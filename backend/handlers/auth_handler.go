@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 	"os"
 	"time"
@@ -23,24 +22,17 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	// Hash password
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(input.Password), 14)
 
-	id := uuid.New().String()
+	input.ID = uuid.New().String()
+	input.Password = string(hashedPassword)
 
-	_, err := config.DB.Exec(context.Background(),
-		"INSERT INTO users (id, name, email, password) VALUES ($1, $2, $3, $4)",
-		id, input.Name, input.Email, string(hashedPassword),
-	)
-
-	if err != nil {
+	if err := config.DB.Create(&input).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "User registered successfully",
-	})
+	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
 }
 
 func Login(c *gin.Context) {
@@ -52,24 +44,18 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	err := config.DB.QueryRow(context.Background(),
-		"SELECT id, name, email, password FROM users WHERE email=$1",
-		input.Email,
-	).Scan(&user.ID, &user.Name, &user.Email, &user.Password)
-
+	err := config.DB.Where("email = ?", input.Email).First(&user).Error
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 		return
 	}
 
-	// Compare password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Wrong password"})
 		return
 	}
 
-	// Generate JWT
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
 		"exp":     time.Now().Add(time.Hour * 24).Unix(),
@@ -77,7 +63,5 @@ func Login(c *gin.Context) {
 
 	tokenString, _ := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 
-	c.JSON(http.StatusOK, gin.H{
-		"token": tokenString,
-	})
+	c.JSON(http.StatusOK, gin.H{"token": tokenString})
 }

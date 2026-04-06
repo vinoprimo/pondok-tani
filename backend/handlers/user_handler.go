@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 
 	"pondok-tani-backend/config"
+	"pondok-tani-backend/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,17 +12,9 @@ import (
 func GetCurrentUser(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
-	var user struct {
-		ID    string `json:"id"`
-		Name  string `json:"name"`
-		Email string `json:"email"`
-	}
+	var user models.User
 
-	err := config.DB.QueryRow(context.Background(),
-		"SELECT id, name, email FROM users WHERE id=$1",
-		userID,
-	).Scan(&user.ID, &user.Name, &user.Email)
-
+	err := config.DB.First(&user, "id = ?", userID).Error
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "User not found"})
 		return

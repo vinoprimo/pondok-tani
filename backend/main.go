@@ -2,8 +2,10 @@ package main
 
 import (
 	"pondok-tani-backend/config"
-	"github.com/gin-contrib/cors"
+	"pondok-tani-backend/models"
 	"pondok-tani-backend/routes"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -12,6 +14,7 @@ func main() {
 	godotenv.Load()
 
 	config.ConnectDB()
+	config.DB.AutoMigrate(&models.User{})
 
 	r := gin.Default()
 
@@ -29,6 +32,5 @@ func main() {
 		})
 	})
 	routes.AuthRoutes(r)
-	routes.InvestmentRoutes(r)
 	r.Run(":8000")
 }
