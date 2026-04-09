@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"pondok-tani-backend/config"
 	"pondok-tani-backend/models"
 	"pondok-tani-backend/routes"
@@ -10,11 +13,25 @@ import (
 	"github.com/joho/godotenv"
 )
 
+func migrateDB() {
+	config.ConnectDB()
+	err := config.DB.AutoMigrate(&models.User{}, &models.Harvest{}, &models.HarvestOutput{}, &models.StockMovement{})
+	if err != nil {
+		panic(fmt.Sprintf("failed to migrate database: %v", err))
+	}
+	fmt.Println("database migrated successfully")
+}
+
 func main() {
 	godotenv.Load()
 
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		migrateDB()
+		return
+	}
+
 	config.ConnectDB()
-	config.DB.AutoMigrate(&models.User{})
+	config.DB.AutoMigrate(&models.User{}, &models.Harvest{}, &models.HarvestOutput{}, &models.StockMovement{})
 
 	r := gin.Default()
 
