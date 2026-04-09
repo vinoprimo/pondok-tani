@@ -1,15 +1,16 @@
-package handlers
+package harvest
 
 import (
 	"net/http"
+
 	"pondok-tani-backend/config"
-	"pondok-tani-backend/models"
+	harvestmodels "pondok-tani-backend/models/harvest"
 
 	"github.com/gin-gonic/gin"
 )
 
 func CreateHarvestOutput(c *gin.Context) {
-	var input models.HarvestOutput
+	var input harvestmodels.HarvestOutput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

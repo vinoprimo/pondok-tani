@@ -1,10 +1,10 @@
-package handlers
+package user
 
 import (
 	"net/http"
 
 	"pondok-tani-backend/config"
-	"pondok-tani-backend/models"
+	authmodels "pondok-tani-backend/models/auth"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,7 +12,7 @@ import (
 func GetCurrentUser(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
-	var user models.User
+	var user authmodels.User
 
 	err := config.DB.First(&user, "id = ?", userID).Error
 	if err != nil {
