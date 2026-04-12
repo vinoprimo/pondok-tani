@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
-import Landing from "../views/Landing.vue";
-import Login from "../views/Login.vue";
-import Dashboard from "../views/Dashboard.vue";
+import Landing from "../views/landing/Landing.vue";
+import Login from "../views/auth/Login.vue";
+import Dashboard from "../views/dashboard/Dashboard.vue";
 
 const routes = [
   { path: "/", component: Landing },

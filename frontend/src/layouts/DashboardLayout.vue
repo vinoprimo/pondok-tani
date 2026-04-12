@@ -13,6 +13,6 @@
   </template>
   
   <script setup>
-  import Sidebar from "../components/Sidebar.vue";
-  import Topbar from "../components/Topbar.vue";
+  import Sidebar from "../components/layouts/Sidebar.vue";
+  import Topbar from "../components/layouts/Topbar.vue";
   </script>

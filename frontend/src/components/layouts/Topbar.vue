@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted } from "vue";
-import { getCurrentUser } from "../services/user";
-import { user } from "../store/user";
+import { getCurrentUser } from "../../services/user/user";
+import { user } from "../../store/user";
 
 onMounted(async () => {
   try {
