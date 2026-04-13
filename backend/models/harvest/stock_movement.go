@@ -1,7 +1,7 @@
-package models
+package harvest
 
 type StockMovement struct {
-	ID               uint    `gorm:"primaryKey"`
+	ID               uint `gorm:"primaryKey"`
 	WarehouseStockID uint
 	ReferenceType    string
 	ReferenceID      uint

@@ -1,4 +1,4 @@
-package handlers
+package auth
 
 import (
 	"net/http"
@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"pondok-tani-backend/config"
-	"pondok-tani-backend/models"
+	authmodels "pondok-tani-backend/models/auth"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -15,7 +15,7 @@ import (
 )
 
 func Register(c *gin.Context) {
-	var input models.User
+	var input authmodels.User
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
@@ -36,8 +36,8 @@ func Register(c *gin.Context) {
 }
 
 func Login(c *gin.Context) {
-	var input models.User
-	var user models.User
+	var input authmodels.User
+	var user authmodels.User
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})

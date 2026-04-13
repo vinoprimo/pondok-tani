@@ -83,11 +83,11 @@ function handleLogout() {
             <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
           </button>
         </div>
-      </header>
-
-      <main class="flex-1 overflow-y-auto px-8 py-6">
-        <router-view />
-      </main>
+      </div>
     </div>
-  </div>
-</template>
+  </template>
+  
+  <script setup>
+  import Sidebar from "../components/Sidebar.vue";
+  import Topbar from "../components/Topbar.vue";
+  </script>

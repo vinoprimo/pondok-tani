@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { Bell } from 'lucide-vue-next';
 import LandingPage from '../views/Landing.vue';
 import LoginPage from '../views/Login.vue';
-import Sidebar from '../components/Sidebar.vue';
+import Sidebar from '../components/layouts/Sidebar.vue';
 import DashboardOverview from '../views/Dashboard.vue';
 import InvestmentPortfolio from '../views/InvestmentPortfolio.vue';
 import PlantMonitoring from '../views/PlantMonitoring.vue';

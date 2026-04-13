@@ -2,7 +2,7 @@
 import { ref, reactive } from 'vue';
 import { Sprout, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-vue-next';
 import { useRouter } from "vue-router";
-import { login } from "../services/auth"; // sesuaikan path
+import { login } from "../../services/auth/auth";
 
 const router = useRouter();
 
