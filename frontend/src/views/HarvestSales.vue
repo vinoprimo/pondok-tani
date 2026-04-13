@@ -42,7 +42,7 @@ const harvestsReadyForSale: Harvest[] = [
       { grade: 'B', quantity: 15, price: 4250000 },
     ],
     totalQuantity: 40,
-    province: 'West Java',
+    province: 'Jawa Barat',
     harvestDate: '2024-01-15',
   },
   {
@@ -52,7 +52,7 @@ const harvestsReadyForSale: Harvest[] = [
     type: 'Wet',
     quantity: 120,
     price: 750000,
-    province: 'West Java',
+    province: 'Jawa Barat',
     harvestDate: '2024-01-18',
   },
   {
@@ -66,10 +66,14 @@ const harvestsReadyForSale: Harvest[] = [
       { grade: 'C', quantity: 10, price: 3500000 },
     ],
     totalQuantity: 60,
-    province: 'West Java',
+    province: 'Jawa Barat',
     harvestDate: '2024-01-20',
   },
 ];
+
+function harvestTypeLabel(type: 'Dry' | 'Wet') {
+  return type === 'Dry' ? 'Kering' : 'Basah';
+}
 
 function calculateTotalValue(harvest: Harvest) {
   if (harvest.type === 'Wet') {
@@ -87,7 +91,7 @@ function handleProcessSale(harvestId: string) {
 }
 
 function confirmSale() {
-  window.alert('Sale processed successfully!');
+  window.alert('Penjualan berhasil diproses!');
   showConfirmModal.value = false;
   selectedHarvest.value = null;
 }
@@ -106,14 +110,14 @@ function typeBadgeClass(type: string) {
 <template>
   <div class="space-y-6">
     <div>
-      <h2 class="text-2xl font-semibold text-gray-900">Harvest Sales</h2>
-      <p class="text-gray-600 mt-1">Manage and process harvest sales</p>
+      <h2 class="text-2xl font-semibold text-gray-900">Penjualan panen</h2>
+      <p class="text-gray-600 mt-1">Kelola dan proses penjualan hasil panen</p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-sm text-gray-600">Ready for Sale</p>
+          <p class="text-sm text-gray-600">Siap dijual</p>
           <Package class="w-5 h-5 text-green-600" />
         </div>
         <p class="text-2xl font-semibold text-gray-900">12</p>
@@ -121,7 +125,7 @@ function typeBadgeClass(type: string) {
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-sm text-gray-600">Total Quantity</p>
+          <p class="text-sm text-gray-600">Total kuantitas</p>
           <Package class="w-5 h-5 text-blue-600" />
         </div>
         <p class="text-2xl font-semibold text-gray-900">420 kg</p>
@@ -129,7 +133,7 @@ function typeBadgeClass(type: string) {
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-sm text-gray-600">Est. Total Value</p>
+          <p class="text-sm text-gray-600">Perkiraan nilai total</p>
           <ShoppingCart class="w-5 h-5 text-green-600" />
         </div>
         <p class="text-2xl font-semibold text-green-600">$1.85M</p>
@@ -137,7 +141,7 @@ function typeBadgeClass(type: string) {
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-sm text-gray-600">Sales This Month</p>
+          <p class="text-sm text-gray-600">Penjualan bulan ini</p>
           <ShoppingCart class="w-5 h-5 text-orange-600" />
         </div>
         <p class="text-2xl font-semibold text-gray-900">8</p>
@@ -149,13 +153,13 @@ function typeBadgeClass(type: string) {
         <table class="w-full">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Harvest ID</th>
+              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">ID panen</th>
               <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Investor</th>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Type</th>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Grade Breakdown</th>
-              <th class="text-right px-6 py-3 text-sm font-medium text-gray-900">Quantity</th>
-              <th class="text-right px-6 py-3 text-sm font-medium text-gray-900">Est. Value</th>
-              <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Action</th>
+              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Jenis</th>
+              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Rincian mutu</th>
+              <th class="text-right px-6 py-3 text-sm font-medium text-gray-900">Kuantitas</th>
+              <th class="text-right px-6 py-3 text-sm font-medium text-gray-900">Perkiraan nilai</th>
+              <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Aksi</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -172,13 +176,13 @@ function typeBadgeClass(type: string) {
                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                   :class="typeBadgeClass(harvest.type)"
                 >
-                  {{ harvest.type }}
+                  {{ harvestTypeLabel(harvest.type) }}
                 </span>
               </td>
               <td class="px-6 py-4">
                 <div v-if="harvest.type === 'Dry'" class="space-y-1">
                   <div v-for="(g, idx) in harvest.grades" :key="idx" class="text-sm">
-                    <span class="font-medium">Grade {{ g.grade }}:</span> {{ g.quantity }} kg
+                    <span class="font-medium">Mutu {{ g.grade }}:</span> {{ g.quantity }} kg
                   </div>
                 </div>
                 <span v-else class="text-sm text-gray-500">-</span>
@@ -198,7 +202,7 @@ function typeBadgeClass(type: string) {
                   class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                   @click="handleProcessSale(harvest.id)"
                 >
-                  Process Sale
+                  Proses penjualan
                 </button>
               </td>
             </tr>
@@ -213,14 +217,14 @@ function typeBadgeClass(type: string) {
     >
       <div class="bg-white rounded-2xl max-w-lg w-full">
         <div class="border-b border-gray-200 px-6 py-4">
-          <h3 class="text-lg font-semibold text-gray-900">Confirm Sale</h3>
-          <p class="text-sm text-gray-600 mt-1">Review sale details before processing</p>
+          <h3 class="text-lg font-semibold text-gray-900">Konfirmasi penjualan</h3>
+          <p class="text-sm text-gray-600 mt-1">Tinjau detail sebelum memproses</p>
         </div>
 
         <div class="p-6 space-y-4">
           <div class="bg-gray-50 rounded-lg p-4 space-y-3">
             <div class="flex justify-between">
-              <span class="text-sm text-gray-600">Harvest ID</span>
+              <span class="text-sm text-gray-600">ID panen</span>
               <span class="font-medium text-gray-900">{{ selectedHarvestData.id }}</span>
             </div>
             <div class="flex justify-between">
@@ -228,11 +232,11 @@ function typeBadgeClass(type: string) {
               <span class="font-medium text-gray-900">{{ selectedHarvestData.investor }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-sm text-gray-600">Type</span>
-              <span class="font-medium text-gray-900">{{ selectedHarvestData.type }}</span>
+              <span class="text-sm text-gray-600">Jenis</span>
+              <span class="font-medium text-gray-900">{{ harvestTypeLabel(selectedHarvestData.type) }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-sm text-gray-600">Total Quantity</span>
+              <span class="text-sm text-gray-600">Total kuantitas</span>
               <span class="font-medium text-gray-900">
                 {{
                   selectedHarvestData.type === 'Dry'
@@ -243,7 +247,7 @@ function typeBadgeClass(type: string) {
               </span>
             </div>
             <div class="flex justify-between pt-2 border-t border-gray-200">
-              <span class="text-sm font-medium text-gray-900">Total Sale Value</span>
+              <span class="text-sm font-medium text-gray-900">Total nilai penjualan</span>
               <span class="text-xl font-bold text-green-600">
                 ${{ calculateTotalValue(selectedHarvestData).toLocaleString() }}
               </span>
@@ -257,7 +261,7 @@ function typeBadgeClass(type: string) {
               @click="showConfirmModal = false"
             >
               <X class="w-4 h-4" />
-              Cancel
+              Batal
             </button>
             <button
               type="button"
@@ -265,7 +269,7 @@ function typeBadgeClass(type: string) {
               @click="confirmSale"
             >
               <Check class="w-4 h-4" />
-              Confirm Sale
+              Konfirmasi penjualan
             </button>
           </div>
         </div>

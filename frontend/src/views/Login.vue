@@ -95,6 +95,7 @@ async function handleSubmit(e: Event) {
     console.log("LOGIN SUCCESS:", res);
 
     localStorage.setItem("token", res.data.token);
+    localStorage.setItem("userRole", role.value);
 
     router.push("/dashboard");
 
@@ -213,10 +214,10 @@ function toggleRegistering() {
           </div>
 
           <div v-if="!isRegistering" class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p class="text-sm text-blue-800 font-medium mb-2">🎯 Demo Credentials:</p>
+            <p class="text-sm text-blue-800 font-medium mb-2">🎯 Kredensial demo:</p>
             <div class="text-xs text-blue-700 space-y-1">
               <p>Email: {{ demoCredentials[role].email }}</p>
-              <p>Password: {{ demoCredentials[role].password }}</p>
+              <p>Kata sandi: {{ demoCredentials[role].password }}</p>
             </div>
             <button
               type="button"

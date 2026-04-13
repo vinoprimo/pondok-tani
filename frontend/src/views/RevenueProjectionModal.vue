@@ -83,8 +83,8 @@ const projection = computed(() => {
             <Calculator class="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <h2 class="text-xl font-semibold text-gray-900">Revenue Projection Calculator</h2>
-            <p class="text-sm text-gray-600">Estimate your harvest revenue and ROI</p>
+            <h2 class="text-xl font-semibold text-gray-900">Kalkulator proyeksi pendapatan</h2>
+            <p class="text-sm text-gray-600">Perkirakan pendapatan panen dan ROI Anda</p>
           </div>
         </div>
         <button
@@ -100,18 +100,18 @@ const projection = computed(() => {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Estimated Harvest Quantity (kg)
+              Perkiraan jumlah panen (kg)
             </label>
             <input
               v-model="harvestQty"
               type="number"
-              placeholder="e.g., 100"
+              placeholder="mis. 100"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Harvest Type</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Jenis panen</label>
             <div class="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -123,7 +123,7 @@ const projection = computed(() => {
                 "
                 @click="harvestType = 'wet'"
               >
-                Wet
+                Basah
               </button>
               <button
                 type="button"
@@ -135,43 +135,43 @@ const projection = computed(() => {
                 "
                 @click="harvestType = 'dry'"
               >
-                Dry
+                Kering
               </button>
             </div>
           </div>
 
           <div v-if="harvestType === 'dry'">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Grade Selection</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Pilihan mutu</label>
             <select
               v-model="grade"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">Select Grade</option>
-              <option value="A">Grade A - Premium</option>
-              <option value="B">Grade B - Standard</option>
-              <option value="C">Grade C - Economy</option>
+              <option value="">Pilih mutu</option>
+              <option value="A">Mutu A — Premium</option>
+              <option value="B">Mutu B — Standar</option>
+              <option value="C">Mutu C — Ekonomi</option>
               <option value="Split">Split</option>
               <option value="Asalan">Asalan</option>
             </select>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Province (Price Reference)</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Provinsi (acuan harga)</label>
             <select
               v-model="province"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">Select Province</option>
-              <option value="West Java">West Java</option>
-              <option value="Central Java">Central Java</option>
-              <option value="East Java">East Java</option>
+              <option value="">Pilih provinsi</option>
+              <option value="West Java">Jawa Barat</option>
+              <option value="Central Java">Jawa Tengah</option>
+              <option value="East Java">Jawa Timur</option>
               <option value="Bali">Bali</option>
             </select>
           </div>
 
           <div v-if="harvestType === 'dry'">
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Estimated Drying Shrinkage (%)
+              Perkiraan susut pengeringan (%)
             </label>
             <input
               v-model="shrinkage"
@@ -183,12 +183,12 @@ const projection = computed(() => {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Estimated Operational Cost (Optional)
+              Perkiraan biaya operasional (opsional)
             </label>
             <input
               v-model="operationalCost"
               type="number"
-              placeholder="Auto: 15% of revenue"
+              placeholder="Otomatis: 15% dari pendapatan"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -200,40 +200,40 @@ const projection = computed(() => {
         >
           <div class="flex items-center gap-2 mb-4">
             <TrendingUp class="w-5 h-5 text-green-600" />
-            <h3 class="text-lg font-semibold text-gray-900">Projection Results</h3>
+            <h3 class="text-lg font-semibold text-gray-900">Hasil proyeksi</h3>
           </div>
 
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white rounded-lg p-4">
-              <p class="text-sm text-gray-600 mb-1">Estimated Revenue</p>
+              <p class="text-sm text-gray-600 mb-1">Perkiraan pendapatan</p>
               <p class="text-2xl font-bold text-green-600">
                 ${{ projection.revenue.toLocaleString() }}
               </p>
             </div>
 
             <div class="bg-white rounded-lg p-4">
-              <p class="text-sm text-gray-600 mb-1">Operational Cost</p>
+              <p class="text-sm text-gray-600 mb-1">Biaya operasional</p>
               <p class="text-2xl font-bold text-orange-600">
                 ${{ projection.costs.toLocaleString() }}
               </p>
             </div>
 
             <div class="bg-white rounded-lg p-4">
-              <p class="text-sm text-gray-600 mb-1">Net Profit</p>
+              <p class="text-sm text-gray-600 mb-1">Laba bersih</p>
               <p class="text-2xl font-bold text-green-600">
                 ${{ projection.netProfit.toLocaleString() }}
               </p>
             </div>
 
             <div class="bg-white rounded-lg p-4">
-              <p class="text-sm text-gray-600 mb-1">Projected ROI</p>
+              <p class="text-sm text-gray-600 mb-1">Proyeksi ROI</p>
               <p class="text-2xl font-bold text-blue-600">{{ projection.roi.toFixed(1) }}%</p>
             </div>
           </div>
 
           <div v-if="harvestType === 'dry'" class="mt-4 p-3 bg-white/50 rounded-lg border border-green-200">
             <p class="text-sm text-gray-700">
-              <span class="font-medium">Note:</span> After {{ shrinkage }}% shrinkage, effective quantity:
+              <span class="font-medium">Catatan:</span> Setelah susut {{ shrinkage }}%, jumlah efektif:
               <span class="font-semibold">{{ projection.effectiveQty.toFixed(2) }} kg</span>
             </p>
           </div>

@@ -39,7 +39,7 @@ function handleLogin(role: UserRole, credentials: { email: string; password: str
   activeView.value = 'dashboard';
   userInfo.value = {
     email: credentials.email,
-    name: role === 'admin' ? 'Admin User' : 'Sarah Johnson',
+    name: role === 'admin' ? 'Pengguna admin' : 'Sarah Johnson',
   };
 }
 
@@ -144,7 +144,7 @@ const currentViewNeedsUserRole = computed(() => currentViewComponent.value === D
             <div class="flex items-center gap-3 pl-4 border-l border-gray-200">
               <div class="text-right">
                 <p class="text-sm font-medium text-gray-900">
-                  {{ userInfo.name || (userRole === 'admin' ? 'Admin User' : 'Sarah Johnson') }}
+                  {{ userInfo.name || (userRole === 'admin' ? 'Pengguna admin' : 'Sarah Johnson') }}
                 </p>
                 <p class="text-xs text-gray-500">
                   {{ userRole === 'admin' ? 'Administrator Sistem' : 'Investor Premium' }}

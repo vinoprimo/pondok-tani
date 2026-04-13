@@ -24,97 +24,103 @@ const selectedPlant = ref('P-001')
 const plants = [
   {
     id: 'P-001',
-    name: 'Vanilla Plant #001',
-    batch: 'Premium Batch A',
-    age: '18 months',
-    status: 'Flowering',
+    name: 'Tanaman vanili #001',
+    batch: 'Batch premium A',
+    age: '18 bulan',
+    status: 'Berbunga',
     health: 95,
     lastInspection: '2026-01-18',
     nextInspection: '2026-01-25',
-    location: 'Sector A-12',
+    location: 'Sektor A-12',
   },
   {
     id: 'P-002',
-    name: 'Vanilla Plant #002',
-    batch: 'Organic Batch B',
-    age: '14 months',
-    status: 'Growing',
+    name: 'Tanaman vanili #002',
+    batch: 'Batch organik B',
+    age: '14 bulan',
+    status: 'Tumbuh',
     health: 92,
     lastInspection: '2026-01-19',
     nextInspection: '2026-01-26',
-    location: 'Sector B-08',
+    location: 'Sektor B-08',
   },
   {
     id: 'P-003',
-    name: 'Vanilla Plant #003',
-    batch: 'Premium Batch A',
-    age: '22 months',
-    status: 'Harvesting',
+    name: 'Tanaman vanili #003',
+    batch: 'Batch premium A',
+    age: '22 bulan',
+    status: 'Panen',
     health: 98,
     lastInspection: '2026-01-20',
     nextInspection: '2026-01-27',
-    location: 'Sector A-15',
+    location: 'Sektor A-15',
   },
 ]
 
 const timeline = [
   {
-    stage: 'Planting',
+    stage: 'Penanaman',
     date: '2024-07-15',
     status: 'completed' as const,
-    description: 'Initial planting and setup',
+    description: 'Penanaman awal dan persiapan lahan',
     images: 1,
   },
   {
-    stage: 'Early Growth',
+    stage: 'Pertumbuhan awal',
     date: '2024-10-20',
     status: 'completed' as const,
-    description: 'First 3 months of development',
+    description: '3 bulan pertama perkembangan',
     images: 3,
   },
   {
-    stage: 'Vegetative Stage',
+    stage: 'Fase vegetatif',
     date: '2025-02-10',
     status: 'completed' as const,
-    description: 'Strong vine development',
+    description: 'Perkembangan sulur kuat',
     images: 4,
   },
   {
-    stage: 'Pre-Flowering',
+    stage: 'Pra-berbunga',
     date: '2025-08-05',
     status: 'completed' as const,
-    description: 'Flower buds forming',
+    description: 'Kuncup bunga terbentuk',
     images: 5,
   },
   {
-    stage: 'Flowering',
+    stage: 'Berbunga',
     date: '2025-11-15',
     status: 'current' as const,
-    description: 'Active flowering phase',
+    description: 'Fase berbunga aktif',
     images: 6,
   },
   {
-    stage: 'Pod Development',
-    date: 'Expected: 2026-03-01',
+    stage: 'Pembentukan polong',
+    date: 'Perkiraan: 2026-03-01',
     status: 'upcoming' as const,
-    description: 'Bean pod formation',
+    description: 'Pembentukan polong biji',
     images: 0,
   },
   {
-    stage: 'Harvest',
-    date: 'Expected: 2026-08-15',
+    stage: 'Panen',
+    date: 'Perkiraan: 2026-08-15',
     status: 'upcoming' as const,
-    description: 'Ready for harvesting',
+    description: 'Siap dipanen',
     images: 0,
   },
 ]
 
 const environmentalData = [
-  { label: 'Temperature', value: '26°C', status: 'optimal', icon: ThermometerSun },
-  { label: 'Humidity', value: '75%', status: 'optimal', icon: Droplets },
-  { label: 'Sunlight', value: '6.5 hrs', status: 'good', icon: Sun },
-  { label: 'Soil Health', value: '8.2/10', status: 'excellent', icon: Sprout },
+  { label: 'Suhu', value: '26°C', status: 'optimal', icon: ThermometerSun },
+  { label: 'Kelembapan', value: '75%', status: 'optimal', icon: Droplets },
+  { label: 'Sinar matahari', value: '6,5 jam', status: 'good', icon: Sun },
+  { label: 'Kesehatan tanah', value: '8,2/10', status: 'excellent', icon: Sprout },
 ]
+
+const envStatusLabel: Record<string, string> = {
+  optimal: 'Optimal',
+  excellent: 'Sangat baik',
+  good: 'Baik',
+}
 
 const currentPlant = computed(() => plants.find((p) => p.id === selectedPlant.value) ?? plants[0])
 
@@ -138,8 +144,8 @@ function plantTitleClass(id: string) {
 }
 
 function statusBadgeClass(status: string) {
-  if (status === 'Flowering') return 'bg-purple-100 text-purple-700'
-  if (status === 'Growing') return 'bg-blue-100 text-blue-700'
+  if (status === 'Berbunga') return 'bg-purple-100 text-purple-700'
+  if (status === 'Tumbuh') return 'bg-blue-100 text-blue-700'
   return 'bg-yellow-100 text-yellow-700'
 }
 
@@ -159,8 +165,8 @@ function timelineDotClass(status: string) {
 <template>
   <div class="space-y-6">
     <div>
-      <h2 class="text-2xl font-semibold text-gray-900">Plant Monitoring</h2>
-      <p class="text-gray-600 mt-1">Track growth stages and health of your vanilla plants</p>
+      <h2 class="text-2xl font-semibold text-gray-900">Monitoring tanaman</h2>
+      <p class="text-gray-600 mt-1">Pantau fase pertumbuhan dan kesehatan tanaman vanili Anda</p>
     </div>
 
     <div class="flex gap-3 overflow-x-auto pb-2">
@@ -187,7 +193,7 @@ function timelineDotClass(status: string) {
           <div>
             <h3 class="text-xl font-semibold text-gray-900">{{ currentPlant.name }}</h3>
             <p class="text-gray-600 mt-1">
-              Age: {{ currentPlant.age }} • Location: {{ currentPlant.location }}
+              Usia: {{ currentPlant.age }} • Lokasi: {{ currentPlant.location }}
             </p>
           </div>
           <span :class="['px-3 py-1 rounded-full text-sm font-medium', statusBadgeClass(currentPlant.status)]">
@@ -198,14 +204,14 @@ function timelineDotClass(status: string) {
         <div class="aspect-video bg-gray-100 rounded-lg overflow-hidden mb-6">
           <img
             :src="mainPlantSrc"
-            alt="Vanilla Plant"
+            alt="Tanaman vanili"
             class="w-full h-full object-cover"
             @error="onImgError"
           />
         </div>
 
         <div>
-          <h4 class="font-semibold text-gray-900 mb-4">Environmental Conditions</h4>
+          <h4 class="font-semibold text-gray-900 mb-4">Kondisi lingkungan</h4>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div v-for="(item, index) in environmentalData" :key="index" class="bg-gray-50 rounded-lg p-4">
               <div class="flex items-center gap-2 mb-2">
@@ -213,7 +219,7 @@ function timelineDotClass(status: string) {
                 <span class="text-sm text-gray-600">{{ item.label }}</span>
               </div>
               <p class="text-lg font-semibold text-gray-900">{{ item.value }}</p>
-              <span :class="['text-xs', envStatusClass(item.status)]">{{ item.status }}</span>
+              <span :class="['text-xs', envStatusClass(item.status)]">{{ envStatusLabel[item.status] ?? item.status }}</span>
             </div>
           </div>
         </div>
@@ -221,38 +227,38 @@ function timelineDotClass(status: string) {
 
       <div class="space-y-6">
         <div class="bg-white rounded-xl border border-gray-200 p-6">
-          <h4 class="font-semibold text-gray-900 mb-4">Plant Health</h4>
+          <h4 class="font-semibold text-gray-900 mb-4">Kesehatan tanaman</h4>
           <div class="text-center mb-4">
             <div class="inline-flex items-center justify-center w-24 h-24 bg-green-50 rounded-full mb-3">
               <span class="text-3xl font-semibold text-green-600">{{ currentPlant.health }}%</span>
             </div>
-            <p class="text-sm text-gray-600">Overall Health Score</p>
+            <p class="text-sm text-gray-600">Skor kesehatan keseluruhan</p>
           </div>
           <div class="space-y-3">
             <div class="flex items-center justify-between text-sm">
-              <span class="text-gray-600">Growth Rate</span>
-              <span class="font-medium text-gray-900">Excellent</span>
+              <span class="text-gray-600">Laju pertumbuhan</span>
+              <span class="font-medium text-gray-900">Sangat baik</span>
             </div>
             <div class="flex items-center justify-between text-sm">
-              <span class="text-gray-600">Disease Risk</span>
-              <span class="font-medium text-green-600">Low</span>
+              <span class="text-gray-600">Risiko penyakit</span>
+              <span class="font-medium text-green-600">Rendah</span>
             </div>
             <div class="flex items-center justify-between text-sm">
-              <span class="text-gray-600">Pest Activity</span>
-              <span class="font-medium text-green-600">None</span>
+              <span class="text-gray-600">Aktivitas hama</span>
+              <span class="font-medium text-green-600">Tidak ada</span>
             </div>
           </div>
         </div>
 
         <div class="bg-white rounded-xl border border-gray-200 p-6">
-          <h4 class="font-semibold text-gray-900 mb-4">Inspections</h4>
+          <h4 class="font-semibold text-gray-900 mb-4">Inspeksi</h4>
           <div class="space-y-3">
             <div>
-              <p class="text-sm text-gray-600">Last Inspection</p>
+              <p class="text-sm text-gray-600">Inspeksi terakhir</p>
               <p class="font-medium text-gray-900">{{ currentPlant.lastInspection }}</p>
             </div>
             <div>
-              <p class="text-sm text-gray-600">Next Scheduled</p>
+              <p class="text-sm text-gray-600">Jadwal berikutnya</p>
               <p class="font-medium text-gray-900">{{ currentPlant.nextInspection }}</p>
             </div>
           </div>
@@ -262,9 +268,9 @@ function timelineDotClass(status: string) {
 
     <div class="bg-white rounded-xl border border-gray-200 p-6">
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-lg font-semibold text-gray-900">Growth Timeline</h3>
+        <h3 class="text-lg font-semibold text-gray-900">Linimasa pertumbuhan</h3>
         <button type="button" class="text-sm text-green-600 hover:text-green-700 font-medium">
-          View All Photos
+          Lihat semua foto
         </button>
       </div>
 
@@ -293,7 +299,7 @@ function timelineDotClass(status: string) {
                   </div>
                   <div v-if="item.images > 0" class="flex items-center gap-1 text-sm text-gray-600">
                     <Camera class="w-4 h-4" />
-                    <span>{{ item.images }} photos</span>
+                    <span>{{ item.images }} foto</span>
                   </div>
                 </div>
                 <p class="text-sm text-gray-600">{{ item.description }}</p>
@@ -306,7 +312,7 @@ function timelineDotClass(status: string) {
                   >
                     <img
                       :src="src"
-                      alt="Plant photo"
+                      alt="Foto tanaman"
                       class="w-full h-full object-cover"
                       @error="onImgError"
                     />

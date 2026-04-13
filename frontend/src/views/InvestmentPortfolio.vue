@@ -4,17 +4,17 @@ import { TrendingUp, DollarSign, Calendar, Download, Eye } from 'lucide-vue-next
 
 const portfolioData = [
   { month: 'Jan', value: 45000 },
-  { month: 'Feb', value: 46800 },
+  { month: 'Peb', value: 46800 },
   { month: 'Mar', value: 48200 },
   { month: 'Apr', value: 50100 },
-  { month: 'May', value: 52500 },
+  { month: 'Mei', value: 52500 },
   { month: 'Jun', value: 55980 },
 ]
 
 const investments = [
   {
     id: 'INV-001',
-    name: 'Premium Vanilla Batch A',
+    name: 'Batch vanili premium A',
     invested: 15000,
     currentValue: 18650,
     roi: 24.3,
@@ -24,7 +24,7 @@ const investments = [
   },
   {
     id: 'INV-002',
-    name: 'Organic Vanilla Batch B',
+    name: 'Batch vanili organik B',
     invested: 20000,
     currentValue: 24800,
     roi: 24.0,
@@ -34,7 +34,7 @@ const investments = [
   },
   {
     id: 'INV-003',
-    name: 'Standard Vanilla Batch C',
+    name: 'Batch vanili standar C',
     invested: 10000,
     currentValue: 12530,
     roi: 25.3,
@@ -51,42 +51,42 @@ const maxPortfolioValue = computed(() => Math.max(...portfolioData.map((d) => d.
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-2xl font-semibold text-gray-900">Investment Portfolio</h2>
-        <p class="text-gray-600 mt-1">Track your vanilla plantation investments and returns</p>
+        <h2 class="text-2xl font-semibold text-gray-900">Portofolio investasi</h2>
+        <p class="text-gray-600 mt-1">Pantau investasi perkebunan vanili dan imbal hasil Anda</p>
       </div>
       <button
         type="button"
         class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
       >
         <Download class="w-4 h-4" />
-        Export Report
+        Ekspor laporan
       </button>
     </div>
 
     <div class="bg-gradient-to-br from-green-600 to-green-700 rounded-xl p-6 text-white">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div>
-          <p class="text-green-100 text-sm mb-1">Total Invested</p>
+          <p class="text-green-100 text-sm mb-1">Total investasi</p>
           <p class="text-3xl font-semibold">$45,000</p>
         </div>
         <div>
-          <p class="text-green-100 text-sm mb-1">Current Value</p>
+          <p class="text-green-100 text-sm mb-1">Nilai saat ini</p>
           <p class="text-3xl font-semibold">$55,980</p>
         </div>
         <div>
-          <p class="text-green-100 text-sm mb-1">Total Returns</p>
+          <p class="text-green-100 text-sm mb-1">Total imbal hasil</p>
           <p class="text-3xl font-semibold">$10,980</p>
         </div>
         <div>
-          <p class="text-green-100 text-sm mb-1">Average ROI</p>
+          <p class="text-green-100 text-sm mb-1">ROI rata-rata</p>
           <p class="text-3xl font-semibold">24.5%</p>
         </div>
       </div>
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Portfolio Value Growth</h3>
-      <p class="text-xs text-gray-500 mb-3">Area chart placeholder — bar strip + table</p>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Pertumbuhan nilai portofolio</h3>
+      <p class="text-xs text-gray-500 mb-3">Grafik area (placeholder) — strip batang + tabel</p>
       <div class="flex items-end gap-1 h-32 mb-4 px-1 border border-gray-100 rounded-lg bg-gray-50/50 p-2">
         <div
           v-for="d in portfolioData"
@@ -105,8 +105,8 @@ const maxPortfolioValue = computed(() => Math.max(...portfolioData.map((d) => d.
         <table class="w-full text-sm">
           <thead class="bg-gray-50 text-left text-gray-600">
             <tr>
-              <th class="px-3 py-2 font-medium">Month</th>
-              <th class="px-3 py-2 font-medium text-right">Portfolio value</th>
+              <th class="px-3 py-2 font-medium">Bulan</th>
+              <th class="px-3 py-2 font-medium text-right">Nilai portofolio</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
@@ -121,27 +121,27 @@ const maxPortfolioValue = computed(() => Math.max(...portfolioData.map((d) => d.
 
     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div class="p-6 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">Active Investments</h3>
+        <h3 class="text-lg font-semibold text-gray-900">Investasi aktif</h3>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead class="bg-gray-50">
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Investment
+                Investasi
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Invested
+                Investasi awal
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Current Value
+                Nilai saat ini
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ROI</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plants</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanaman</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Start Date
+                Tanggal mulai
               </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -170,7 +170,7 @@ const maxPortfolioValue = computed(() => Math.max(...portfolioData.map((d) => d.
                   class="text-green-600 hover:text-green-700 font-medium text-sm flex items-center gap-1"
                 >
                   <Eye class="w-4 h-4" />
-                  View Details
+                  Lihat detail
                 </button>
               </td>
             </tr>
@@ -185,30 +185,30 @@ const maxPortfolioValue = computed(() => Math.max(...portfolioData.map((d) => d.
           <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
             <DollarSign class="w-5 h-5 text-blue-600" />
           </div>
-          <h3 class="font-semibold text-gray-900">Last Month</h3>
+          <h3 class="font-semibold text-gray-900">Bulan lalu</h3>
         </div>
         <p class="text-2xl font-semibold text-gray-900 mb-1">$918</p>
-        <p class="text-sm text-gray-600">June 2026 Returns</p>
+        <p class="text-sm text-gray-600">Imbal hasil Juni 2026</p>
       </div>
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
             <Calendar class="w-5 h-5 text-green-600" />
           </div>
-          <h3 class="font-semibold text-gray-900">Next Payout</h3>
+          <h3 class="font-semibold text-gray-900">Pembayaran berikutnya</h3>
         </div>
         <p class="text-2xl font-semibold text-gray-900 mb-1">$950</p>
-        <p class="text-sm text-gray-600">Expected on Aug 1, 2026</p>
+        <p class="text-sm text-gray-600">Perkiraan 1 Agustus 2026</p>
       </div>
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
             <TrendingUp class="w-5 h-5 text-purple-600" />
           </div>
-          <h3 class="font-semibold text-gray-900">YTD Returns</h3>
+          <h3 class="font-semibold text-gray-900">Imbal YTD</h3>
         </div>
         <p class="text-2xl font-semibold text-gray-900 mb-1">$5,340</p>
-        <p class="text-sm text-gray-600">Year to Date</p>
+        <p class="text-sm text-gray-600">Tahun berjalan</p>
       </div>
     </div>
   </div>

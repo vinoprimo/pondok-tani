@@ -68,26 +68,26 @@ const upcomingSchedule = [
 const activityHistory = [
   {
     id: 'AH-001',
-    activityType: 'Watering',
+    activityType: 'Penyiraman',
     date: '2024-01-18',
     status: 'Verified',
-    verifiedBy: 'Admin User',
+    verifiedBy: 'Admin',
     verifiedDate: '2024-01-19',
   },
   {
     id: 'AH-002',
-    activityType: 'Fertilizing',
+    activityType: 'Pemupukan',
     date: '2024-01-15',
     status: 'Verified',
-    verifiedBy: 'Admin User',
+    verifiedBy: 'Admin',
     verifiedDate: '2024-01-16',
   },
   {
     id: 'AH-003',
-    activityType: 'Pruning',
+    activityType: 'Pemangkasan',
     date: '2024-01-12',
     status: 'Verified',
-    verifiedBy: 'Admin User',
+    verifiedBy: 'Admin',
     verifiedDate: '2024-01-13',
   },
 ];
@@ -109,7 +109,7 @@ function handleFileUpload(e: Event) {
 }
 
 function handleSubmit() {
-  alert('Activity report submitted successfully!');
+  alert('Laporan aktivitas berhasil dikirim!');
   showSubmitForm.value = false;
   formData.activityType = '';
   formData.activityDate = '';
@@ -183,19 +183,19 @@ function closeModal() {
 
     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">Maintenance Schedule</h3>
-        <p class="text-sm text-gray-600 mt-1">Your upcoming and recent maintenance activities</p>
+        <h3 class="text-lg font-semibold text-gray-900">Jadwal perawatan</h3>
+        <p class="text-sm text-gray-600 mt-1">Tugas mendatang dan aktivitas terkini Anda</p>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Activity ID</th>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Activity Type</th>
+              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">ID aktivitas</th>
+              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Jenis aktivitas</th>
               <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Batch</th>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Due Date</th>
+              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Jatuh tempo</th>
               <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Status</th>
-              <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Days Left</th>
+              <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Sisa hari</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -219,35 +219,35 @@ function closeModal() {
                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
                 >
                   <AlertCircle class="w-3 h-3 mr-1" />
-                  Overdue
+                  Terlambat
                 </span>
                 <span
                   v-else-if="item.status === 'Upcoming'"
                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
                 >
                   <Clock class="w-3 h-3 mr-1" />
-                  Upcoming
+                  Mendatang
                 </span>
                 <span
                   v-else-if="item.status === 'Submitted'"
                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
                 >
                   <Clock class="w-3 h-3 mr-1" />
-                  Pending Verification
+                  Menunggu verifikasi
                 </span>
                 <span
                   v-else-if="item.status === 'Verified'"
                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
                 >
                   <CheckCircle class="w-3 h-3 mr-1" />
-                  Verified
+                  Terverifikasi
                 </span>
                 <span
                   v-else-if="item.status === 'Rejected'"
                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
                 >
                   <XCircle class="w-3 h-3 mr-1" />
-                  Rejected
+                  Ditolak
                 </span>
               </td>
               <td class="px-6 py-4 text-center">
@@ -264,8 +264,8 @@ function closeModal() {
                   >
                     {{
                       isScheduleOverdue(item)
-                        ? `${Math.abs(item.daysLeft)} days overdue`
-                        : `${item.daysLeft} days`
+                        ? `Terlambat ${Math.abs(item.daysLeft)} hari`
+                        : `${item.daysLeft} hari`
                     }}
                   </span>
                 </template>
@@ -278,7 +278,7 @@ function closeModal() {
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Activity History</h3>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Riwayat aktivitas</h3>
       <div class="space-y-4">
         <div
           v-for="(activity, index) in activityHistory"
@@ -300,10 +300,10 @@ function closeModal() {
                 <h4 class="font-semibold text-gray-900">{{ activity.activityType }}</h4>
                 <span class="text-xs text-gray-500">{{ activity.date }}</span>
               </div>
-              <p class="text-sm text-gray-600 mb-2">Activity ID: {{ activity.id }}</p>
+              <p class="text-sm text-gray-600 mb-2">ID aktivitas: {{ activity.id }}</p>
               <div class="flex items-center justify-between text-xs">
                 <span class="text-green-600 font-medium">
-                  ✓ Verified by {{ activity.verifiedBy }} on {{ activity.verifiedDate }}
+                  Diverifikasi oleh {{ activity.verifiedBy }} pada {{ activity.verifiedDate }}
                 </span>
               </div>
             </div>
@@ -319,9 +319,9 @@ function closeModal() {
       <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <div>
-            <h3 class="text-xl font-semibold text-gray-900">Submit Activity Report</h3>
+            <h3 class="text-xl font-semibold text-gray-900">Kirim laporan aktivitas</h3>
             <p class="text-sm text-gray-600 mt-1">
-              Provide details and evidence of completed maintenance
+              Isi detail dan bukti perawatan yang telah dilakukan
             </p>
           </div>
           <button
@@ -336,24 +336,24 @@ function closeModal() {
         <form class="p-6 space-y-4" @submit.prevent="handleSubmit">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Activity Type <span class="text-red-500">*</span>
+              Jenis aktivitas <span class="text-red-500">*</span>
             </label>
             <select
               v-model="formData.activityType"
               required
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
-              <option value="">Select Activity Type</option>
-              <option value="watering">Watering</option>
-              <option value="fertilizing">Fertilizing</option>
-              <option value="pruning">Pruning</option>
-              <option value="pest-control">Pest Control</option>
+              <option value="">Pilih jenis aktivitas</option>
+              <option value="watering">Penyiraman</option>
+              <option value="fertilizing">Pemupukan</option>
+              <option value="pruning">Pemangkasan</option>
+              <option value="pest-control">Pengendalian hama</option>
             </select>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Activity Date <span class="text-red-500">*</span>
+              Tanggal aktivitas <span class="text-red-500">*</span>
             </label>
             <input
               v-model="formData.activityDate"
@@ -365,37 +365,37 @@ function closeModal() {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Description <span class="text-red-500">*</span>
+              Deskripsi <span class="text-red-500">*</span>
             </label>
             <textarea
               v-model="formData.description"
               required
               rows="3"
-              placeholder="Describe the maintenance activity performed..."
+              placeholder="Jelaskan aktivitas perawatan yang dilakukan..."
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Photo Evidence <span class="text-red-500">*</span>
+              Bukti foto <span class="text-red-500">*</span>
             </label>
             <div
               class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-500 transition-colors"
             >
               <div v-if="selectedFile" class="space-y-2">
-                <img :src="selectedFile" alt="Preview" class="max-h-48 mx-auto rounded-lg" />
+                <img :src="selectedFile" alt="Pratinjau" class="max-h-48 mx-auto rounded-lg" />
                 <button
                   type="button"
                   class="text-sm text-red-600 hover:text-red-700"
                   @click="selectedFile = null"
                 >
-                  Remove Image
+                  Hapus gambar
                 </button>
               </div>
               <template v-else>
                 <ImageIcon class="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                <p class="text-sm text-gray-600 mb-2">Click to upload or drag and drop</p>
+                <p class="text-sm text-gray-600 mb-2">Klik untuk mengunggah atau seret file</p>
                 <input
                   id="file-upload"
                   type="file"
@@ -408,7 +408,7 @@ function closeModal() {
                   for="file-upload"
                   class="inline-block px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
                 >
-                  Choose File
+                  Pilih file
                 </label>
               </template>
             </div>
@@ -416,24 +416,24 @@ function closeModal() {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Quantity of Material Used (Optional)
+              Kuantitas material (opsional)
             </label>
             <input
               v-model="formData.quantity"
               type="text"
-              placeholder="e.g., 5 kg fertilizer"
+              placeholder="mis. 5 kg pupuk"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Additional Notes (Optional)
+              Catatan tambahan (opsional)
             </label>
             <textarea
               v-model="formData.notes"
               rows="2"
-              placeholder="Any additional information..."
+              placeholder="Informasi tambahan..."
               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
@@ -444,13 +444,13 @@ function closeModal() {
               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700"
               @click="closeModal"
             >
-              Cancel
+              Batal
             </button>
             <button
               type="submit"
               class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
             >
-              Submit Report
+              Kirim laporan
             </button>
           </div>
         </form>
