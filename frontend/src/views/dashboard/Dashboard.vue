@@ -1,7 +1,7 @@
 <script setup>
-import DashboardLayout from "../layouts/DashboardLayout.vue";
-import StatCard from "../components/StatCard.vue";
-import InvestmentChart from "../components/InvestmentChart.vue";
+import DashboardLayout from "../../layouts/DashboardLayout.vue";
+import StatCard from "../../components/StatCard.vue";
+import InvestmentChart from "../../components/investment/InvestmentChart.vue";
 </script>
 
 <template>

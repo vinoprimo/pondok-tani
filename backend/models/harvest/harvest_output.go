@@ -1,7 +1,7 @@
-package models
+package harvest
 
 type HarvestOutput struct {
-	ID        uint    `gorm:"primaryKey"`
+	ID        uint `gorm:"primaryKey"`
 	HarvestID uint
 	Jenis     string
 	Berat     float64
