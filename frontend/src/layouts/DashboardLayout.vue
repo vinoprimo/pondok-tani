@@ -2,7 +2,7 @@
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Bell } from "lucide-vue-next";
-import Sidebar from "../components/Sidebar.vue";
+import Sidebar from "../components/layouts/Sidebar.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -83,11 +83,13 @@ function handleLogout() {
             <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
           </button>
         </div>
-      </div>
+      </header>
+
+      <main class="flex-1 overflow-auto bg-gray-50">
+        <div class="mx-auto w-full max-w-[1400px] px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-8">
+          <router-view />
+        </div>
+      </main>
     </div>
-  </template>
-  
-  <script setup>
-  import Sidebar from "../components/Sidebar.vue";
-  import Topbar from "../components/Topbar.vue";
-  </script>
+  </div>
+</template>
