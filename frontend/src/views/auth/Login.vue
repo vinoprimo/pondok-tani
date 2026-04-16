@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
 import { Sprout, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-vue-next';
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { login, register } from "../../services/auth/auth";
 
 const router = useRouter();
+const route = useRoute();
 
 const props = withDefaults(
   defineProps<{
@@ -18,7 +19,7 @@ const emit = defineEmits<{
   back: [];
 }>();
 
-const role = ref<'investor' | 'admin'>(props.initialRole);
+const role = ref<'investor' | 'mitra' | 'admin'>(props.initialRole);
 const showPassword = ref(false);
 const isRegistering = ref(false);
 const formData = reactive({
@@ -54,6 +55,14 @@ function resetErrors() {
   errors.password = '';
   errors.confirmPassword = '';
   errors.fullName = '';
+}
+
+function syncRegisterModeFromQuery() {
+  const mode = String(route.query.mode || '').toLowerCase();
+  const shouldRegister = mode === 'register' || mode === 'daftar' || mode === '1';
+  if (shouldRegister) {
+    isRegistering.value = true;
+  }
 }
 
 async function handleSubmit(e: Event) {
@@ -173,12 +182,24 @@ async function handleRegister() {
 function toggleRegistering() {
   isRegistering.value = !isRegistering.value;
   resetErrors();
+  role.value = 'investor';
   // Reset form data saat toggle
   formData.email = '';
   formData.password = '';
   formData.confirmPassword = '';
   formData.fullName = '';
 }
+
+onMounted(() => {
+  syncRegisterModeFromQuery();
+});
+
+watch(
+  () => route.query.mode,
+  () => {
+    syncRegisterModeFromQuery();
+  }
+);
 </script>
 
 <template>
@@ -269,11 +290,11 @@ function toggleRegistering() {
               type="button"
               class="flex-1 py-2.5 rounded-lg font-medium transition-all"
               :class="
-                role === 'admin' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                role === 'mitra' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
               "
-              @click="role = 'admin'"
+              @click="role = 'mitra'"
             >
-              Admin
+              Mitra
             </button>
           </div>
 

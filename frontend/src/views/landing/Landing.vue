@@ -3,10 +3,6 @@ import { ArrowRight, Sprout, TrendingUp, Shield, BarChart3, Users } from 'lucide
 import { useRouter } from "vue-router";
 
 const router = useRouter();
-
-const emit = defineEmits<{
-  getStarted: [role: 'investor' | 'admin'];
-}>();
 </script>
 
 <template>
@@ -34,7 +30,7 @@ const emit = defineEmits<{
           <button
             type="button"
             class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-            @click="emit('getStarted', 'investor')"
+            @click="router.push({ path: '/login', query: { mode: 'register' } })"
           >
             Daftar Sekarang
           </button>
@@ -215,7 +211,7 @@ const emit = defineEmits<{
           <button
             type="button"
             class="px-8 py-4 bg-white text-green-600 rounded-xl hover:bg-green-50 transition-colors font-semibold text-lg flex items-center gap-2"
-            @click="emit('getStarted', 'investor')"
+            @click="router.push({ path: '/login', query: { mode: 'register' } })"
           >
             Mulai Sekarang
             <ArrowRight class="w-5 h-5" />
@@ -223,7 +219,7 @@ const emit = defineEmits<{
           <button
             type="button"
             class="px-8 py-4 border-2 border-white text-white rounded-xl hover:bg-white/10 transition-colors font-semibold text-lg"
-            @click="emit('getStarted', 'admin')"
+            @click="router.push('/login')"
           >
             Masuk sebagai admin
           </button>

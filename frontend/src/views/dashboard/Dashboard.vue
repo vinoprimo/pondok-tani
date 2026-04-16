@@ -12,7 +12,7 @@ import {
   Calculator,
 } from "lucide-vue-next";
 
-type UserRole = "investor" | "admin";
+type UserRole = "investor" | "mitra" | "admin";
 
 const userRole = ref<UserRole>(
   (localStorage.getItem("userRole") as UserRole) || "investor"
@@ -20,7 +20,7 @@ const userRole = ref<UserRole>(
 
 onMounted(() => {
   const stored = localStorage.getItem("userRole") as UserRole | null;
-  if (stored === "admin" || stored === "investor") {
+  if (stored === "admin" || stored === "investor" || stored === "mitra") {
     userRole.value = stored;
   }
 });
@@ -235,13 +235,15 @@ function closeModal() {
   <div class="space-y-6">
     <div>
       <h2 class="text-2xl font-semibold text-gray-900">
-        {{ userRole === "admin" ? "Dasbor admin" : "Ringkasan investasi" }}
+        {{ userRole === "admin" ? "Dasbor admin" : userRole === "mitra" ? "Dasbor mitra" : "Ringkasan investasi" }}
       </h2>
       <p class="text-gray-600 mt-1">
         {{
           userRole === "admin"
             ? "Kelola operasional perkebunan vanili Anda"
-            : "Pantau investasi perkebunan vanili Anda"
+            : userRole === "mitra"
+              ? "Pantau aktivitas operasional kebun vanili Anda"
+              : "Pantau investasi perkebunan vanili Anda"
         }}
       </p>
     </div>

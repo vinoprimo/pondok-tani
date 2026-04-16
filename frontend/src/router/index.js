@@ -34,49 +34,49 @@ const routes = [
         path: "",
         name: "dashboard",
         component: () => import("../views/dashboard/Dashboard.vue"),
-        meta: { roles: ["investor", "admin"] },
+        meta: { roles: ["investor", "mitra", "admin"] },
       },
       {
         path: "portfolio",
         name: "dashboard-portfolio",
         component: () => import("../views/investment/InvestmentPortfolio.vue"),
-        meta: { roles: ["investor"] },
+        meta: { roles: ["investor", "mitra"] },
       },
       {
         path: "plants",
         name: "dashboard-plants",
         component: () => import("../views/plant-monitoring/PlantMonitoring.vue"),
-        meta: { roles: ["investor", "admin"] },
+        meta: { roles: ["investor", "mitra", "admin"] },
       },
       {
         path: "maintenance",
         name: "dashboard-maintenance",
         component: () => import("../views/plant-monitoring/MaintenanceActivities.vue"),
-        meta: { roles: ["investor"] },
+        meta: { roles: ["investor", "mitra"] },
       },
       {
         path: "reminder-settings",
         name: "dashboard-reminder-settings",
         component: () => import("../views/notifications/ReminderSettings.vue"),
-        meta: { roles: ["investor"] },
+        meta: { roles: ["investor", "mitra"] },
       },
       {
         path: "financials",
         name: "dashboard-financials",
         component: () => import("../views/investment/FinancialProjections.vue"),
-        meta: { roles: ["investor", "admin"] },
+        meta: { roles: ["investor", "mitra", "admin"] },
       },
       {
         path: "reports",
         name: "dashboard-reports",
         component: () => import("../views/reporting/Reports.vue"),
-        meta: { roles: ["investor", "admin"] },
+        meta: { roles: ["investor", "mitra", "admin"] },
       },
       {
         path: "notifications",
         name: "dashboard-notifications",
         component: () => import("../views/notifications/Notifications.vue"),
-        meta: { roles: ["investor", "admin"] },
+        meta: { roles: ["investor", "mitra", "admin"] },
       },
       {
         path: "investors",
@@ -115,6 +115,7 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("userRole");
   const isAuth = Boolean(token);
+  const normalizedRole = role === "admin" ? "admin" : role === "mitra" ? "mitra" : "investor";
 
   if (to.matched.some((record) => record.meta.requiresAuth) && !isAuth) {
     return next({ name: "login" });
@@ -127,7 +128,7 @@ router.beforeEach((to, from, next) => {
   const roleRule = to.matched.find((record) => Array.isArray(record.meta?.roles));
   if (roleRule) {
     const allowedRoles = roleRule.meta.roles;
-    if (!role || !allowedRoles.includes(role)) {
+    if (!allowedRoles.includes(normalizedRole)) {
       return next({ name: "dashboard" });
     }
   }

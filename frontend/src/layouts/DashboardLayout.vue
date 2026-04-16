@@ -7,12 +7,22 @@ import Sidebar from "../components/layouts/Sidebar.vue";
 const router = useRouter();
 const route = useRoute();
 
-const userRole = ref<"investor" | "admin">(
-  (localStorage.getItem("userRole") as "investor" | "admin") || "investor"
+const userRole = ref<"investor" | "mitra" | "admin">(
+  (localStorage.getItem("userRole") as "investor" | "mitra" | "admin") || "investor"
 );
 
-const roleAllowedViews: Record<"investor" | "admin", string[]> = {
+const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
   investor: [
+    "dashboard",
+    "portfolio",
+    "plants",
+    "maintenance",
+    "reminder-settings",
+    "financials",
+    "reports",
+    "notifications",
+  ],
+  mitra: [
     "dashboard",
     "portfolio",
     "plants",
@@ -56,7 +66,11 @@ const activeView = computed(() => {
 });
 
 const pageTitle = computed(() =>
-  userRole.value === "admin" ? "Dashboard Admin" : "Portal Investor"
+  userRole.value === "admin"
+    ? "Dashboard Admin"
+    : userRole.value === "mitra"
+      ? "Portal Mitra"
+      : "Portal Investor"
 );
 
 function handleSetActiveView(view: string) {
@@ -99,8 +113,8 @@ function ensureAllowedCurrentRoute() {
 }
 
 onMounted(() => {
-  const storedRole = localStorage.getItem("userRole") as "investor" | "admin" | null;
-  if (storedRole === "investor" || storedRole === "admin") {
+  const storedRole = localStorage.getItem("userRole") as "investor" | "mitra" | "admin" | null;
+  if (storedRole === "investor" || storedRole === "mitra" || storedRole === "admin") {
     userRole.value = storedRole;
   }
   ensureAllowedCurrentRoute();

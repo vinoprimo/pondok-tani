@@ -17,7 +17,7 @@ import {
 
 const props = defineProps<{
   activeView: string;
-  userRole: 'investor' | 'admin';
+  userRole: 'investor' | 'mitra' | 'admin';
 }>();
 
 const emit = defineEmits<{
@@ -51,6 +51,12 @@ const adminMenuItems = [
 const menuItems = computed(() =>
   props.userRole === 'admin' ? adminMenuItems : investorMenuItems
 );
+
+const roleLabel = computed(() => {
+  if (props.userRole === 'admin') return 'Panel Admin';
+  if (props.userRole === 'mitra') return 'Portal Mitra';
+  return 'Portal Investor';
+});
 </script>
 
 <template>
@@ -62,9 +68,7 @@ const menuItems = computed(() =>
         </div>
         <div>
           <h1 class="font-semibold text-gray-900">Omah Vanili</h1>
-          <p class="text-xs text-gray-500">
-            {{ userRole === 'admin' ? 'Panel Admin' : 'Portal Investor' }}
-          </p>
+          <p class="text-xs text-gray-500">{{ roleLabel }}</p>
         </div>
       </div>
     </div>
