@@ -2,7 +2,7 @@
 import { ref, reactive } from 'vue';
 import { Sprout, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-vue-next';
 import { useRouter } from "vue-router";
-import { login } from "../../services/auth/auth";
+import { login, register } from "../../services/auth/auth";
 
 const router = useRouter();
 
@@ -79,30 +79,82 @@ async function handleSubmit(e: Event) {
     hasError = true;
   }
 
+  if (isRegistering.value) {
+    if (!formData.fullName) {
+      newErrors.fullName = 'Nama lengkap harus diisi';
+      hasError = true;
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Konfirmasi password harus diisi';
+      hasError = true;
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Password tidak cocok';
+      hasError = true;
+    }
+  }
+
   if (hasError) {
     Object.assign(errors, newErrors);
     return;
   }
 
   try {
-    console.log("LOGIN REQUEST...");
-
-    const res = await login({
-      email: formData.email,
-      password: formData.password,
-    });
-
-    console.log("LOGIN SUCCESS:", res);
-
-    localStorage.setItem("token", res.data.token);
-    localStorage.setItem("userRole", role.value);
-
-    router.push("/dashboard");
-
+    if (isRegistering.value) {
+      await handleRegister();
+    } else {
+      await handleLogin();
+    }
   } catch (err) {
-    console.error("LOGIN ERROR:", err);
-    errors.email = "Email atau password salah";
+    console.error("AUTH ERROR:", err);
+    if (isRegistering.value) {
+      errors.email = "Email sudah terdaftar atau terjadi kesalahan";
+    } else {
+      errors.email = "Email atau password salah";
+    }
   }
+}
+
+async function handleLogin() {
+  console.log("LOGIN REQUEST...");
+
+  const res = await login({
+    email: formData.email,
+    password: formData.password,
+  });
+
+  console.log("LOGIN SUCCESS:", res);
+
+  localStorage.setItem("token", res.data.token);
+  localStorage.setItem("userRole", role.value);
+
+  router.push("/dashboard");
+}
+
+async function handleRegister() {
+  console.log("REGISTER REQUEST...");
+
+  const res = await register({
+    name: formData.fullName,
+    email: formData.email,
+    password: formData.password,
+    role: role.value,
+  });
+
+  console.log("REGISTER SUCCESS:", res);
+
+  // Auto login setelah register
+  const loginRes = await login({
+    email: formData.email,
+    password: formData.password,
+  });
+
+  console.log("AUTO LOGIN SUCCESS:", loginRes);
+
+  localStorage.setItem("token", loginRes.data.token);
+  localStorage.setItem("userRole", role.value);
+
+  router.push("/dashboard");
 }
 
 function fillDemoCredentials() {
@@ -114,6 +166,11 @@ function fillDemoCredentials() {
 function toggleRegistering() {
   isRegistering.value = !isRegistering.value;
   resetErrors();
+  // Reset form data saat toggle
+  formData.email = '';
+  formData.password = '';
+  formData.confirmPassword = '';
+  formData.fullName = '';
 }
 </script>
 

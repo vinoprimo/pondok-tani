@@ -6,7 +6,14 @@ import (
 
 	"pondok-tani-backend/config"
 	authmodels "pondok-tani-backend/models/auth"
+	coremodels "pondok-tani-backend/models/core"
 	harvestmodels "pondok-tani-backend/models/harvest"
+	maintenancemodels "pondok-tani-backend/models/maintenance"
+	notificationmodels "pondok-tani-backend/models/notification"
+	postharvestmodels "pondok-tani-backend/models/postharvest"
+	pricemodels "pondok-tani-backend/models/price"
+	salesmodels "pondok-tani-backend/models/sales"
+	warehousemodels "pondok-tani-backend/models/warehouse"
 	"pondok-tani-backend/routes"
 
 	"github.com/gin-contrib/cors"
@@ -16,7 +23,26 @@ import (
 
 func migrateDB() {
 	config.ConnectDB()
-	err := config.DB.AutoMigrate(&authmodels.User{}, &harvestmodels.Harvest{}, &harvestmodels.HarvestOutput{}, &harvestmodels.StockMovement{})
+	err := config.DB.AutoMigrate(
+		&authmodels.User{},
+		&coremodels.InvestmentPackage{},
+		&coremodels.Investment{},
+		&coremodels.PlantBatch{},
+		&maintenancemodels.MaintenanceSchedule{},
+		&maintenancemodels.MaintenanceActivity{},
+		&harvestmodels.Harvest{},
+		&harvestmodels.HarvestOutput{},
+		&postharvestmodels.DryingProcess{},
+		&postharvestmodels.GradingBatch{},
+		&postharvestmodels.Grade{},
+		&postharvestmodels.GradingDetail{},
+		&warehousemodels.WarehouseStock{},
+		&warehousemodels.StockMovement{},
+		&salesmodels.SalesOrder{},
+		&salesmodels.SalesDetail{},
+		&notificationmodels.Notification{},
+		&pricemodels.NationalPrice{},
+	)
 	if err != nil {
 		panic(fmt.Sprintf("failed to migrate database: %v", err))
 	}
@@ -32,7 +58,26 @@ func main() {
 	}
 
 	config.ConnectDB()
-	config.DB.AutoMigrate(&authmodels.User{}, &harvestmodels.Harvest{}, &harvestmodels.HarvestOutput{}, &harvestmodels.StockMovement{})
+	config.DB.AutoMigrate(
+		&authmodels.User{},
+		&coremodels.InvestmentPackage{},
+		&coremodels.Investment{},
+		&coremodels.PlantBatch{},
+		&maintenancemodels.MaintenanceSchedule{},
+		&maintenancemodels.MaintenanceActivity{},
+		&harvestmodels.Harvest{},
+		&harvestmodels.HarvestOutput{},
+		&postharvestmodels.DryingProcess{},
+		&postharvestmodels.GradingBatch{},
+		&postharvestmodels.Grade{},
+		&postharvestmodels.GradingDetail{},
+		&warehousemodels.WarehouseStock{},
+		&warehousemodels.StockMovement{},
+		&salesmodels.SalesOrder{},
+		&salesmodels.SalesDetail{},
+		&notificationmodels.Notification{},
+		&pricemodels.NationalPrice{},
+	)
 
 	r := gin.Default()
 
@@ -50,5 +95,6 @@ func main() {
 		})
 	})
 	routes.AuthRoutes(r)
+	routes.HarvestRoutes(r)
 	r.Run(":8000")
 }

@@ -3,6 +3,7 @@ package auth
 import (
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"pondok-tani-backend/config"
@@ -14,8 +15,31 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type registerRequest struct {
+	Name     string `json:"name" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
+	Role     string `json:"role"`
+}
+
+type loginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+
+func normalizeRole(role string) string {
+	normalized := strings.ToLower(strings.TrimSpace(role))
+	if normalized == "" {
+		return "investor"
+	}
+	if normalized != "admin" && normalized != "investor" && normalized != "mitra" {
+		return "investor"
+	}
+	return normalized
+}
+
 func Register(c *gin.Context) {
-	var input authmodels.User
+	var input registerRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
@@ -24,10 +48,15 @@ func Register(c *gin.Context) {
 
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(input.Password), 14)
 
-	input.ID = uuid.New().String()
-	input.Password = string(hashedPassword)
+	user := authmodels.User{
+		ID:       uuid.New().String(),
+		Name:     input.Name,
+		Email:    input.Email,
+		Password: string(hashedPassword),
+		Role:     normalizeRole(input.Role),
+	}
 
-	if err := config.DB.Create(&input).Error; err != nil {
+	if err := config.DB.Create(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register"})
 		return
 	}
@@ -36,7 +65,7 @@ func Register(c *gin.Context) {
 }
 
 func Login(c *gin.Context) {
-	var input authmodels.User
+	var input loginRequest
 	var user authmodels.User
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -58,6 +87,7 @@ func Login(c *gin.Context) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
+		"role":    user.Role,
 		"exp":     time.Now().Add(time.Hour * 24).Unix(),
 	})
 
