@@ -26,8 +26,8 @@ function handleSave() {
 <template>
   <div class="space-y-6">
     <div>
-      <h2 class="text-2xl font-semibold text-gray-900">Reminder Settings</h2>
-      <p class="text-gray-600 mt-1">Configure your maintenance activity reminders</p>
+      <h2 class="text-2xl font-semibold text-gray-900">Pengaturan pengingat</h2>
+      <p class="text-gray-600 mt-1">Atur pengingat aktivitas perawatan Anda</p>
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
@@ -37,9 +37,9 @@ function handleSave() {
             <Mail class="w-6 h-6 text-blue-600" />
           </div>
           <div>
-            <h3 class="text-lg font-semibold text-gray-900">Email Reminders</h3>
+            <h3 class="text-lg font-semibold text-gray-900">Pengingat email</h3>
             <p class="text-sm text-gray-600 mt-1">
-              Receive email notifications for upcoming maintenance tasks
+              Terima email untuk tugas perawatan yang akan datang
             </p>
           </div>
         </div>
@@ -61,9 +61,9 @@ function handleSave() {
             <Smartphone class="w-6 h-6 text-green-600" />
           </div>
           <div>
-            <h3 class="text-lg font-semibold text-gray-900">Push Notifications</h3>
+            <h3 class="text-lg font-semibold text-gray-900">Notifikasi push</h3>
             <p class="text-sm text-gray-600 mt-1">
-              Get instant push notifications on your device
+              Dapatkan notifikasi instan di perangkat Anda
             </p>
           </div>
         </div>
@@ -84,9 +84,9 @@ function handleSave() {
           <Clock class="w-6 h-6 text-orange-600" />
         </div>
         <div class="flex-1">
-          <h3 class="text-lg font-semibold text-gray-900 mb-1">Reminder Timing</h3>
+          <h3 class="text-lg font-semibold text-gray-900 mb-1">Waktu pengingat</h3>
           <p class="text-sm text-gray-600 mb-4">
-            Choose when to receive reminders before the due date
+            Pilih kapan ingin diingatkan sebelum jatuh tempo
           </p>
           <div class="space-y-3">
             <label
@@ -100,8 +100,8 @@ function handleSave() {
                 class="w-4 h-4 text-green-600 focus:ring-green-500"
               />
               <div>
-                <p class="font-medium text-gray-900">3 days before</p>
-                <p class="text-sm text-gray-500">Early warning for better planning</p>
+                <p class="font-medium text-gray-900">3 hari sebelumnya</p>
+                <p class="text-sm text-gray-500">Peringatan dini untuk perencanaan</p>
               </div>
             </label>
 
@@ -116,8 +116,8 @@ function handleSave() {
                 class="w-4 h-4 text-green-600 focus:ring-green-500"
               />
               <div>
-                <p class="font-medium text-gray-900">1 day before</p>
-                <p class="text-sm text-gray-500">Standard reminder timing</p>
+                <p class="font-medium text-gray-900">1 hari sebelumnya</p>
+                <p class="text-sm text-gray-500">Waktu pengingat standar</p>
               </div>
             </label>
 
@@ -132,8 +132,8 @@ function handleSave() {
                 class="w-4 h-4 text-green-600 focus:ring-green-500"
               />
               <div>
-                <p class="font-medium text-gray-900">Same day (morning)</p>
-                <p class="text-sm text-gray-500">Last minute reminder</p>
+                <p class="font-medium text-gray-900">Hari yang sama (pagi)</p>
+                <p class="text-sm text-gray-500">Pengingat mendesak</p>
               </div>
             </label>
           </div>
@@ -155,26 +155,25 @@ function handleSave() {
       >
         <template v-if="saved">
           <CheckCircle class="w-5 h-5" />
-          Settings Saved!
+          Pengaturan disimpan!
         </template>
         <template v-else>
           <Bell class="w-5 h-5" />
-          Save Settings
+          Simpan pengaturan
         </template>
       </button>
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Notification Preview</h3>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Pratinjau notifikasi</h3>
       <div class="space-y-3">
         <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div class="flex items-start gap-3">
             <Bell class="w-5 h-5 text-blue-600 mt-0.5" />
             <div>
-              <p class="font-medium text-blue-900">Maintenance task due tomorrow</p>
+              <p class="font-medium text-blue-900">Tugas perawatan jatuh tempo besok</p>
               <p class="text-sm text-blue-700 mt-1">
-                Your watering activity for BATCH-045 is scheduled for tomorrow. Don't forget to
-                submit your report!
+                Aktivitas penyiraman untuk BATCH-045 dijadwalkan besok. Jangan lupa kirim laporan Anda!
               </p>
             </div>
           </div>
@@ -184,9 +183,9 @@ function handleSave() {
           <div class="flex items-start gap-3">
             <CheckCircle class="w-5 h-5 text-green-600 mt-0.5" />
             <div>
-              <p class="font-medium text-green-900">Your activity report has been verified</p>
+              <p class="font-medium text-green-900">Laporan aktivitas Anda telah diverifikasi</p>
               <p class="text-sm text-green-700 mt-1">
-                Admin User has approved your pruning activity (MA-003). Great work!
+                Admin telah menyetujui aktivitas pemangkasan Anda (MA-003). Kerja bagus!
               </p>
             </div>
           </div>
@@ -196,9 +195,9 @@ function handleSave() {
           <div class="flex items-start gap-3">
             <Bell class="w-5 h-5 text-red-600 mt-0.5" />
             <div>
-              <p class="font-medium text-red-900">Your activity report was rejected</p>
+              <p class="font-medium text-red-900">Laporan aktivitas Anda ditolak</p>
               <p class="text-sm text-red-700 mt-1">
-                Reason: Photo quality insufficient - please resubmit with clearer images
+                Alasan: Kualitas foto kurang memadai — mohon kirim ulang dengan gambar yang lebih jelas
               </p>
             </div>
           </div>

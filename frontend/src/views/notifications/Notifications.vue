@@ -8,116 +8,116 @@ const notifications = [
   {
     id: 1,
     type: 'success',
-    title: 'Monthly return deposited',
-    message: 'Your June return of $918 has been deposited to your account.',
-    time: '2 hours ago',
+    title: 'Imbal bulanan telah dicairkan',
+    message: 'Imbal Juni sebesar $918 telah masuk ke rekening Anda.',
+    time: '2 jam lalu',
     read: false,
     category: 'payment',
   },
   {
     id: 2,
     type: 'info',
-    title: 'Plant inspection scheduled',
-    message: 'Routine health inspection scheduled for Plant #001 on January 25, 2026.',
-    time: '5 hours ago',
+    title: 'Inspeksi tanaman dijadwalkan',
+    message: 'Inspeksi kesehatan rutin untuk Tanaman #001 dijadwalkan 25 Januari 2026.',
+    time: '5 jam lalu',
     read: false,
     category: 'plant',
   },
   {
     id: 3,
     type: 'success',
-    title: 'New growth stage reached',
-    message: 'Plant #001 has entered the flowering stage. Expected pod development in 3 months.',
-    time: '1 day ago',
+    title: 'Tahap pertumbuhan baru tercapai',
+    message: 'Tanaman #001 memasuki fase berbunga. Perkiraan pembentukan polong dalam 3 bulan.',
+    time: '1 hari lalu',
     read: true,
     category: 'plant',
   },
   {
     id: 4,
     type: 'alert',
-    title: 'Weather advisory',
-    message: 'Heavy rainfall expected in cultivation area. Monitoring drainage systems.',
-    time: '1 day ago',
+    title: 'Peringatan cuaca',
+    message: 'Hujan lebat diperkirakan di area budidaya. Memantau sistem drainase.',
+    time: '1 hari lalu',
     read: true,
     category: 'alert',
   },
   {
     id: 5,
     type: 'info',
-    title: 'Quarterly report available',
-    message: 'Your Q4 2025 investment report is now available for download.',
-    time: '2 days ago',
+    title: 'Laporan kuartal tersedia',
+    message: 'Laporan investasi Q4 2025 Anda siap diunduh.',
+    time: '2 hari lalu',
     read: true,
     category: 'report',
   },
   {
     id: 6,
     type: 'success',
-    title: 'Harvest completed',
-    message: 'Batch #28 harvest completed successfully. Yield: 142kg of premium vanilla beans.',
-    time: '3 days ago',
+    title: 'Panen selesai',
+    message: 'Panen batch #28 selesai. Hasil: 142 kg biji vanili premium.',
+    time: '3 hari lalu',
     read: true,
     category: 'plant',
   },
   {
     id: 7,
     type: 'info',
-    title: 'ROI update',
-    message: 'Your portfolio ROI increased to 24.5% this month, up from 23.2%.',
-    time: '1 week ago',
+    title: 'Pembaruan ROI',
+    message: 'ROI portofolio Anda naik menjadi 24,5% bulan ini (sebelumnya 23,2%).',
+    time: '1 minggu lalu',
     read: true,
     category: 'investment',
   },
   {
     id: 8,
     type: 'alert',
-    title: 'Maintenance scheduled',
-    message: 'Irrigation system maintenance scheduled for Sector A on February 1.',
-    time: '1 week ago',
+    title: 'Perawatan dijadwalkan',
+    message: 'Perawatan sistem irigasi di Sektor A dijadwalkan 1 Februari.',
+    time: '1 minggu lalu',
     read: true,
     category: 'alert',
   },
 ];
 
 const filterItems = [
-  { id: 'all', label: 'All' },
-  { id: 'unread', label: 'Unread' },
-  { id: 'plant', label: 'Plant Updates' },
-  { id: 'payment', label: 'Payments' },
-  { id: 'alert', label: 'Alerts' },
-  { id: 'report', label: 'Reports' },
-  { id: 'investment', label: 'Investment' },
+  { id: 'all', label: 'Semua' },
+  { id: 'unread', label: 'Belum dibaca' },
+  { id: 'plant', label: 'Pembaruan tanaman' },
+  { id: 'payment', label: 'Pembayaran' },
+  { id: 'alert', label: 'Peringatan' },
+  { id: 'report', label: 'Laporan' },
+  { id: 'investment', label: 'Investasi' },
 ];
 
 const preferenceRows = [
   {
-    label: 'Payment notifications',
-    description: 'Get notified when returns are deposited',
+    label: 'Notifikasi pembayaran',
+    description: 'Diberitahu saat imbal hasil dicairkan',
     enabled: true,
   },
   {
-    label: 'Plant updates',
-    description: 'Growth stages and health status changes',
+    label: 'Pembaruan tanaman',
+    description: 'Perubahan fase pertumbuhan dan status kesehatan',
     enabled: true,
   },
   {
-    label: 'Reports available',
-    description: 'When new reports are ready for download',
+    label: 'Laporan tersedia',
+    description: 'Saat laporan baru siap diunduh',
     enabled: true,
   },
   {
-    label: 'Weather alerts',
-    description: 'Important weather advisories for your plants',
+    label: 'Peringatan cuaca',
+    description: 'Informasi cuaca penting untuk tanaman Anda',
     enabled: true,
   },
   {
-    label: 'Investment insights',
-    description: 'ROI updates and market trends',
+    label: 'Wawasan investasi',
+    description: 'Pembaruan ROI dan tren pasar',
     enabled: false,
   },
   {
-    label: 'Marketing emails',
-    description: 'News and promotional content',
+    label: 'Email pemasaran',
+    description: 'Berita dan konten promosi',
     enabled: false,
   },
 ];
@@ -146,18 +146,18 @@ function getIconBg(type: string) {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-2xl font-semibold text-gray-900">Notifications</h2>
-        <p class="text-gray-600 mt-1">Stay updated with your investment activities</p>
+        <h2 class="text-2xl font-semibold text-gray-900">Notifikasi</h2>
+        <p class="text-gray-600 mt-1">Ikuti perkembangan aktivitas investasi Anda</p>
       </div>
       <div class="flex items-center gap-3">
         <button type="button" class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm">
-          Mark all as read
+          Tandai semua dibaca
         </button>
         <button
           type="button"
           class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
         >
-          Settings
+          Pengaturan
         </button>
       </div>
     </div>
@@ -166,7 +166,7 @@ function getIconBg(type: string) {
       <div class="bg-white rounded-xl border border-gray-200 p-4">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-600">Unread</p>
+            <p class="text-sm text-gray-600">Belum dibaca</p>
             <p class="text-2xl font-semibold text-gray-900 mt-1">{{ unreadCount }}</p>
           </div>
           <div class="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
@@ -178,7 +178,7 @@ function getIconBg(type: string) {
       <div class="bg-white rounded-xl border border-gray-200 p-4">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-600">Plant Updates</p>
+            <p class="text-sm text-gray-600">Pembaruan tanaman</p>
             <p class="text-2xl font-semibold text-gray-900 mt-1">3</p>
           </div>
           <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
@@ -190,7 +190,7 @@ function getIconBg(type: string) {
       <div class="bg-white rounded-xl border border-gray-200 p-4">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-600">Alerts</p>
+            <p class="text-sm text-gray-600">Peringatan</p>
             <p class="text-2xl font-semibold text-gray-900 mt-1">2</p>
           </div>
           <div class="w-12 h-12 bg-yellow-50 rounded-lg flex items-center justify-center">
@@ -202,7 +202,7 @@ function getIconBg(type: string) {
       <div class="bg-white rounded-xl border border-gray-200 p-4">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-600">Financial</p>
+            <p class="text-sm text-gray-600">Keuangan</p>
             <p class="text-2xl font-semibold text-gray-900 mt-1">2</p>
           </div>
           <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -277,7 +277,7 @@ function getIconBg(type: string) {
                 type="button"
                 class="text-sm text-green-600 hover:text-green-700 font-medium"
               >
-                Mark as read
+                Tandai dibaca
               </button>
             </div>
           </div>
@@ -286,7 +286,7 @@ function getIconBg(type: string) {
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 class="font-semibold text-gray-900 mb-4">Notification Preferences</h3>
+      <h3 class="font-semibold text-gray-900 mb-4">Preferensi notifikasi</h3>
       <div class="space-y-4">
         <div
           v-for="(pref, index) in preferenceRows"

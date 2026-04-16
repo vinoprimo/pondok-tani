@@ -13,7 +13,7 @@ const stockByGrade = [
 const stockMovements = [
   {
     id: 'MOV-001',
-    source: 'Harvest - BATCH-045',
+    source: 'Panen - BATCH-045',
     type: 'In' as const,
     grade: 'A',
     quantityIn: 25,
@@ -23,7 +23,7 @@ const stockMovements = [
   },
   {
     id: 'MOV-002',
-    source: 'Sale - Premium Export',
+    source: 'Penjualan - Ekspor Premium',
     type: 'Out' as const,
     grade: 'A',
     quantityIn: 0,
@@ -33,7 +33,7 @@ const stockMovements = [
   },
   {
     id: 'MOV-003',
-    source: 'Harvest - BATCH-038',
+    source: 'Panen - BATCH-038',
     type: 'In' as const,
     grade: 'B',
     quantityIn: 35,
@@ -43,7 +43,7 @@ const stockMovements = [
   },
   {
     id: 'MOV-004',
-    source: 'Sale - Local Distributor',
+    source: 'Penjualan - Distributor Lokal',
     type: 'Out' as const,
     grade: 'B',
     quantityIn: 0,
@@ -53,7 +53,7 @@ const stockMovements = [
   },
   {
     id: 'MOV-005',
-    source: 'Harvest - BATCH-052',
+    source: 'Panen - BATCH-052',
     type: 'In' as const,
     grade: 'A',
     quantityIn: 30,
@@ -87,55 +87,55 @@ function barPct(value: number) {
 <template>
   <div class="space-y-6">
     <div>
-      <h2 class="text-2xl font-semibold text-gray-900">Warehouse Stock</h2>
-      <p class="text-gray-600 mt-1">Monitor vanilla stock levels and movements</p>
+      <h2 class="text-2xl font-semibold text-gray-900">Stok Gudang</h2>
+      <p class="text-gray-600 mt-1">Pantau level stok vanili dan pergerakannya</p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-sm text-gray-600">Total Stock</p>
+          <p class="text-sm text-gray-600">Total stok</p>
           <Package class="w-5 h-5 text-blue-600" />
         </div>
         <p class="text-2xl font-semibold text-gray-900">338 kg</p>
-        <p class="text-xs text-gray-500 mt-1">All grades combined</p>
+        <p class="text-xs text-gray-500 mt-1">Semua mutu digabung</p>
       </div>
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-sm text-gray-600">Total Value</p>
+          <p class="text-sm text-gray-600">Nilai total</p>
           <Package class="w-5 h-5 text-green-600" />
         </div>
         <p class="text-2xl font-semibold text-green-600">$1.42M</p>
-        <p class="text-xs text-gray-500 mt-1">Est. market value</p>
+        <p class="text-xs text-gray-500 mt-1">Perkiraan nilai pasar</p>
       </div>
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-sm text-gray-600">Stock In (MTD)</p>
+          <p class="text-sm text-gray-600">Masuk gudang (MTD)</p>
           <TrendingUp class="w-5 h-5 text-green-600" />
         </div>
         <p class="text-2xl font-semibold text-gray-900">142 kg</p>
-        <p class="text-xs text-green-600 mt-1">+12% vs last month</p>
+        <p class="text-xs text-green-600 mt-1">+12% vs bulan lalu</p>
       </div>
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-sm text-gray-600">Stock Out (MTD)</p>
+          <p class="text-sm text-gray-600">Keluar gudang (MTD)</p>
           <TrendingDown class="w-5 h-5 text-orange-600" />
         </div>
         <p class="text-2xl font-semibold text-gray-900">105 kg</p>
-        <p class="text-xs text-orange-600 mt-1">-5% vs last month</p>
+        <p class="text-xs text-orange-600 mt-1">-5% vs bulan lalu</p>
       </div>
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Stock by Grade</h3>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Stok per mutu</h3>
       <div class="space-y-4">
         <div v-for="item in stockByGrade" :key="item.grade" class="space-y-2">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <span class="font-medium text-gray-900 w-16">Grade {{ item.grade }}</span>
+              <span class="font-medium text-gray-900 w-16">Mutu {{ item.grade }}</span>
               <div
                 class="relative flex-1 h-8 bg-gray-100 rounded-lg overflow-hidden"
                 style="width: 300px"
@@ -160,13 +160,13 @@ function barPct(value: number) {
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 class="text-lg font-semibold text-gray-900 mb-4">Stock Movement Trend</h3>
+      <h3 class="text-lg font-semibold text-gray-900 mb-4">Tren pergerakan stok</h3>
       <p class="text-xs text-gray-500 mb-2 flex gap-4">
         <span class="inline-flex items-center gap-1">
-          <span class="inline-block w-3 h-3 rounded-sm bg-[#10b981]" /> Stock In (kg)
+          <span class="inline-block w-3 h-3 rounded-sm bg-[#10b981]" /> Masuk (kg)
         </span>
         <span class="inline-flex items-center gap-1">
-          <span class="inline-block w-3 h-3 rounded-sm bg-[#f59e0b]" /> Stock Out (kg)
+          <span class="inline-block w-3 h-3 rounded-sm bg-[#f59e0b]" /> Keluar (kg)
         </span>
       </p>
       <div class="w-full h-[300px] flex flex-col">
@@ -179,7 +179,7 @@ function barPct(value: number) {
             <div
               class="flex gap-1 items-end justify-center w-full"
               style="height: 220px"
-              :title="`${m.month}: In ${m.stockIn} kg, Out ${m.stockOut} kg`"
+              :title="`${m.month}: Masuk ${m.stockIn} kg, Keluar ${m.stockOut} kg`"
             >
               <div
                 class="w-[28%] max-w-5 rounded-t-md bg-[#10b981] transition-all"
@@ -198,20 +198,20 @@ function barPct(value: number) {
 
     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">Stock Movement History</h3>
-        <p class="text-sm text-gray-600 mt-1">Recent stock in and out transactions</p>
+        <h3 class="text-lg font-semibold text-gray-900">Riwayat pergerakan stok</h3>
+        <p class="text-sm text-gray-600 mt-1">Transaksi masuk dan keluar gudang terbaru</p>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Movement ID</th>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Source</th>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Grade</th>
-              <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Quantity In</th>
-              <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Quantity Out</th>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Date</th>
-              <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Reference</th>
+              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">ID pergerakan</th>
+              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Sumber</th>
+              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Mutu</th>
+              <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Jumlah masuk</th>
+              <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Jumlah keluar</th>
+              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Tanggal</th>
+              <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Referensi</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
@@ -228,7 +228,7 @@ function barPct(value: number) {
                 <span
                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
                 >
-                  Grade {{ movement.grade }}
+                  Mutu {{ movement.grade }}
                 </span>
               </td>
               <td class="px-6 py-4 text-center">

@@ -1,18 +1,95 @@
+<script setup lang="ts">
+import { computed, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { Bell } from "lucide-vue-next";
+import Sidebar from "../components/layouts/Sidebar.vue";
+
+const router = useRouter();
+const route = useRoute();
+
+const userRole = ref<"investor" | "admin">(
+  (localStorage.getItem("userRole") as "investor" | "admin") || "investor"
+);
+
+const activeView = computed(() => {
+  if (route.path === "/dashboard") return "dashboard";
+
+  const matchMap: Record<string, string> = {
+    "/dashboard/portfolio": "portfolio",
+    "/dashboard/plants": "plants",
+    "/dashboard/maintenance": "maintenance",
+    "/dashboard/reminder-settings": "reminder-settings",
+    "/dashboard/financials": "financials",
+    "/dashboard/reports": "reports",
+    "/dashboard/notifications": "notifications",
+    "/dashboard/investors": "investors",
+    "/dashboard/maintenance-validation": "maintenance-validation",
+    "/dashboard/harvest-sales": "harvest-sales",
+    "/dashboard/warehouse": "warehouse",
+  };
+
+  return matchMap[route.path] || "dashboard";
+});
+
+const pageTitle = computed(() =>
+  userRole.value === "admin" ? "Dashboard Admin" : "Portal Investor"
+);
+
+function handleSetActiveView(view: string) {
+  const routeMap: Record<string, string> = {
+    dashboard: "/dashboard",
+    portfolio: "/dashboard/portfolio",
+    plants: "/dashboard/plants",
+    maintenance: "/dashboard/maintenance",
+    "reminder-settings": "/dashboard/reminder-settings",
+    financials: "/dashboard/financials",
+    reports: "/dashboard/reports",
+    notifications: "/dashboard/notifications",
+    investors: "/dashboard/investors",
+    "maintenance-validation": "/dashboard/maintenance-validation",
+    "harvest-sales": "/dashboard/harvest-sales",
+    warehouse: "/dashboard/warehouse",
+  };
+
+  router.push(routeMap[view] || "/dashboard");
+}
+
+function handleLogout() {
+  localStorage.removeItem("token");
+  router.push("/login");
+}
+</script>
+
 <template>
-    <div class="flex h-screen bg-gray-50">
-      <Sidebar />
-  
-      <div class="flex-1 flex flex-col">
-        <Topbar />
-  
-        <div class="p-6 overflow-y-auto">
-          <slot />
+  <div class="flex h-screen bg-gray-50">
+    <Sidebar
+      :active-view="activeView"
+      :user-role="userRole"
+      @set-active-view="handleSetActiveView"
+      @logout="handleLogout"
+    />
+
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <header class="bg-white border-b border-gray-200 px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-xl font-semibold text-gray-900">{{ pageTitle }}</h1>
+            <p class="text-sm text-gray-600 mt-0.5">
+              Selamat datang kembali! Berikut perkembangan terkini perkebunan vanili Anda.
+            </p>
+          </div>
+          <button type="button" class="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <Bell class="w-6 h-6 text-gray-600" />
+            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+          </button>
         </div>
-      </div>
+      </header>
+
+      <main class="flex-1 overflow-auto bg-gray-50">
+        <div class="mx-auto w-full max-w-[1400px] px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-8">
+          <router-view />
+        </div>
+      </main>
     </div>
-  </template>
-  
-  <script setup>
-  import Sidebar from "../components/layouts/Sidebar.vue";
-  import Topbar from "../components/layouts/Topbar.vue";
-  </script>
+  </div>
+</template>

@@ -93,7 +93,7 @@ const emit = defineEmits<{
           <div class="bg-gradient-to-br from-green-100 to-green-50 rounded-3xl p-8 shadow-2xl">
             <img
               src="https://images.unsplash.com/photo-1637922808382-0e5930886159?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2YW5pbGxhJTIwcGxhbnRhdGlvbiUyMGZhcm0lMjBhZ3JpY3VsdHVyZXxlbnwxfHx8fDE3NzQ4NDIxNzJ8MA&ixlib=rb-4.1.0&q=80&w=1080"
-              alt="Vanilla Plantation"
+              alt="Perkebunan vanili"
               class="rounded-2xl shadow-lg w-full h-96 object-cover"
             />
             <div class="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
@@ -225,7 +225,7 @@ const emit = defineEmits<{
             class="px-8 py-4 border-2 border-white text-white rounded-xl hover:bg-white/10 transition-colors font-semibold text-lg"
             @click="emit('getStarted', 'admin')"
           >
-            Login Admin
+            Masuk sebagai admin
           </button>
         </div>
       </div>
@@ -276,7 +276,7 @@ const emit = defineEmits<{
         </div>
 
         <div class="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
-          <p>&copy; 2024 Omah Vanili Investment System. Semua hak dilindungi.</p>
+          <p>&copy; 2024 Sistem Investasi Omah Vanili. Semua hak dilindungi.</p>
         </div>
       </div>
     </footer>

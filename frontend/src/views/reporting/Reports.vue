@@ -2,66 +2,68 @@
 import { computed, ref } from 'vue';
 import { Download, FileText, Calendar, Filter, TrendingUp } from 'lucide-vue-next';
 
+type ReportCategory = 'financial' | 'plant' | 'investment';
+
 const selectedPeriod = ref('monthly');
 const selectedReport = ref('all');
 
 const reportTypes = [
-  { id: 'all', label: 'All Reports' },
-  { id: 'financial', label: 'Financial' },
-  { id: 'plant', label: 'Plant Health' },
-  { id: 'investment', label: 'Investment' },
+  { id: 'all', label: 'Semua laporan' },
+  { id: 'financial', label: 'Keuangan' },
+  { id: 'plant', label: 'Kesehatan tanaman' },
+  { id: 'investment', label: 'Investasi' },
 ];
 
 const reports = [
   {
     id: 1,
-    name: 'Monthly Investment Statement',
-    type: 'Investment',
+    name: 'Laporan rekening investasi bulanan',
+    category: 'investment' as ReportCategory,
     date: '2026-01-01',
-    period: 'January 2026',
+    period: 'Januari 2026',
     size: '245 KB',
     format: 'PDF',
   },
   {
     id: 2,
-    name: 'Q2 Financial Summary',
-    type: 'Financial',
+    name: 'Ringkasan keuangan Q2',
+    category: 'financial' as ReportCategory,
     date: '2025-07-01',
-    period: 'Q2 2025',
+    period: 'Kuartal II 2025',
     size: '512 KB',
     format: 'PDF',
   },
   {
     id: 3,
-    name: 'Plant Health & Growth Report',
-    type: 'Plant Health',
+    name: 'Laporan kesehatan & pertumbuhan tanaman',
+    category: 'plant' as ReportCategory,
     date: '2026-01-15',
-    period: 'January 2026',
+    period: 'Januari 2026',
     size: '1.2 MB',
     format: 'PDF',
   },
   {
     id: 4,
-    name: 'ROI Analysis Report',
-    type: 'Investment',
+    name: 'Laporan analisis ROI',
+    category: 'investment' as ReportCategory,
     date: '2025-12-31',
-    period: '2025 Annual',
+    period: 'Tahunan 2025',
     size: '380 KB',
     format: 'PDF',
   },
   {
     id: 5,
-    name: 'Cost Breakdown Analysis',
-    type: 'Financial',
+    name: 'Analisis rincian biaya',
+    category: 'financial' as ReportCategory,
     date: '2025-12-01',
-    period: 'December 2025',
+    period: 'Desember 2025',
     size: '298 KB',
     format: 'PDF',
   },
   {
     id: 6,
-    name: 'Harvest Yield Report',
-    type: 'Plant Health',
+    name: 'Laporan hasil panen',
+    category: 'plant' as ReportCategory,
     date: '2025-11-20',
     period: 'November 2025',
     size: '445 KB',
@@ -69,17 +71,21 @@ const reports = [
   },
 ];
 
+const categoryLabels: Record<ReportCategory, string> = {
+  financial: 'Keuangan',
+  plant: 'Kesehatan tanaman',
+  investment: 'Investasi',
+};
+
 const filteredReports = computed(() =>
   reports.filter(
-    (report) =>
-      selectedReport.value === 'all' ||
-      report.type.toLowerCase() === selectedReport.value
+    (report) => selectedReport.value === 'all' || report.category === selectedReport.value
   )
 );
 
-function reportTypeBadgeClass(type: string) {
-  if (type === 'Financial') return 'bg-blue-100 text-blue-700';
-  if (type === 'Investment') return 'bg-green-100 text-green-700';
+function reportTypeBadgeClass(category: ReportCategory) {
+  if (category === 'financial') return 'bg-blue-100 text-blue-700';
+  if (category === 'investment') return 'bg-green-100 text-green-700';
   return 'bg-purple-100 text-purple-700';
 }
 </script>
@@ -88,15 +94,15 @@ function reportTypeBadgeClass(type: string) {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-2xl font-semibold text-gray-900">Reports & Documents</h2>
-        <p class="text-gray-600 mt-1">Download and export your investment reports</p>
+        <h2 class="text-2xl font-semibold text-gray-900">Laporan & dokumen</h2>
+        <p class="text-gray-600 mt-1">Unduh dan ekspor laporan investasi Anda</p>
       </div>
       <button
         type="button"
         class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
       >
         <Download class="w-4 h-4" />
-        Generate Custom Report
+        Buat laporan kustom
       </button>
     </div>
 
@@ -108,8 +114,8 @@ function reportTypeBadgeClass(type: string) {
         <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center mb-4">
           <FileText class="w-6 h-6 text-green-600" />
         </div>
-        <h3 class="font-semibold text-gray-900 mb-1">Portfolio Statement</h3>
-        <p class="text-sm text-gray-600">Current holdings & performance</p>
+        <h3 class="font-semibold text-gray-900 mb-1">Rekening portofolio</h3>
+        <p class="text-sm text-gray-600">Kepemilikan saat ini & kinerja</p>
       </button>
 
       <button
@@ -119,8 +125,8 @@ function reportTypeBadgeClass(type: string) {
         <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center mb-4">
           <TrendingUp class="w-6 h-6 text-blue-600" />
         </div>
-        <h3 class="font-semibold text-gray-900 mb-1">ROI Analysis</h3>
-        <p class="text-sm text-gray-600">Returns & projections</p>
+        <h3 class="font-semibold text-gray-900 mb-1">Analisis ROI</h3>
+        <p class="text-sm text-gray-600">Imbal hasil & proyeksi</p>
       </button>
 
       <button
@@ -130,8 +136,8 @@ function reportTypeBadgeClass(type: string) {
         <div class="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center mb-4">
           <Calendar class="w-6 h-6 text-purple-600" />
         </div>
-        <h3 class="font-semibold text-gray-900 mb-1">Tax Documents</h3>
-        <p class="text-sm text-gray-600">Annual tax statements</p>
+        <h3 class="font-semibold text-gray-900 mb-1">Dokumen pajak</h3>
+        <p class="text-sm text-gray-600">Surat keterangan tahunan</p>
       </button>
 
       <button
@@ -141,8 +147,8 @@ function reportTypeBadgeClass(type: string) {
         <div class="w-12 h-12 bg-yellow-50 rounded-lg flex items-center justify-center mb-4">
           <FileText class="w-6 h-6 text-yellow-600" />
         </div>
-        <h3 class="font-semibold text-gray-900 mb-1">Plant Reports</h3>
-        <p class="text-sm text-gray-600">Growth & health data</p>
+        <h3 class="font-semibold text-gray-900 mb-1">Laporan tanaman</h3>
+        <p class="text-sm text-gray-600">Data pertumbuhan & kesehatan</p>
       </button>
     </div>
 
@@ -150,7 +156,7 @@ function reportTypeBadgeClass(type: string) {
       <div class="flex flex-wrap items-center gap-4">
         <div class="flex items-center gap-2">
           <Filter class="w-4 h-4 text-gray-600" />
-          <span class="text-sm font-medium text-gray-700">Filter by:</span>
+          <span class="text-sm font-medium text-gray-700">Filter:</span>
         </div>
 
         <div class="flex gap-2">
@@ -175,10 +181,10 @@ function reportTypeBadgeClass(type: string) {
             v-model="selectedPeriod"
             class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
           >
-            <option value="all">All Time</option>
-            <option value="monthly">This Month</option>
-            <option value="quarterly">This Quarter</option>
-            <option value="yearly">This Year</option>
+            <option value="all">Sepanjang waktu</option>
+            <option value="monthly">Bulan ini</option>
+            <option value="quarterly">Kuartal ini</option>
+            <option value="yearly">Tahun ini</option>
           </select>
         </div>
       </div>
@@ -190,22 +196,22 @@ function reportTypeBadgeClass(type: string) {
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Report Name
+                Nama laporan
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
+                Jenis
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Period
+                Periode
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
+                Tanggal
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Size
+                Ukuran
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+                Aksi
               </th>
             </tr>
           </thead>
@@ -225,9 +231,9 @@ function reportTypeBadgeClass(type: string) {
               <td class="px-6 py-4">
                 <span
                   class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium"
-                  :class="reportTypeBadgeClass(report.type)"
+                  :class="reportTypeBadgeClass(report.category)"
                 >
-                  {{ report.type }}
+                  {{ categoryLabels[report.category] }}
                 </span>
               </td>
               <td class="px-6 py-4 text-gray-900">{{ report.period }}</td>
@@ -239,7 +245,7 @@ function reportTypeBadgeClass(type: string) {
                   class="flex items-center gap-2 px-3 py-1.5 text-green-600 hover:bg-green-50 rounded-lg font-medium text-sm transition-colors"
                 >
                   <Download class="w-4 h-4" />
-                  Download
+                  Unduh
                 </button>
               </td>
             </tr>
@@ -249,10 +255,10 @@ function reportTypeBadgeClass(type: string) {
     </div>
 
     <div class="bg-gray-50 border border-gray-200 rounded-xl p-6">
-      <h3 class="font-semibold text-gray-900 mb-4">Custom Export Options</h3>
+      <h3 class="font-semibold text-gray-900 mb-4">Opsi ekspor kustom</h3>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white border border-gray-200 rounded-lg p-4">
-          <p class="text-sm font-medium text-gray-900 mb-2">Date Range</p>
+          <p class="text-sm font-medium text-gray-900 mb-2">Rentang tanggal</p>
           <input
             type="date"
             class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
@@ -260,12 +266,12 @@ function reportTypeBadgeClass(type: string) {
           />
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-4">
-          <p class="text-sm font-medium text-gray-900 mb-2">Report Type</p>
+          <p class="text-sm font-medium text-gray-900 mb-2">Jenis laporan</p>
           <select class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-            <option>All Types</option>
-            <option>Financial Only</option>
-            <option>Investment Only</option>
-            <option>Plant Health Only</option>
+            <option>Semua jenis</option>
+            <option>Hanya keuangan</option>
+            <option>Hanya investasi</option>
+            <option>Hanya kesehatan tanaman</option>
           </select>
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-4">
@@ -281,7 +287,7 @@ function reportTypeBadgeClass(type: string) {
             type="button"
             class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
           >
-            Generate Report
+            Buat laporan
           </button>
         </div>
       </div>

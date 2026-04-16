@@ -94,21 +94,27 @@ function statusBadgeClass(status: string) {
     ? 'bg-green-100 text-green-700'
     : 'bg-yellow-100 text-yellow-700';
 }
+
+function investorStatusLabel(status: string) {
+  if (status === 'active') return 'Aktif';
+  if (status === 'pending') return 'Menunggu';
+  return 'Tidak aktif';
+}
 </script>
 
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-2xl font-semibold text-gray-900">Investor Management</h2>
-        <p class="text-gray-600 mt-1">Manage and track all investor accounts</p>
+        <h2 class="text-2xl font-semibold text-gray-900">Manajemen investor</h2>
+        <p class="text-gray-600 mt-1">Kelola dan pantau semua akun investor</p>
       </div>
       <button
         type="button"
         class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
       >
         <UserPlus class="w-4 h-4" />
-        Add New Investor
+        Tambah investor
       </button>
     </div>
 
@@ -118,10 +124,10 @@ function statusBadgeClass(status: string) {
           <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
             <Users class="w-6 h-6 text-blue-600" />
           </div>
-          <span class="text-sm text-gray-600">Total Investors</span>
+          <span class="text-sm text-gray-600">Total investor</span>
         </div>
         <p class="text-3xl font-semibold text-gray-900">{{ investors.length }}</p>
-        <p class="text-sm text-green-600 mt-1">{{ activeInvestors }} active</p>
+        <p class="text-sm text-green-600 mt-1">{{ activeInvestors }} aktif</p>
       </div>
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
@@ -129,12 +135,12 @@ function statusBadgeClass(status: string) {
           <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
             <DollarSign class="w-6 h-6 text-green-600" />
           </div>
-          <span class="text-sm text-gray-600">Total Investment</span>
+          <span class="text-sm text-gray-600">Total investasi</span>
         </div>
         <p class="text-3xl font-semibold text-gray-900">
           ${{ totalInvestment.toLocaleString() }}
         </p>
-        <p class="text-sm text-gray-600 mt-1">Cumulative</p>
+        <p class="text-sm text-gray-600 mt-1">Kumulatif</p>
       </div>
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
@@ -142,10 +148,10 @@ function statusBadgeClass(status: string) {
           <div class="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
             <TrendingUp class="w-6 h-6 text-purple-600" />
           </div>
-          <span class="text-sm text-gray-600">Average ROI</span>
+          <span class="text-sm text-gray-600">ROI rata-rata</span>
         </div>
         <p class="text-3xl font-semibold text-gray-900">{{ avgROI }}%</p>
-        <p class="text-sm text-gray-600 mt-1">Across all investors</p>
+        <p class="text-sm text-gray-600 mt-1">Semua investor</p>
       </div>
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
@@ -153,10 +159,10 @@ function statusBadgeClass(status: string) {
           <div class="w-12 h-12 bg-yellow-50 rounded-lg flex items-center justify-center">
             <UserPlus class="w-6 h-6 text-yellow-600" />
           </div>
-          <span class="text-sm text-gray-600">New This Month</span>
+          <span class="text-sm text-gray-600">Baru bulan ini</span>
         </div>
         <p class="text-3xl font-semibold text-gray-900">12</p>
-        <p class="text-sm text-green-600 mt-1">+18% vs last month</p>
+        <p class="text-sm text-green-600 mt-1">+18% vs bulan lalu</p>
       </div>
     </div>
 
@@ -167,7 +173,7 @@ function statusBadgeClass(status: string) {
             <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search investors by name, email, or ID..."
+              placeholder="Cari investor nama, email, atau ID..."
               class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
@@ -177,15 +183,15 @@ function statusBadgeClass(status: string) {
           class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
         >
           <Filter class="w-4 h-4" />
-          Filter
+          Saring
         </button>
         <select
           class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
         >
-          <option>All Status</option>
-          <option>Active</option>
-          <option>Pending</option>
-          <option>Inactive</option>
+          <option>Semua status</option>
+          <option>Aktif</option>
+          <option>Menunggu</option>
+          <option>Tidak aktif</option>
         </select>
       </div>
     </div>
@@ -199,25 +205,25 @@ function statusBadgeClass(status: string) {
                 Investor
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Contact
+                Kontak
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Investment
+                Investasi
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 ROI
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Plants
+                Tanaman
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Join Date
+                Bergabung
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+                Aksi
               </th>
             </tr>
           </thead>
@@ -265,7 +271,7 @@ function statusBadgeClass(status: string) {
                   class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium"
                   :class="statusBadgeClass(investor.status)"
                 >
-                  {{ investor.status }}
+                  {{ investorStatusLabel(investor.status) }}
                 </span>
               </td>
               <td class="px-6 py-4 text-gray-600 text-sm">{{ investor.joinDate }}</td>
@@ -282,14 +288,14 @@ function statusBadgeClass(status: string) {
 
     <div class="flex items-center justify-between bg-white rounded-xl border border-gray-200 p-4">
       <p class="text-sm text-gray-600">
-        Showing 1 to {{ investors.length }} of 234 investors
+        Menampilkan 1 sampai {{ investors.length }} dari 234 investor
       </p>
       <div class="flex gap-2">
         <button
           type="button"
           class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
         >
-          Previous
+          Sebelumnya
         </button>
         <button type="button" class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm">
           1
@@ -310,7 +316,7 @@ function statusBadgeClass(status: string) {
           type="button"
           class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
         >
-          Next
+          Berikutnya
         </button>
       </div>
     </div>
