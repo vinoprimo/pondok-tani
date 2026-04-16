@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Bell } from "lucide-vue-next";
 import Sidebar from "../components/layouts/Sidebar.vue";
@@ -10,6 +10,30 @@ const route = useRoute();
 const userRole = ref<"investor" | "admin">(
   (localStorage.getItem("userRole") as "investor" | "admin") || "investor"
 );
+
+const roleAllowedViews: Record<"investor" | "admin", string[]> = {
+  investor: [
+    "dashboard",
+    "portfolio",
+    "plants",
+    "maintenance",
+    "reminder-settings",
+    "financials",
+    "reports",
+    "notifications",
+  ],
+  admin: [
+    "dashboard",
+    "investors",
+    "plants",
+    "maintenance-validation",
+    "harvest-sales",
+    "warehouse",
+    "financials",
+    "reports",
+    "notifications",
+  ],
+};
 
 const activeView = computed(() => {
   if (route.path === "/dashboard") return "dashboard";
@@ -51,13 +75,43 @@ function handleSetActiveView(view: string) {
     warehouse: "/dashboard/warehouse",
   };
 
+  const isAllowed = roleAllowedViews[userRole.value].includes(view);
+  if (!isAllowed) {
+    router.push("/dashboard");
+    return;
+  }
+
   router.push(routeMap[view] || "/dashboard");
 }
 
 function handleLogout() {
   localStorage.removeItem("token");
+  localStorage.removeItem("userRole");
   router.push("/login");
 }
+
+function ensureAllowedCurrentRoute() {
+  const currentView = activeView.value;
+  const allowed = roleAllowedViews[userRole.value];
+  if (!allowed.includes(currentView)) {
+    router.replace("/dashboard");
+  }
+}
+
+onMounted(() => {
+  const storedRole = localStorage.getItem("userRole") as "investor" | "admin" | null;
+  if (storedRole === "investor" || storedRole === "admin") {
+    userRole.value = storedRole;
+  }
+  ensureAllowedCurrentRoute();
+});
+
+watch(
+  () => route.path,
+  () => {
+    ensureAllowedCurrentRoute();
+  }
+);
 </script>
 
 <template>

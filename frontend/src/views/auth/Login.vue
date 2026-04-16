@@ -34,10 +34,15 @@ const errors = reactive({
   fullName: '',
 });
 
-const demoCredentials = {
-  investor: { email: 'investor@omahvanili.com', password: 'investor123' },
-  admin: { email: 'admin@omahvanili.com', password: 'admin123' },
-} as const;
+function extractRoleFromToken(token: string): 'investor' | 'admin' {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload?.role === 'admin') return 'admin';
+    return 'investor';
+  } catch {
+    return 'investor';
+  }
+}
 
 function validateEmail(email: string) {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -125,8 +130,12 @@ async function handleLogin() {
 
   console.log("LOGIN SUCCESS:", res);
 
-  localStorage.setItem("token", res.data.token);
-  localStorage.setItem("userRole", role.value);
+  const token = res.data.token;
+  const detectedRole = extractRoleFromToken(token);
+
+  localStorage.setItem("token", token);
+  localStorage.setItem("userRole", detectedRole);
+  role.value = detectedRole;
 
   router.push("/dashboard");
 }
@@ -151,16 +160,14 @@ async function handleRegister() {
 
   console.log("AUTO LOGIN SUCCESS:", loginRes);
 
-  localStorage.setItem("token", loginRes.data.token);
-  localStorage.setItem("userRole", role.value);
+  const token = loginRes.data.token;
+  const detectedRole = extractRoleFromToken(token);
+
+  localStorage.setItem("token", token);
+  localStorage.setItem("userRole", detectedRole);
+  role.value = detectedRole;
 
   router.push("/dashboard");
-}
-
-function fillDemoCredentials() {
-  const creds = demoCredentials[role.value];
-  formData.email = creds.email;
-  formData.password = creds.password;
 }
 
 function toggleRegistering() {
@@ -245,7 +252,7 @@ function toggleRegistering() {
         </div>
 
         <div class="p-8">
-          <div class="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
+          <div v-if="isRegistering" class="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
             <button
               type="button"
               class="flex-1 py-2.5 rounded-lg font-medium transition-all"
@@ -270,20 +277,9 @@ function toggleRegistering() {
             </button>
           </div>
 
-          <div v-if="!isRegistering" class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p class="text-sm text-blue-800 font-medium mb-2">🎯 Kredensial demo:</p>
-            <div class="text-xs text-blue-700 space-y-1">
-              <p>Email: {{ demoCredentials[role].email }}</p>
-              <p>Kata sandi: {{ demoCredentials[role].password }}</p>
-            </div>
-            <button
-              type="button"
-              class="mt-3 text-xs text-blue-700 font-medium hover:text-blue-900 underline"
-              @click="fillDemoCredentials"
-            >
-              Isi otomatis kredensial demo
-            </button>
-          </div>
+          <p v-else class="mb-6 text-sm text-gray-500">
+            Role akun akan terdeteksi otomatis setelah login.
+          </p>
 
           <form class="space-y-4" @submit="handleSubmit">
             <div v-if="isRegistering">
