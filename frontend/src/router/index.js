@@ -21,6 +21,16 @@ const routes = [
     component: () => import("../views/landing/Landing.vue"),
   },
   {
+    path: "/paket-investasi",
+    name: "landing-paket",
+    component: () => import("../views/landing/LandingPaket.vue"),
+  },
+  {
+    path: "/kemitraan",
+    name: "landing-kemitraan",
+    component: () => import("../views/landing/LandingKemitraan.vue"),
+  },
+  {
     path: "/login",
     name: "login",
     component: () => import("../views/auth/Login.vue"),
