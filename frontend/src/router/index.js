@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { getCurrentUser } from "../services/user/user";
 
 /**
  * Struktur views (relatif ke src/):
@@ -127,7 +128,7 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("userRole");
   const isAuth = Boolean(token);
@@ -135,6 +136,20 @@ router.beforeEach((to, from, next) => {
 
   if (to.matched.some((record) => record.meta.requiresAuth) && !isAuth) {
     return next({ name: "login" });
+  }
+
+  if (isAuth && (normalizedRole === "investor" || normalizedRole === "mitra")) {
+    try {
+      const userRes = await getCurrentUser();
+      const hasSelectedPackage = Boolean(userRes?.data?.selected_package_id);
+      if (!hasSelectedPackage && to.name !== "package-selection") {
+        return next({ name: "package-selection" });
+      }
+    } catch (err) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("userRole");
+      return next({ name: "login" });
+    }
   }
 
   if (to.name === "login" && isAuth) {

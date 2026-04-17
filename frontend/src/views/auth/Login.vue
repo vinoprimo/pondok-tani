@@ -3,6 +3,7 @@ import { onMounted, reactive, ref, watch } from 'vue';
 import { Sprout, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-vue-next';
 import { useRoute, useRouter } from "vue-router";
 import { login, register } from "../../services/auth/auth";
+import { getCurrentUser } from '../../services/user/user';
 
 const router = useRouter();
 const route = useRoute();
@@ -156,6 +157,21 @@ async function handleLogin() {
     return;
   }
 
+  if (detectedRole === 'investor' || detectedRole === 'mitra') {
+    try {
+      const userRes = await getCurrentUser();
+      const hasSelectedPackage = Boolean(userRes?.data?.selected_package_id);
+      if (!hasSelectedPackage) {
+        router.push('/pilih-paket');
+        return;
+      }
+    } catch (err) {
+      console.error('FAILED TO VERIFY PACKAGE STATUS:', err);
+      router.push('/pilih-paket');
+      return;
+    }
+  }
+
   router.push("/dashboard");
 }
 
@@ -193,6 +209,21 @@ async function handleRegister() {
       query: { package_id: selectedPackageId },
     });
     return;
+  }
+
+  if (detectedRole === 'investor' || detectedRole === 'mitra') {
+    try {
+      const userRes = await getCurrentUser();
+      const hasSelectedPackage = Boolean(userRes?.data?.selected_package_id);
+      if (!hasSelectedPackage) {
+        router.push('/pilih-paket');
+        return;
+      }
+    } catch (err) {
+      console.error('FAILED TO VERIFY PACKAGE STATUS:', err);
+      router.push('/pilih-paket');
+      return;
+    }
   }
 
   router.push("/dashboard");
