@@ -1,105 +1,99 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import {
   Users,
   DollarSign,
   TrendingUp,
-  UserPlus,
+  UserCheck,
   Search,
   Filter,
   Mail,
   Phone,
   MoreVertical,
+  Package,
+  Loader2,
 } from 'lucide-vue-next';
+import { activateUserPackage, getAdminUsers } from '../../services/user/user';
 
-const investors = [
-  {
-    id: 'INV-001',
-    name: 'Sarah Johnson',
-    email: 'sarah.j@email.com',
-    phone: '+1 (555) 123-4567',
-    investment: 45000,
-    roi: 24.5,
-    plants: 85,
-    status: 'active',
-    joinDate: '2024-03-15',
-  },
-  {
-    id: 'INV-002',
-    name: 'Michael Chen',
-    email: 'michael.c@email.com',
-    phone: '+1 (555) 234-5678',
-    investment: 75000,
-    roi: 26.2,
-    plants: 140,
-    status: 'active',
-    joinDate: '2024-01-10',
-  },
-  {
-    id: 'INV-003',
-    name: 'Emma Davis',
-    email: 'emma.d@email.com',
-    phone: '+1 (555) 345-6789',
-    investment: 32000,
-    roi: 22.8,
-    plants: 60,
-    status: 'active',
-    joinDate: '2024-06-20',
-  },
-  {
-    id: 'INV-004',
-    name: 'James Wilson',
-    email: 'james.w@email.com',
-    phone: '+1 (555) 456-7890',
-    investment: 55000,
-    roi: 25.1,
-    plants: 105,
-    status: 'active',
-    joinDate: '2024-02-28',
-  },
-  {
-    id: 'INV-005',
-    name: 'Linda Martinez',
-    email: 'linda.m@email.com',
-    phone: '+1 (555) 567-8901',
-    investment: 28000,
-    roi: 21.5,
-    plants: 52,
-    status: 'pending',
-    joinDate: '2026-01-15',
-  },
-];
+const users = ref<any[]>([]);
+const loading = ref(false);
+const activatingUserId = ref<string | null>(null);
+const searchTerm = ref('');
+const statusFilter = ref('all');
 
-const totalInvestment = computed(() =>
-  investors.reduce((sum, inv) => sum + inv.investment, 0)
-);
+const visibleUsers = computed(() => {
+  const keyword = searchTerm.value.trim().toLowerCase();
+  return users.value.filter((user) => {
+    const packageStatus = user.package_status || 'none';
+    const matchesKeyword =
+      !keyword ||
+      user.name?.toLowerCase().includes(keyword) ||
+      user.email?.toLowerCase().includes(keyword) ||
+      user.id?.toLowerCase().includes(keyword);
+    const matchesStatus = statusFilter.value === 'all' || packageStatus === statusFilter.value;
+    return matchesKeyword && matchesStatus;
+  });
+});
 
-const activeInvestors = computed(() =>
-  investors.filter((inv) => inv.status === 'active').length
-);
-
-const avgROI = computed(() =>
-  (investors.reduce((sum, inv) => sum + inv.roi, 0) / investors.length).toFixed(1)
-);
+const totalSelected = computed(() => users.value.filter((user) => user.selected_package_id).length);
+const activeUsers = computed(() => users.value.filter((user) => user.package_status === 'active').length);
+const pendingUsers = computed(() => users.value.filter((user) => user.package_status === 'pending').length);
+const activeRatio = computed(() => {
+  if (!users.value.length) return '0';
+  return ((activeUsers.value / users.value.length) * 100).toFixed(0);
+});
 
 function investorInitials(name: string) {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('');
+  return (
+    name
+      ?.split(' ')
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join('')
+      .slice(0, 2) || '?'
+  );
 }
 
 function statusBadgeClass(status: string) {
-  return status === 'active'
-    ? 'bg-green-100 text-green-700'
-    : 'bg-yellow-100 text-yellow-700';
+  if (status === 'active') return 'bg-green-100 text-green-700';
+  if (status === 'pending') return 'bg-yellow-100 text-yellow-700';
+  return 'bg-gray-100 text-gray-700';
 }
 
 function investorStatusLabel(status: string) {
   if (status === 'active') return 'Aktif';
   if (status === 'pending') return 'Menunggu';
-  return 'Tidak aktif';
+  return 'Belum memilih';
 }
+
+async function loadUsers() {
+  loading.value = true;
+  try {
+    const response = await getAdminUsers();
+    users.value = Array.isArray(response.data) ? response.data : [];
+  } catch (error) {
+    console.error('Failed to load users:', error);
+    users.value = [];
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function handleActivate(userId: string) {
+  activatingUserId.value = userId;
+  try {
+    await activateUserPackage(userId);
+    await loadUsers();
+  } catch (error) {
+    console.error('Failed to activate package:', error);
+  } finally {
+    activatingUserId.value = null;
+  }
+}
+
+onMounted(() => {
+  loadUsers();
+});
 </script>
 
 <template>
@@ -107,14 +101,15 @@ function investorStatusLabel(status: string) {
     <div class="flex items-center justify-between">
       <div>
         <h2 class="text-2xl font-semibold text-gray-900">Manajemen investor</h2>
-        <p class="text-gray-600 mt-1">Kelola dan pantau semua akun investor</p>
+        <p class="text-gray-600 mt-1">Kelola pilihan paket dan aktivasi akun investor</p>
       </div>
       <button
         type="button"
         class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        @click="loadUsers"
       >
-        <UserPlus class="w-4 h-4" />
-        Tambah investor
+        <UserCheck class="w-4 h-4" />
+        Refresh data
       </button>
     </div>
 
@@ -124,45 +119,43 @@ function investorStatusLabel(status: string) {
           <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
             <Users class="w-6 h-6 text-blue-600" />
           </div>
-          <span class="text-sm text-gray-600">Total investor</span>
+          <span class="text-sm text-gray-600">Total user</span>
         </div>
-        <p class="text-3xl font-semibold text-gray-900">{{ investors.length }}</p>
-        <p class="text-sm text-green-600 mt-1">{{ activeInvestors }} aktif</p>
-      </div>
-
-      <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-            <DollarSign class="w-6 h-6 text-green-600" />
-          </div>
-          <span class="text-sm text-gray-600">Total investasi</span>
-        </div>
-        <p class="text-3xl font-semibold text-gray-900">
-          ${{ totalInvestment.toLocaleString() }}
-        </p>
-        <p class="text-sm text-gray-600 mt-1">Kumulatif</p>
-      </div>
-
-      <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
-            <TrendingUp class="w-6 h-6 text-purple-600" />
-          </div>
-          <span class="text-sm text-gray-600">ROI rata-rata</span>
-        </div>
-        <p class="text-3xl font-semibold text-gray-900">{{ avgROI }}%</p>
-        <p class="text-sm text-gray-600 mt-1">Semua investor</p>
+        <p class="text-3xl font-semibold text-gray-900">{{ users.length }}</p>
+        <p class="text-sm text-green-600 mt-1">{{ activeUsers }} aktif</p>
       </div>
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center gap-3 mb-3">
           <div class="w-12 h-12 bg-yellow-50 rounded-lg flex items-center justify-center">
-            <UserPlus class="w-6 h-6 text-yellow-600" />
+            <Package class="w-6 h-6 text-yellow-600" />
           </div>
-          <span class="text-sm text-gray-600">Baru bulan ini</span>
+          <span class="text-sm text-gray-600">Menunggu aktivasi</span>
         </div>
-        <p class="text-3xl font-semibold text-gray-900">12</p>
-        <p class="text-sm text-green-600 mt-1">+18% vs bulan lalu</p>
+        <p class="text-3xl font-semibold text-gray-900">{{ pendingUsers }}</p>
+        <p class="text-sm text-gray-600 mt-1">Paket dipilih namun belum aktif</p>
+      </div>
+
+      <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+            <TrendingUp class="w-6 h-6 text-green-600" />
+          </div>
+          <span class="text-sm text-gray-600">Sudah memilih paket</span>
+        </div>
+        <p class="text-3xl font-semibold text-gray-900">{{ totalSelected }}</p>
+        <p class="text-sm text-gray-600 mt-1">User dengan paket tersimpan</p>
+      </div>
+
+      <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
+            <DollarSign class="w-6 h-6 text-purple-600" />
+          </div>
+          <span class="text-sm text-gray-600">Rasio aktif</span>
+        </div>
+        <p class="text-3xl font-semibold text-gray-900">{{ activeRatio }}%</p>
+        <p class="text-sm text-gray-600 mt-1">Dari seluruh user</p>
       </div>
     </div>
 
@@ -172,8 +165,9 @@ function investorStatusLabel(status: string) {
           <div class="relative">
             <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
+              v-model="searchTerm"
               type="text"
-              placeholder="Cari investor nama, email, atau ID..."
+              placeholder="Cari nama, email, atau ID user..."
               class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
@@ -186,35 +180,34 @@ function investorStatusLabel(status: string) {
           Saring
         </button>
         <select
+          v-model="statusFilter"
           class="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
         >
-          <option>Semua status</option>
-          <option>Aktif</option>
-          <option>Menunggu</option>
-          <option>Tidak aktif</option>
+          <option value="all">Semua status</option>
+          <option value="active">Aktif</option>
+          <option value="pending">Menunggu</option>
+          <option value="none">Belum memilih</option>
         </select>
       </div>
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div class="overflow-x-auto">
+      <div v-if="loading" class="px-6 py-10 text-center text-gray-500 flex items-center justify-center gap-2">
+        <Loader2 class="h-4 w-4 animate-spin" />
+        Memuat data investor...
+      </div>
+      <div v-else class="overflow-x-auto">
         <table class="w-full">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Investor
+                User
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Kontak
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Investasi
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                ROI
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tanaman
+                Paket Dipilih
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -228,17 +221,15 @@ function investorStatusLabel(status: string) {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-for="investor in investors" :key="investor.id" class="hover:bg-gray-50">
+            <tr v-for="user in visibleUsers" :key="user.id" class="hover:bg-gray-50">
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
-                  <div
-                    class="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-semibold"
-                  >
-                    {{ investorInitials(investor.name) }}
+                  <div class="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-semibold">
+                    {{ investorInitials(user.name) }}
                   </div>
                   <div>
-                    <p class="font-medium text-gray-900">{{ investor.name }}</p>
-                    <p class="text-sm text-gray-500">{{ investor.id }}</p>
+                    <p class="font-medium text-gray-900">{{ user.name }}</p>
+                    <p class="text-sm text-gray-500">{{ user.id }}</p>
                   </div>
                 </div>
               </td>
@@ -246,78 +237,49 @@ function investorStatusLabel(status: string) {
                 <div class="space-y-1">
                   <div class="flex items-center gap-2 text-sm text-gray-600">
                     <Mail class="w-4 h-4" />
-                    <span>{{ investor.email }}</span>
+                    <span>{{ user.email }}</span>
                   </div>
-                  <div class="flex items-center gap-2 text-sm text-gray-600">
+                  <div v-if="user.phone_number" class="flex items-center gap-2 text-sm text-gray-600">
                     <Phone class="w-4 h-4" />
-                    <span>{{ investor.phone }}</span>
+                    <span>{{ user.phone_number }}</span>
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4 font-medium text-gray-900">
-                ${{ investor.investment.toLocaleString() }}
+              <td class="px-6 py-4">
+                <div v-if="user.selected_package" class="space-y-1">
+                  <p class="font-medium text-gray-900">{{ user.selected_package.package_name }}</p>
+                  <p class="text-sm text-gray-500">{{ user.selected_package.description }}</p>
+                </div>
+                <p v-else class="text-sm text-gray-500">Belum memilih paket</p>
               </td>
               <td class="px-6 py-4">
-                <span
-                  class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium"
-                >
-                  <TrendingUp class="w-3 h-3" />
-                  {{ investor.roi }}%
+                <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium" :class="statusBadgeClass(user.package_status)">
+                  {{ investorStatusLabel(user.package_status) }}
                 </span>
               </td>
-              <td class="px-6 py-4 text-gray-900">{{ investor.plants }}</td>
-              <td class="px-6 py-4">
-                <span
-                  class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium"
-                  :class="statusBadgeClass(investor.status)"
-                >
-                  {{ investorStatusLabel(investor.status) }}
-                </span>
+              <td class="px-6 py-4 text-gray-600 text-sm">
+                {{ user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID') : '-' }}
               </td>
-              <td class="px-6 py-4 text-gray-600 text-sm">{{ investor.joinDate }}</td>
               <td class="px-6 py-4">
-                <button type="button" class="text-gray-400 hover:text-gray-600">
-                  <MoreVertical class="w-5 h-5" />
-                </button>
+                <div class="flex items-center gap-2">
+                  <button
+                    v-if="user.selected_package_id && user.package_status !== 'active'"
+                    type="button"
+                    class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-60"
+                    :disabled="activatingUserId === user.id"
+                    @click="handleActivate(user.id)"
+                  >
+                    <Loader2 v-if="activatingUserId === user.id" class="h-4 w-4 animate-spin" />
+                    <span>{{ activatingUserId === user.id ? 'Mengaktifkan...' : 'Aktifkan paket' }}</span>
+                  </button>
+                  <button type="button" class="text-gray-400 hover:text-gray-600">
+                    <MoreVertical class="w-5 h-5" />
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
-      </div>
-    </div>
-
-    <div class="flex items-center justify-between bg-white rounded-xl border border-gray-200 p-4">
-      <p class="text-sm text-gray-600">
-        Menampilkan 1 sampai {{ investors.length }} dari 234 investor
-      </p>
-      <div class="flex gap-2">
-        <button
-          type="button"
-          class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
-        >
-          Sebelumnya
-        </button>
-        <button type="button" class="px-3 py-1 bg-green-600 text-white rounded-lg text-sm">
-          1
-        </button>
-        <button
-          type="button"
-          class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
-        >
-          2
-        </button>
-        <button
-          type="button"
-          class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
-        >
-          3
-        </button>
-        <button
-          type="button"
-          class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
-        >
-          Berikutnya
-        </button>
       </div>
     </div>
   </div>

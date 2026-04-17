@@ -9,13 +9,13 @@ const route = useRoute();
 
 const props = withDefaults(
   defineProps<{
-    initialRole?: 'investor' | 'admin';
+    initialRole?: 'investor' | 'mitra' | 'admin';
   }>(),
   { initialRole: 'investor' }
 );
 
 const emit = defineEmits<{
-  login: [role: 'investor' | 'admin', credentials: { email: string; password: string }];
+  login: [role: 'investor' | 'mitra' | 'admin', credentials: { email: string; password: string }];
   back: [];
 }>();
 
@@ -35,10 +35,11 @@ const errors = reactive({
   fullName: '',
 });
 
-function extractRoleFromToken(token: string): 'investor' | 'admin' {
+function extractRoleFromToken(token: string): 'investor' | 'mitra' | 'admin' {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     if (payload?.role === 'admin') return 'admin';
+    if (payload?.role === 'mitra') return 'mitra';
     return 'investor';
   } catch {
     return 'investor';
@@ -146,6 +147,15 @@ async function handleLogin() {
   localStorage.setItem("userRole", detectedRole);
   role.value = detectedRole;
 
+  const selectedPackageId = String(route.query.package_id || '').trim();
+  if (selectedPackageId) {
+    router.push({
+      path: '/pilih-paket',
+      query: { package_id: selectedPackageId },
+    });
+    return;
+  }
+
   router.push("/dashboard");
 }
 
@@ -175,6 +185,15 @@ async function handleRegister() {
   localStorage.setItem("token", token);
   localStorage.setItem("userRole", detectedRole);
   role.value = detectedRole;
+
+  const selectedPackageId = String(route.query.package_id || '').trim();
+  if (selectedPackageId) {
+    router.push({
+      path: '/pilih-paket',
+      query: { package_id: selectedPackageId },
+    });
+    return;
+  }
 
   router.push("/dashboard");
 }

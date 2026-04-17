@@ -36,6 +36,12 @@ const routes = [
     component: () => import("../views/auth/Login.vue"),
   },
   {
+    path: "/pilih-paket",
+    name: "package-selection",
+    component: () => import("../views/investment/PackageSelection.vue"),
+    meta: { requiresAuth: true, roles: ["investor", "mitra"] },
+  },
+  {
     path: "/dashboard",
     component: () => import("../layouts/DashboardLayout.vue"),
     meta: { requiresAuth: true },

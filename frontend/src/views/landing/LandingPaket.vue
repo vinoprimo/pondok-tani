@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import LandingLayout from '../../layouts/LandingLayout.vue';
 import PaketHero from '../../components/landing-paket/PaketHero.vue';
 import PaketCard from '../../components/landing-paket/PaketCard.vue';
@@ -17,6 +18,8 @@ type PaketItem = {
 
 const paketItems = ref<PaketItem[]>([]);
 const loadingPackages = ref(false);
+const router = useRouter();
+const selectedPackageId = ref<number | null>(null);
 
 const formatRupiah = (value: number) =>
   new Intl.NumberFormat('id-ID', {
@@ -44,6 +47,25 @@ async function loadPackages() {
   } finally {
     loadingPackages.value = false;
   }
+}
+
+function choosePackage(packageItem: PaketItem) {
+  selectedPackageId.value = packageItem.id;
+  if (localStorage.getItem('token')) {
+    router.push({
+      path: '/pilih-paket',
+      query: { package_id: String(packageItem.id) },
+    });
+    return;
+  }
+
+  router.push({
+    path: '/login',
+    query: {
+      mode: 'register',
+      package_id: String(packageItem.id),
+    },
+  });
 }
 
 const benefits = [
@@ -82,6 +104,9 @@ onMounted(() => {
           :roi="item.roi"
           :duration="item.duration"
           :highlight="item.highlight"
+          :selected="selectedPackageId === item.id"
+          button-label="Pilih Paket Ini"
+          @choose="choosePackage(item)"
         />
       </div>
     </section>
