@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Bell } from "lucide-vue-next";
-import Sidebar from "../components/layouts/Sidebar.vue";
+import Sidebar from "../components/dashboard-layouts/Sidebar.vue";
 
 const router = useRouter();
 const route = useRoute();
