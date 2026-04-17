@@ -96,5 +96,6 @@ func main() {
 	})
 	routes.AuthRoutes(r)
 	routes.HarvestRoutes(r)
+	routes.InvestmentPackageRoutes(r)
 	r.Run(":8000")
 }
