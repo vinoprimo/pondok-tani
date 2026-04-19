@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Sprout } from 'lucide-vue-next';
+import { ChevronDown, Sprout, UserCircle2 } from 'lucide-vue-next';
+import { getCurrentUser } from '../../services/user/user';
 
 const router = useRouter();
 const route = useRoute();
+const isProfileOpen = ref(false);
+const isLoadingProfile = ref(false);
+const profile = ref({
+  name: 'Guest',
+  email: '-',
+  role: 'guest',
+});
+
+const isLoggedIn = computed(() => Boolean(localStorage.getItem('token')));
 
 const navItems = [
   { label: 'Beranda', path: '/' },
@@ -21,6 +31,43 @@ const mobileTitle = computed(() => {
   if (route.path === '/paket-investasi') return 'Paket Investasi';
   if (route.path === '/kemitraan') return 'Kemitraan';
   return 'Beranda';
+});
+
+async function loadProfile() {
+  if (!isLoggedIn.value) {
+    profile.value = {
+      name: 'Guest',
+      email: '-',
+      role: 'guest',
+    };
+    return;
+  }
+
+  isLoadingProfile.value = true;
+  try {
+    const response = await getCurrentUser();
+    profile.value = {
+      name: response.data?.name || 'User',
+      email: response.data?.email || '-',
+      role: response.data?.role || 'investor',
+    };
+  } catch (error) {
+    profile.value = {
+      name: 'Guest',
+      email: '-',
+      role: 'guest',
+    };
+  } finally {
+    isLoadingProfile.value = false;
+  }
+}
+
+function toggleProfile() {
+  isProfileOpen.value = !isProfileOpen.value;
+}
+
+onMounted(() => {
+  loadProfile();
 });
 </script>
 
@@ -50,33 +97,94 @@ const mobileTitle = computed(() => {
         </button>
       </nav>
 
-      <div class="hidden md:flex items-center gap-3">
+      <div class="hidden md:flex items-center gap-3 relative">
+        <template v-if="!isLoggedIn">
+          <button
+            type="button"
+            class="px-4 py-2 text-green-700 hover:bg-green-50 rounded-lg transition-colors font-medium"
+            @click="router.push('/login')"
+          >
+            Masuk
+          </button>
+          <button
+            type="button"
+            class="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+            @click="router.push({ path: '/login', query: { mode: 'register' } })"
+          >
+            Daftar Sekarang
+          </button>
+        </template>
         <button
+          v-else
           type="button"
-          class="px-4 py-2 text-green-700 hover:bg-green-50 rounded-lg transition-colors font-medium"
-          @click="router.push('/login')"
+          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+          @click="router.push('/dashboard')"
         >
-          Masuk
+          Masuk ke Dashboard
         </button>
         <button
           type="button"
-          class="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-          @click="router.push({ path: '/login', query: { mode: 'register' } })"
+          class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-700 hover:bg-gray-50"
+          @click="toggleProfile"
         >
-          Daftar Sekarang
+          <UserCircle2 class="h-5 w-5" />
+          <ChevronDown class="h-4 w-4" />
         </button>
+
+        <div
+          v-if="isProfileOpen"
+          class="absolute right-0 top-12 w-64 rounded-xl border border-gray-200 bg-white p-4 shadow-lg"
+        >
+          <p class="text-xs uppercase tracking-wide text-gray-500 mb-2">Profil</p>
+          <p class="text-sm font-semibold text-gray-900">{{ isLoadingProfile ? 'Memuat...' : profile.name }}</p>
+          <p class="text-sm text-gray-600 mt-1">{{ isLoadingProfile ? '-' : profile.email }}</p>
+          <p class="mt-2 inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+            {{ isLoadingProfile ? 'loading' : profile.role }}
+          </p>
+        </div>
       </div>
     </div>
 
     <div class="md:hidden px-6 pb-3 flex items-center justify-between">
       <p class="text-sm text-gray-600 font-medium">{{ mobileTitle }}</p>
-      <button
-        type="button"
-        class="text-sm text-green-700 font-medium"
-        @click="router.push({ path: '/login', query: { mode: 'register' } })"
-      >
-        Daftar
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          v-if="!isLoggedIn"
+          type="button"
+          class="text-sm text-green-700 font-medium"
+          @click="router.push({ path: '/login', query: { mode: 'register' } })"
+        >
+          Daftar
+        </button>
+        <button
+          v-else
+          type="button"
+          class="text-sm text-green-700 font-medium"
+          @click="router.push('/dashboard')"
+        >
+          Dashboard
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-gray-700"
+          @click="toggleProfile"
+        >
+          <UserCircle2 class="h-4 w-4" />
+          <ChevronDown class="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+
+    <div
+      v-if="isProfileOpen"
+      class="md:hidden mx-6 mb-3 rounded-xl border border-gray-200 bg-white p-3"
+    >
+      <p class="text-xs uppercase tracking-wide text-gray-500 mb-2">Profil</p>
+      <p class="text-sm font-semibold text-gray-900">{{ isLoadingProfile ? 'Memuat...' : profile.name }}</p>
+      <p class="text-sm text-gray-600 mt-1">{{ isLoadingProfile ? '-' : profile.email }}</p>
+      <p class="mt-2 inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+        {{ isLoadingProfile ? 'loading' : profile.role }}
+      </p>
     </div>
   </header>
 </template>

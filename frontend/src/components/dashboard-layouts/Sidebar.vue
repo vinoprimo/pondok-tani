@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import {
+  ArrowUpRight,
   LayoutDashboard,
   Sprout,
   TrendingUp,
@@ -19,6 +21,8 @@ const props = defineProps<{
   activeView: string;
   userRole: 'investor' | 'mitra' | 'admin';
 }>();
+
+const router = useRouter();
 
 const emit = defineEmits<{
   setActiveView: [view: string];
@@ -92,6 +96,14 @@ const roleLabel = computed(() => {
     </nav>
 
     <div class="p-4 border-t border-gray-200 space-y-1">
+      <button
+        type="button"
+        class="w-full inline-flex items-center justify-between gap-2 px-3 py-2 rounded-md text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+        @click="router.push('/')"
+      >
+        <span>Kembali ke landing</span>
+        <ArrowUpRight class="w-4 h-4" />
+      </button>
       <button
         type="button"
         class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
