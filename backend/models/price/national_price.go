@@ -11,7 +11,7 @@ type NationalPrice struct {
 	Province        string    `gorm:"type:varchar(120);not null" json:"province"`
 	PricePerKg      float64   `gorm:"type:numeric(14,2);not null" json:"price_per_kg"`
 	EffectiveDate   time.Time `gorm:"not null;index" json:"effective_date"`
-	HarvestType     string    `gorm:"type:varchar(80);not null;index" json:"harvest_type"`
+	HarvestType     string    `gorm:"type:varchar(20);not null;index" json:"harvest_type"`
 
 	Grade *postharvestmodels.Grade `gorm:"foreignKey:GradeID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"grade,omitempty"`
 

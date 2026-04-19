@@ -21,6 +21,52 @@ import (
 	"github.com/joho/godotenv"
 )
 
+func applyNationalPriceMigrations() error {
+	if config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "id") && !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "national_price_id") {
+		if err := config.DB.Exec(`ALTER TABLE national_prices RENAME COLUMN id TO national_price_id`).Error; err != nil {
+			return fmt.Errorf("failed to rename national_prices.id column: %w", err)
+		}
+	}
+
+	if !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "harvest_type") {
+		if err := config.DB.Exec(`ALTER TABLE national_prices ADD COLUMN IF NOT EXISTS harvest_type varchar(20) NOT NULL DEFAULT 'basah'`).Error; err != nil {
+			return fmt.Errorf("failed to ensure national_prices.harvest_type column: %w", err)
+		}
+	}
+
+	if config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "source") {
+		if err := config.DB.Migrator().DropColumn(&pricemodels.NationalPrice{}, "source"); err != nil {
+			return fmt.Errorf("failed to drop national_prices.source column: %w", err)
+		}
+	}
+
+	if err := config.DB.Exec(`UPDATE national_prices SET harvest_type = lower(trim(harvest_type)) WHERE harvest_type IS NOT NULL`).Error; err != nil {
+		return fmt.Errorf("failed to normalize national_prices.harvest_type values: %w", err)
+	}
+	if err := config.DB.Exec(`UPDATE national_prices SET harvest_type = 'basah' WHERE harvest_type IS NULL OR harvest_type NOT IN ('basah','kering')`).Error; err != nil {
+		return fmt.Errorf("failed to repair invalid national_prices.harvest_type values: %w", err)
+	}
+	if err := config.DB.Exec(`UPDATE national_prices SET grade_id = NULL WHERE harvest_type = 'basah'`).Error; err != nil {
+		return fmt.Errorf("failed to clear grade_id for basah harvest_type rows: %w", err)
+	}
+
+	if err := config.DB.Exec(`ALTER TABLE national_prices DROP CONSTRAINT IF EXISTS chk_national_prices_harvest_type`).Error; err != nil {
+		return fmt.Errorf("failed to drop old national_prices harvest_type constraint: %w", err)
+	}
+	if err := config.DB.Exec(`ALTER TABLE national_prices ADD CONSTRAINT chk_national_prices_harvest_type CHECK (harvest_type IN ('basah','kering'))`).Error; err != nil {
+		return fmt.Errorf("failed to add national_prices harvest_type constraint: %w", err)
+	}
+
+	if err := config.DB.Exec(`ALTER TABLE national_prices DROP CONSTRAINT IF EXISTS chk_national_prices_basah_no_grade`).Error; err != nil {
+		return fmt.Errorf("failed to drop old national_prices basah-grade constraint: %w", err)
+	}
+	if err := config.DB.Exec(`ALTER TABLE national_prices ADD CONSTRAINT chk_national_prices_basah_no_grade CHECK (harvest_type <> 'basah' OR grade_id IS NULL)`).Error; err != nil {
+		return fmt.Errorf("failed to add national_prices basah-grade constraint: %w", err)
+	}
+
+	return nil
+}
+
 func migrateDB() {
 	config.ConnectDB()
 	err := config.DB.AutoMigrate(
@@ -47,20 +93,8 @@ func migrateDB() {
 		panic(fmt.Sprintf("failed to migrate database: %v", err))
 	}
 
-	if config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "id") && !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "national_price_id") {
-		if err := config.DB.Exec(`ALTER TABLE national_prices RENAME COLUMN id TO national_price_id`).Error; err != nil {
-			panic(fmt.Sprintf("failed to rename national_prices.id column: %v", err))
-		}
-	}
-	if !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "harvest_type") {
-		if err := config.DB.Exec(`ALTER TABLE national_prices ADD COLUMN IF NOT EXISTS harvest_type varchar(80) NOT NULL DEFAULT ''`).Error; err != nil {
-			panic(fmt.Sprintf("failed to ensure national_prices.harvest_type column: %v", err))
-		}
-	}
-	if config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "source") {
-		if err := config.DB.Migrator().DropColumn(&pricemodels.NationalPrice{}, "source"); err != nil {
-			panic(fmt.Sprintf("failed to drop national_prices.source column: %v", err))
-		}
+	if err := applyNationalPriceMigrations(); err != nil {
+		panic(err.Error())
 	}
 
 	if err := config.DB.Exec(`ALTER TABLE plant_batches ADD COLUMN IF NOT EXISTS location varchar(150) NOT NULL DEFAULT ''`).Error; err != nil {
@@ -111,20 +145,8 @@ func main() {
 		panic(fmt.Sprintf("failed to migrate database: %v", err))
 	}
 
-	if config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "id") && !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "national_price_id") {
-		if err := config.DB.Exec(`ALTER TABLE national_prices RENAME COLUMN id TO national_price_id`).Error; err != nil {
-			panic(fmt.Sprintf("failed to rename national_prices.id column: %v", err))
-		}
-	}
-	if !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "harvest_type") {
-		if err := config.DB.Exec(`ALTER TABLE national_prices ADD COLUMN IF NOT EXISTS harvest_type varchar(80) NOT NULL DEFAULT ''`).Error; err != nil {
-			panic(fmt.Sprintf("failed to ensure national_prices.harvest_type column: %v", err))
-		}
-	}
-	if config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "source") {
-		if err := config.DB.Migrator().DropColumn(&pricemodels.NationalPrice{}, "source"); err != nil {
-			panic(fmt.Sprintf("failed to drop national_prices.source column: %v", err))
-		}
+	if err := applyNationalPriceMigrations(); err != nil {
+		panic(err.Error())
 	}
 
 	if err := config.DB.Exec(`ALTER TABLE plant_batches ADD COLUMN IF NOT EXISTS location varchar(150) NOT NULL DEFAULT ''`).Error; err != nil {

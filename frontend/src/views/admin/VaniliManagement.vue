@@ -70,9 +70,16 @@ const priceForm = reactive({
   province: "",
   price_per_kg: 0,
   effective_date: new Date().toISOString().slice(0, 10),
-  harvest_type: "",
+  harvest_type: "basah",
   grade_id: "",
 });
+
+const harvestTypeOptions = [
+  { value: "basah", label: "Basah" },
+  { value: "kering", label: "Kering" },
+] as const;
+
+const isWetHarvestType = computed(() => priceForm.harvest_type === "basah");
 
 const formatRupiah = (value: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -105,7 +112,7 @@ function resetPriceForm() {
   priceForm.province = "";
   priceForm.price_per_kg = 0;
   priceForm.effective_date = new Date().toISOString().slice(0, 10);
-  priceForm.harvest_type = "";
+  priceForm.harvest_type = "basah";
   priceForm.grade_id = "";
   editingPriceId.value = null;
 }
@@ -150,8 +157,9 @@ function startEditPrice(item: PriceItem) {
   priceForm.province = item.province;
   priceForm.price_per_kg = Number(item.price_per_kg) || 0;
   priceForm.effective_date = item.effective_date ? String(item.effective_date).slice(0, 10) : new Date().toISOString().slice(0, 10);
-  priceForm.harvest_type = item.harvest_type;
-  priceForm.grade_id = item.grade_id ? String(item.grade_id) : "";
+  const normalizedHarvestType = String(item.harvest_type || "").trim().toLowerCase();
+  priceForm.harvest_type = normalizedHarvestType === "kering" ? "kering" : "basah";
+  priceForm.grade_id = priceForm.harvest_type === "basah" ? "" : item.grade_id ? String(item.grade_id) : "";
   activeTab.value = "prices";
 }
 
@@ -198,7 +206,7 @@ async function submitPriceForm() {
     priceError.value = "Provinsi wajib diisi.";
     return;
   }
-  if (!priceForm.harvest_type.trim()) {
+  if (!harvestTypeOptions.some((option) => option.value === priceForm.harvest_type)) {
     priceError.value = "Jenis panen wajib diisi.";
     return;
   }
@@ -213,12 +221,16 @@ async function submitPriceForm() {
 
   savingPrice.value = true;
   try {
+    if (isWetHarvestType.value) {
+      priceForm.grade_id = "";
+    }
+
     const payload = {
       province: priceForm.province.trim(),
       price_per_kg: Number(priceForm.price_per_kg),
       effective_date: priceForm.effective_date,
-      harvest_type: priceForm.harvest_type.trim(),
-      grade_id: priceForm.grade_id ? Number(priceForm.grade_id) : null,
+      harvest_type: priceForm.harvest_type,
+      grade_id: isWetHarvestType.value ? null : priceForm.grade_id ? Number(priceForm.grade_id) : null,
     };
 
     if (editingPriceId.value) {
@@ -496,22 +508,27 @@ onMounted(async () => {
             <span class="text-sm font-medium text-gray-700">Grade</span>
             <select
               v-model="priceForm.grade_id"
+              :disabled="isWetHarvestType"
               class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              :class="isWetHarvestType ? 'cursor-not-allowed bg-gray-100 text-gray-400' : ''"
             >
               <option value="">Tanpa grade</option>
               <option v-for="grade in grades" :key="grade.id" :value="String(grade.id)">
                 {{ grade.grade_name }}
               </option>
             </select>
+            <p v-if="isWetHarvestType" class="text-xs text-gray-500">Panen basah tidak menggunakan grade.</p>
           </label>
           <label class="space-y-2 md:col-span-1">
             <span class="text-sm font-medium text-gray-700">Jenis panen</span>
-            <input
+            <select
               v-model="priceForm.harvest_type"
-              type="text"
               class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-              placeholder="Contoh: Basah / Kering"
-            />
+            >
+              <option v-for="option in harvestTypeOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
           </label>
           <label class="space-y-2 md:col-span-1">
             <span class="text-sm font-medium text-gray-700">Tanggal berlaku</span>

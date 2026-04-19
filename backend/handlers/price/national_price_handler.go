@@ -20,6 +20,14 @@ type createOrUpdateNationalPriceRequest struct {
 	HarvestType   string  `json:"harvest_type" binding:"required"`
 }
 
+func normalizeHarvestType(value string) (string, bool) {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	if normalized == "basah" || normalized == "kering" {
+		return normalized, true
+	}
+	return "", false
+}
+
 func ListNationalPrices(c *gin.Context) {
 	var items []pricemodels.NationalPrice
 	if err := config.DB.
@@ -41,9 +49,13 @@ func CreateNationalPrice(c *gin.Context) {
 	}
 
 	province := strings.TrimSpace(req.Province)
-	harvestType := strings.TrimSpace(req.HarvestType)
+	harvestType, isValidHarvestType := normalizeHarvestType(req.HarvestType)
 	if province == "" || harvestType == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "province and harvest_type are required"})
+		return
+	}
+	if !isValidHarvestType {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "harvest_type must be either basah or kering"})
 		return
 	}
 	if req.PricePerKg <= 0 {
@@ -57,16 +69,21 @@ func CreateNationalPrice(c *gin.Context) {
 		return
 	}
 
-	if req.GradeID != nil {
+	gradeID := req.GradeID
+	if harvestType == "basah" {
+		gradeID = nil
+	}
+
+	if gradeID != nil {
 		var grade postharvestmodels.Grade
-		if err := config.DB.First(&grade, "id = ?", *req.GradeID).Error; err != nil {
+		if err := config.DB.First(&grade, "id = ?", *gradeID).Error; err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "grade_id is invalid"})
 			return
 		}
 	}
 
 	item := pricemodels.NationalPrice{
-		GradeID:       req.GradeID,
+		GradeID:       gradeID,
 		Province:      province,
 		PricePerKg:    req.PricePerKg,
 		EffectiveDate: effectiveDate,
@@ -100,9 +117,13 @@ func UpdateNationalPrice(c *gin.Context) {
 	}
 
 	province := strings.TrimSpace(req.Province)
-	harvestType := strings.TrimSpace(req.HarvestType)
+	harvestType, isValidHarvestType := normalizeHarvestType(req.HarvestType)
 	if province == "" || harvestType == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "province and harvest_type are required"})
+		return
+	}
+	if !isValidHarvestType {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "harvest_type must be either basah or kering"})
 		return
 	}
 	if req.PricePerKg <= 0 {
@@ -116,15 +137,20 @@ func UpdateNationalPrice(c *gin.Context) {
 		return
 	}
 
-	if req.GradeID != nil {
+	gradeID := req.GradeID
+	if harvestType == "basah" {
+		gradeID = nil
+	}
+
+	if gradeID != nil {
 		var grade postharvestmodels.Grade
-		if err := config.DB.First(&grade, "id = ?", *req.GradeID).Error; err != nil {
+		if err := config.DB.First(&grade, "id = ?", *gradeID).Error; err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "grade_id is invalid"})
 			return
 		}
 	}
 
-	item.GradeID = req.GradeID
+	item.GradeID = gradeID
 	item.Province = province
 	item.PricePerKg = req.PricePerKg
 	item.EffectiveDate = effectiveDate
