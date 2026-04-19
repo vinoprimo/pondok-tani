@@ -19,6 +19,22 @@ export const getAdminUsers = () => {
   return api.get('/admin/users');
 };
 
+export const createAdminUser = (payload) => {
+  return api.post('/admin/users', payload);
+};
+
+export const updateAdminUser = (userId, payload) => {
+  return api.put(`/admin/users/${userId}`, payload);
+};
+
+export const deleteAdminUser = (userId) => {
+  return api.delete(`/admin/users/${userId}`);
+};
+
+export const getAdminUserPlantBatches = (userId) => {
+  return api.get(`/admin/users/${userId}/plant-batches`);
+};
+
 export const activateUserPackage = (userId, payload) => {
   return api.put(`/admin/users/${userId}/activate-package`, payload);
 };

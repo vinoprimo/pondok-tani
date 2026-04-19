@@ -13,6 +13,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type plantBatchSummary struct {
+	ID           uint      `json:"id"`
+	InvestmentID uint      `json:"investment_id"`
+	PackageID    uint      `json:"package_id"`
+	PackageName  string    `json:"package_name"`
+	BatchCode    string    `json:"batch_code"`
+	PlantingDate time.Time `json:"planting_date"`
+	Location     string    `json:"location"`
+	SeedCount    uint      `json:"seed_count"`
+	LandArea     float64   `json:"land_area"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
 type activatePlantBatchItem struct {
 	PackageID    uint    `json:"package_id" binding:"required,gt=0"`
 	BatchCode    string  `json:"batch_code" binding:"required,min=3,max=60"`
@@ -189,4 +203,48 @@ func ActivateUserPackage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Package activated after plant batch validation"})
+}
+
+func ListUserPlantBatches(c *gin.Context) {
+	userID := c.Param("id")
+
+	var user authmodels.User
+	if err := config.DB.First(&user, "id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	subQuery := config.DB.Model(&coremodels.Investment{}).
+		Select("id").
+		Where("user_id = ?", userID)
+
+	var plantBatches []coremodels.PlantBatch
+	if err := config.DB.
+		Preload("Investment").
+		Preload("Investment.Package").
+		Where("investment_id IN (?)", subQuery).
+		Order("planting_date DESC").
+		Find(&plantBatches).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch plant batch data"})
+		return
+	}
+
+	response := make([]plantBatchSummary, 0, len(plantBatches))
+	for _, item := range plantBatches {
+		response = append(response, plantBatchSummary{
+			ID:           item.ID,
+			InvestmentID: item.InvestmentID,
+			PackageID:    item.Investment.PackageID,
+			PackageName:  item.Investment.Package.PackageName,
+			BatchCode:    item.BatchCode,
+			PlantingDate: item.PlantingDate,
+			Location:     item.Location,
+			SeedCount:    item.SeedCount,
+			LandArea:     item.LandArea,
+			Status:       item.Status,
+			CreatedAt:    item.CreatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, response)
 }

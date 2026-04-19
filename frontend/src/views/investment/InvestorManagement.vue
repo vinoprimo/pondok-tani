@@ -9,11 +9,24 @@ import {
   Filter,
   Mail,
   Phone,
-  MoreVertical,
   Package,
   Loader2,
+  Eye,
+  MapPin,
+  Sprout,
+  Plus,
+  Pencil,
+  Trash2,
 } from 'lucide-vue-next';
-import { activateUserPackage, updateInvestmentStatus, getAdminUsers } from '../../services/user/user';
+import {
+  activateUserPackage,
+  updateInvestmentStatus,
+  getAdminUsers,
+  getAdminUserPlantBatches,
+  createAdminUser,
+  updateAdminUser,
+  deleteAdminUser,
+} from '../../services/user/user';
 
 const users = ref<any[]>([]);
 const loading = ref(false);
@@ -22,6 +35,22 @@ const updatingUserId = ref<string | null>(null);
 const activationFormUser = ref<any | null>(null);
 const activationFormError = ref('');
 const activationForms = ref<any[]>([]);
+const reviewingUser = ref<any | null>(null);
+const reviewLoading = ref(false);
+const reviewPlantBatches = ref<any[]>([]);
+const userFormMode = ref<'create' | 'edit'>('create');
+const userFormOpen = ref(false);
+const userFormLoading = ref(false);
+const userFormError = ref('');
+const editingUser = ref<any | null>(null);
+const userForm = ref({
+  name: '',
+  email: '',
+  password: '',
+  role: 'investor',
+  phone_number: '',
+  address: '',
+});
 const searchTerm = ref('');
 const statusFilter = ref('all');
 
@@ -89,6 +118,20 @@ function investorStatusLabel(status: string) {
   if (status === 'on_process') return 'Proses';
   if (status === 'pending') return 'Menunggu';
   return 'Belum memilih';
+}
+
+function getActionState(user: any) {
+  if (getUserInvestmentItems(user).length && user.package_status === 'pending') return 'mark-paid';
+  if (getUserInvestmentItems(user).length && user.package_status === 'on_process') return 'activate';
+  if (getUserInvestmentItems(user).length && user.package_status === 'active') return 'review';
+  return 'none';
+}
+
+function formatDisplayDate(value: string) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('id-ID');
 }
 
 async function loadUsers() {
@@ -202,6 +245,114 @@ function closeActivationForm() {
   activationForms.value = [];
 }
 
+async function openReviewPlantBatch(user: any) {
+  reviewingUser.value = user;
+  reviewLoading.value = true;
+  reviewPlantBatches.value = [];
+  try {
+    const response = await getAdminUserPlantBatches(user.id);
+    reviewPlantBatches.value = Array.isArray(response.data) ? response.data : [];
+  } catch (error) {
+    console.error('Failed to load plant batch data:', error);
+    reviewPlantBatches.value = [];
+  } finally {
+    reviewLoading.value = false;
+  }
+}
+
+function closeReviewPlantBatch() {
+  reviewingUser.value = null;
+  reviewPlantBatches.value = [];
+}
+
+function openCreateUserForm() {
+  userFormMode.value = 'create';
+  editingUser.value = null;
+  userFormError.value = '';
+  userForm.value = {
+    name: '',
+    email: '',
+    password: '',
+    role: 'investor',
+    phone_number: '',
+    address: '',
+  };
+  userFormOpen.value = true;
+}
+
+function openEditUserForm(user: any) {
+  userFormMode.value = 'edit';
+  editingUser.value = user;
+  userFormError.value = '';
+  userForm.value = {
+    name: user.name || '',
+    email: user.email || '',
+    password: '',
+    role: user.role || 'investor',
+    phone_number: user.phone_number || '',
+    address: user.address || '',
+  };
+  userFormOpen.value = true;
+}
+
+function closeUserForm() {
+  userFormOpen.value = false;
+  userFormError.value = '';
+}
+
+async function submitUserForm() {
+  if (!userForm.value.name.trim() || !userForm.value.email.trim()) {
+    userFormError.value = 'Nama dan email wajib diisi';
+    return;
+  }
+  if (userFormMode.value === 'create' && userForm.value.password.trim().length < 6) {
+    userFormError.value = 'Password minimal 6 karakter';
+    return;
+  }
+
+  userFormLoading.value = true;
+  userFormError.value = '';
+  try {
+    const payload: any = {
+      name: userForm.value.name.trim(),
+      email: userForm.value.email.trim(),
+      role: userForm.value.role,
+      phone_number: userForm.value.phone_number.trim() || null,
+      address: userForm.value.address.trim() || null,
+    };
+
+    if (userForm.value.password.trim()) {
+      payload.password = userForm.value.password.trim();
+    }
+
+    if (userFormMode.value === 'create') {
+      await createAdminUser(payload);
+    } else if (editingUser.value) {
+      await updateAdminUser(editingUser.value.id, payload);
+    }
+
+    await loadUsers();
+    closeUserForm();
+  } catch (error) {
+    console.error('Failed to save user:', error);
+    userFormError.value = 'Gagal menyimpan user. Cek data lalu coba lagi.';
+  } finally {
+    userFormLoading.value = false;
+  }
+}
+
+async function handleDeleteUser(user: any) {
+  const confirmed = window.confirm(`Hapus user ${user.name}? Tindakan ini tidak bisa dibatalkan.`);
+  if (!confirmed) return;
+
+  try {
+    await deleteAdminUser(user.id);
+    await loadUsers();
+  } catch (error) {
+    console.error('Failed to delete user:', error);
+  }
+}
+
 onMounted(() => {
   loadUsers();
 });
@@ -221,6 +372,14 @@ onMounted(() => {
       >
         <UserCheck class="w-4 h-4" />
         Refresh data
+      </button>
+      <button
+        type="button"
+        class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        @click="openCreateUserForm"
+      >
+        <Plus class="w-4 h-4" />
+        Tambah User
       </button>
     </div>
 
@@ -382,32 +541,66 @@ onMounted(() => {
                 {{ user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID') : '-' }}
               </td>
               <td class="px-6 py-4">
-                <div class="flex flex-col gap-2">
+                <div class="space-y-2">
+                  <div class="flex items-center">
+                  <button
+                    v-if="getActionState(user) === 'mark-paid'"
+                    type="button"
+                    class="inline-flex min-w-[210px] items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    :disabled="updatingUserId === user.id"
+                    @click="handleMarkAsPaid(user.id)"
+                  >
+                    <Loader2 v-if="updatingUserId === user.id" class="h-4 w-4 animate-spin" />
+                    <span>{{ updatingUserId === user.id ? 'Memproses...' : 'Tandai Telah Bayar' }}</span>
+                  </button>
+
+                  <button
+                    v-else-if="getActionState(user) === 'activate'"
+                    type="button"
+                    class="inline-flex min-w-[210px] items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    :disabled="activatingUserId === user.id"
+                    @click="openActivationForm(user)"
+                  >
+                    <Loader2 v-if="activatingUserId === user.id" class="h-4 w-4 animate-spin" />
+                    <span>{{ activatingUserId === user.id ? 'Membuka Form...' : 'Aktifkan Penanaman Awal' }}</span>
+                  </button>
+
+                  <button
+                    v-else-if="getActionState(user) === 'review'"
+                    type="button"
+                    class="inline-flex min-w-[210px] items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-semibold text-green-700 transition-colors hover:bg-green-100"
+                    @click="openReviewPlantBatch(user)"
+                  >
+                    <Eye class="h-4 w-4" />
+                    <span>Tinjau Plant Batch</span>
+                  </button>
+
+                  <span
+                    v-else
+                    class="inline-flex min-w-[210px] items-center justify-center rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-500"
+                  >
+                    Tidak ada aksi
+                  </span>
+                  </div>
+
                   <div class="flex items-center gap-2">
                     <button
-                      v-if="getUserInvestmentItems(user).length && user.package_status === 'pending'"
                       type="button"
-                      class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-                      :disabled="updatingUserId === user.id"
-                      @click="handleMarkAsPaid(user.id)"
+                      class="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      @click="openEditUserForm(user)"
                     >
-                      <Loader2 v-if="updatingUserId === user.id" class="h-4 w-4 animate-spin" />
-                      <span>{{ updatingUserId === user.id ? 'Memproses...' : 'Tandai Telah Bayar' }}</span>
+                      <Pencil class="h-3.5 w-3.5" />
+                      Edit
                     </button>
                     <button
-                      v-else-if="getUserInvestmentItems(user).length && user.package_status === 'on_process'"
                       type="button"
-                      class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-60"
-                      :disabled="activatingUserId === user.id"
-                      @click="openActivationForm(user)"
+                      class="inline-flex items-center gap-1 rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                      @click="handleDeleteUser(user)"
                     >
-                      <Loader2 v-if="activatingUserId === user.id" class="h-4 w-4 animate-spin" />
-                      <span>{{ activatingUserId === user.id ? 'Mengaktifkan...' : 'Aktifkan (Penanaman Awal)' }}</span>
+                      <Trash2 class="h-3.5 w-3.5" />
+                      Hapus
                     </button>
                   </div>
-                  <button type="button" class="text-gray-400 hover:text-gray-600 text-left">
-                    <MoreVertical class="w-5 h-5" />
-                  </button>
                 </div>
               </td>
             </tr>
@@ -506,6 +699,115 @@ onMounted(() => {
           >
             <Loader2 v-if="activatingUserId === activationFormUser.id" class="h-4 w-4 animate-spin" />
             <span>{{ activatingUserId === activationFormUser.id ? 'Memproses...' : 'Aktifkan Paket' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="reviewingUser" class="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">
+      <div class="mx-auto my-6 w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl max-h-[88vh] overflow-y-auto">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-xl font-semibold text-gray-900">Tinjau Data Plant Batch</h3>
+            <p class="mt-1 text-sm text-gray-600">
+              Data penanaman awal untuk user <span class="font-medium text-gray-900">{{ reviewingUser.name }}</span>.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            @click="closeReviewPlantBatch"
+          >
+            Tutup
+          </button>
+        </div>
+
+        <div v-if="reviewLoading" class="mt-6 flex items-center justify-center gap-2 text-sm text-gray-500">
+          <Loader2 class="h-4 w-4 animate-spin" />
+          Memuat data plant batch...
+        </div>
+
+        <div v-else-if="!reviewPlantBatches.length" class="mt-6 rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+          Belum ada data plant batch untuk user ini.
+        </div>
+
+        <div v-else class="mt-6 space-y-4">
+          <article
+            v-for="item in reviewPlantBatches"
+            :key="item.id"
+            class="rounded-xl border border-gray-200 bg-white p-4"
+          >
+            <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p class="text-sm font-semibold text-gray-900">{{ item.package_name || `Paket #${item.package_id}` }}</p>
+                <p class="mt-1 text-xs uppercase tracking-wide text-gray-500">Batch Code: {{ item.batch_code }}</p>
+              </div>
+              <span class="inline-flex rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">{{ item.status }}</span>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 gap-3 text-sm text-gray-700 md:grid-cols-2">
+              <p class="inline-flex items-center gap-2"><MapPin class="h-4 w-4 text-gray-500" /> {{ item.location || '-' }}</p>
+              <p class="inline-flex items-center gap-2"><Sprout class="h-4 w-4 text-gray-500" /> {{ item.seed_count }} bibit</p>
+              <p>Tanggal Tanam: {{ formatDisplayDate(item.planting_date) }}</p>
+              <p>Luas Lahan: {{ Number(item.land_area || 0).toLocaleString('id-ID') }} m²</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="userFormOpen" class="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">
+      <div class="mx-auto my-6 w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
+        <h3 class="text-xl font-semibold text-gray-900">
+          {{ userFormMode === 'create' ? 'Tambah User Baru' : 'Edit User' }}
+        </h3>
+        <p class="mt-1 text-sm text-gray-600">Isi data user yang akan dikelola oleh admin.</p>
+
+        <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div class="md:col-span-2">
+            <label class="mb-1 block text-sm font-medium text-gray-700">Nama</label>
+            <input v-model="userForm.name" type="text" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+          </div>
+          <div class="md:col-span-2">
+            <label class="mb-1 block text-sm font-medium text-gray-700">Email</label>
+            <input v-model="userForm.email" type="email" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700">Role</label>
+            <select v-model="userForm.role" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+              <option value="investor">Investor</option>
+              <option value="mitra">Mitra</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700">No. Telepon</label>
+            <input v-model="userForm.phone_number" type="text" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+          </div>
+          <div class="md:col-span-2">
+            <label class="mb-1 block text-sm font-medium text-gray-700">Alamat</label>
+            <textarea v-model="userForm.address" rows="2" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+          </div>
+          <div class="md:col-span-2">
+            <label class="mb-1 block text-sm font-medium text-gray-700">Password {{ userFormMode === 'edit' ? '(opsional)' : '' }}</label>
+            <input v-model="userForm.password" type="password" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" />
+          </div>
+        </div>
+
+        <p v-if="userFormError" class="mt-3 text-sm text-red-600">{{ userFormError }}</p>
+
+        <div class="mt-6 flex justify-end gap-3">
+          <button type="button" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50" @click="closeUserForm">
+            Batal
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            :disabled="userFormLoading"
+            @click="submitUserForm"
+          >
+            <Loader2 v-if="userFormLoading" class="h-4 w-4 animate-spin" />
+            <span>{{ userFormLoading ? 'Menyimpan...' : 'Simpan' }}</span>
           </button>
         </div>
       </div>
