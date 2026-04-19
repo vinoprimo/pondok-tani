@@ -120,25 +120,25 @@ const router = useRouter();
     </section>
 
     <!-- Program Section -->
-    <section class="py-20 bg-gradient-to-b from-emerald-50 to-white">
+    <section class="py-20 bg-gradient-to-b from-green-50 to-white">
       <div class="max-w-7xl mx-auto px-6">
         <div class="mb-12 text-center">
           <h3 class="mt-4 text-4xl font-bold text-slate-900">Program Investasi Atau Kemitraan Pondok Tani</h3>
           <p class="mt-3 text-lg text-slate-600">Pilih jalur yang sesuai dengan tujuan Anda: investor atau mitra aktif bersama tim Pondok Tani.</p>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <article class="rounded-3xl border border-emerald-300 bg-white p-8 text-center shadow-lg shadow-emerald-100/60 transition hover:-translate-y-1 hover:shadow-xl">
-            <h4 class="text-2xl font-bold text-slate-900">Program Investasi</h4>
-            <p class="mt-3 text-slate-600">Skema untuk investor yang ingin menanam modal dan memantau perkembangan kebun dari dashboard secara transparan.</p>
-            <button class="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-white font-semibold hover:bg-emerald-700" @click="router.push('/paket-investasi')">
-              Lihat Program Investasi
-              <ArrowRight class="h-4 w-4" />
-            </button>
-          </article>
-          <article class="rounded-3xl border border-emerald-300 bg-white p-8 text-center shadow-lg shadow-emerald-100/60 transition hover:-translate-y-1 hover:shadow-xl">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <article class="rounded-3xl border border-green-200 bg-white p-8 text-center shadow-lg shadow-green-100/60 transition hover:-translate-y-1 hover:shadow-xl">
+              <h4 class="text-2xl font-bold text-slate-900">Program Investasi</h4>
+              <p class="mt-3 text-slate-600">Skema untuk investor yang ingin menanam modal dan memantau perkembangan kebun dari dashboard secara transparan.</p>
+              <button class="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-white font-semibold hover:bg-green-700" @click="router.push('/paket-investasi')">
+                Lihat Program Investasi
+                <ArrowRight class="h-4 w-4" />
+              </button>
+            </article>
+          <article class="rounded-3xl border border-green-200 bg-white p-8 text-center shadow-lg shadow-green-100/60 transition hover:-translate-y-1 hover:shadow-xl">
             <h4 class="text-2xl font-bold text-slate-900">Program Kemitraan</h4>
             <p class="mt-3 text-slate-600">Skema untuk calon mitra yang ingin terlibat dalam operasional, budi daya, dan penguatan rantai pasok vanili.</p>
-            <button class="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-white font-semibold hover:bg-emerald-700" @click="router.push('/kemitraan')">
+            <button class="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-white font-semibold hover:bg-green-700" @click="router.push('/kemitraan')">
               Lihat Program Kemitraan
               <ArrowRight class="h-4 w-4" />
             </button>
@@ -154,13 +154,13 @@ const router = useRouter();
           <div>
             <h3 class="mt-4 text-4xl font-bold text-slate-900">Berita Vanili Terbaru</h3>
           </div>
-          <a class="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50" href="https://news.google.com/search?q=vanili&hl=id&gl=ID&ceid=ID:id" target="_blank" rel="noopener noreferrer">Lihat Semua Berita</a>
+          <a class="rounded-xl border border-green-200 px-5 py-3 font-semibold text-green-700 hover:bg-green-50" href="https://news.google.com/search?q=vanili&hl=id&gl=ID&ceid=ID:id" target="_blank" rel="noopener noreferrer">Lihat Semua Berita</a>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <a class="rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition" href="https://news.google.com/search?q=vanili+indonesia+terbaru&hl=id&gl=ID&ceid=ID:id" target="_blank" rel="noopener noreferrer">
             <img class="h-48 w-full object-cover" :src="berita1" alt="Berita vanili Indonesia" />
             <div class="p-6">
-              <p class="text-xs font-semibold text-emerald-600">Google News</p>
+                <p class="text-xs font-semibold text-green-600">Google News</p>
               <h4 class="mt-2 text-xl font-bold text-slate-900">Berita Vanili Indonesia Terbaru</h4>
               <p class="mt-3 text-slate-600">Update perkembangan budidaya, petani, dan industri vanili di Indonesia.</p>
             </div>
@@ -168,7 +168,7 @@ const router = useRouter();
           <a class="rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition" href="https://news.google.com/search?q=harga+vanili+dunia&hl=id&gl=ID&ceid=ID:id" target="_blank" rel="noopener noreferrer">
             <img class="h-48 w-full object-cover" :src="berita2" alt="Berita harga vanili dunia" />
             <div class="p-6">
-              <p class="text-xs font-semibold text-emerald-600">Google News</p>
+                <p class="text-xs font-semibold text-green-600">Google News</p>
               <h4 class="mt-2 text-xl font-bold text-slate-900">Pergerakan Harga Vanili Global</h4>
               <p class="mt-3 text-slate-600">Pantau kabar terbaru terkait harga vanili dunia dan permintaan pasar internasional.</p>
             </div>
@@ -176,7 +176,7 @@ const router = useRouter();
           <a class="rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition" href="https://news.google.com/search?q=teknik+budidaya+vanili+terkini&hl=id&gl=ID&ceid=ID:id" target="_blank" rel="noopener noreferrer">
             <img class="h-48 w-full object-cover" :src="berita3" alt="Teknik budidaya vanili" />
             <div class="p-6">
-              <p class="text-xs font-semibold text-emerald-600">Google News</p>
+                <p class="text-xs font-semibold text-green-600">Google News</p>
               <h4 class="mt-2 text-xl font-bold text-slate-900">Teknik Budidaya Vanili Terkini</h4>
               <p class="mt-3 text-slate-600">Kumpulan berita dan tips terbaru seputar teknik budidaya untuk hasil optimal.</p>
             </div>
@@ -186,7 +186,7 @@ const router = useRouter();
     </section>
 
     <!-- CTA Section -->
-    <section class="bg-gradient-to-r from-green-600 to-green-700 py-20">
+    <section class="bg-gradient-to-r from-green-700 to-green-800 py-20">
       <div class="max-w-4xl mx-auto px-6 text-center">
         <h3 class="text-4xl font-bold text-white mb-6">Siap Memulai Investasi Vanili?</h3>
         <p class="text-xl text-green-50 mb-8">
@@ -195,7 +195,7 @@ const router = useRouter();
         <div class="flex gap-4 justify-center">
           <button
             type="button"
-            class="px-8 py-4 bg-white text-green-600 rounded-xl hover:bg-green-50 transition-colors font-semibold text-lg flex items-center gap-2"
+            class="px-8 py-4 bg-white text-green-700 rounded-xl hover:bg-green-50 transition-colors font-semibold text-lg flex items-center gap-2"
             @click="router.push({ path: '/login', query: { mode: 'register' } })"
           >
             Mulai Sekarang
