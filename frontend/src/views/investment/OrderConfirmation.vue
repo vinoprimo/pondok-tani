@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ArrowLeft, CheckCircle2, MessageCircle, Package } from 'lucide-vue-next';
 import LandingLayout from '../../layouts/LandingLayout.vue';
 import { getInvestmentPackages } from '../../services/investment/package';
+import { getCurrentUser } from '../../services/user/user';
 
 type PaketItem = {
   id: number;
@@ -18,6 +19,10 @@ const route = useRoute();
 const loadingPackages = ref(false);
 const paketItems = ref<PaketItem[]>([]);
 const selectedPackageIds = ref<number[]>([]);
+const userProfile = ref({
+  name: 'User',
+  email: '-',
+});
 
 const formatRupiah = (value: number) =>
   new Intl.NumberFormat('id-ID', {
@@ -57,16 +62,36 @@ async function loadPackages() {
   }
 }
 
+async function loadUserProfile() {
+  try {
+    const response = await getCurrentUser();
+    userProfile.value = {
+      name: response.data?.name || 'User',
+      email: response.data?.email || '-',
+    };
+  } catch (error) {
+    console.error('Failed to load user profile:', error);
+    userProfile.value = {
+      name: 'User',
+      email: '-',
+    };
+  } finally {
+  }
+}
+
 const selectedPackages = computed(() =>
   paketItems.value.filter((item) => selectedPackageIds.value.includes(item.id))
 );
 
 const whatsappMessage = computed(() => {
+  const userName = userProfile.value.name || 'User';
+  const userEmail = userProfile.value.email || '-';
+
   if (!selectedPackages.value.length) {
-    return 'saya ingin melanjutkan konfirmasi pesanan paket investasi';
+    return `halo admin, saya ingin melanjutkan konfirmasi pesanan paket investasi.\n\nNama: ${userName}\nEmail: ${userEmail}`;
   }
 
-  return `saya tertarik dengan paket berikut:\n- ${selectedPackages.value.map((item) => item.name).join('\n- ')}`;
+  return `halo admin, saya ingin konfirmasi paket investasi berikut:\n\nNama: ${userName}\nEmail: ${userEmail}\n\nPaket dipilih:\n- ${selectedPackages.value.map((item) => item.name).join('\n- ')}`;
 });
 
 function goBackToSelection() {
@@ -86,6 +111,7 @@ function continueToWhatsApp() {
 
 onMounted(() => {
   loadPackages();
+  loadUserProfile();
 });
 </script>
 

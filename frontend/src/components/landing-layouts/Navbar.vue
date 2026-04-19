@@ -46,6 +46,7 @@ async function loadProfile() {
   isLoggedIn.value = Boolean(localStorage.getItem('token'));
 
   if (!isLoggedIn.value) {
+    isProfileOpen.value = false;
     profile.value = {
       name: 'Guest',
       email: '-',
@@ -169,6 +170,7 @@ watch(
           </button>
         </template>
         <button
+          v-if="isLoggedIn"
           type="button"
           class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-700 hover:bg-gray-50"
           @click="toggleProfile"
@@ -178,7 +180,7 @@ watch(
         </button>
 
         <div
-          v-if="isProfileOpen"
+          v-if="isLoggedIn && isProfileOpen"
           class="absolute right-0 top-12 w-64 rounded-xl border border-gray-200 bg-white p-4 shadow-lg"
         >
           <p class="text-xs uppercase tracking-wide text-gray-500 mb-2">Profil</p>
@@ -228,6 +230,7 @@ watch(
           Pilih Paket
         </button>
         <button
+          v-if="isLoggedIn"
           type="button"
           class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-gray-700"
           @click="toggleProfile"
@@ -239,7 +242,7 @@ watch(
     </div>
 
     <div
-      v-if="isProfileOpen"
+      v-if="isLoggedIn && isProfileOpen"
       class="md:hidden mx-6 mb-3 rounded-xl border border-gray-200 bg-white p-3"
     >
       <p class="text-xs uppercase tracking-wide text-gray-500 mb-2">Profil</p>

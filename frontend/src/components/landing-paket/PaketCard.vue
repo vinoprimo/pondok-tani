@@ -4,11 +4,13 @@ import { CheckCircle2, Sprout } from 'lucide-vue-next';
 const props = defineProps<{
   name: string;
   range: string;
+  description?: string;
   roi: string;
   duration: string;
   highlight?: boolean;
   selected?: boolean;
   buttonLabel?: string;
+  infoMode?: 'full' | 'modal-description';
 }>();
 
 const emit = defineEmits<{
@@ -38,8 +40,16 @@ const emit = defineEmits<{
 
     <ul class="space-y-2 text-sm text-gray-700 mb-6">
       <li><span class="font-medium">Modal:</span> {{ range }}</li>
-      <li><span class="font-medium">Estimasi ROI:</span> {{ roi }}</li>
-      <li><span class="font-medium">Durasi:</span> {{ duration }}</li>
+      <template v-if="props.infoMode === 'modal-description'">
+        <li>
+          <span class="font-medium">Deskripsi:</span>
+          {{ props.description || 'Deskripsi paket belum tersedia.' }}
+        </li>
+      </template>
+      <template v-else>
+        <li><span class="font-medium">Estimasi ROI:</span> {{ roi }}</li>
+        <li><span class="font-medium">Durasi:</span> {{ duration }}</li>
+      </template>
     </ul>
 
     <button

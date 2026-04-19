@@ -13,6 +13,7 @@ type PaketItem = {
   id: number;
   name: string;
   range: string;
+  description: string;
   roi: string;
   duration: string;
   highlight?: boolean;
@@ -52,6 +53,7 @@ async function loadPackages() {
       id: item.id,
       name: item.package_name,
       range: `${formatRupiah(item.price)} (min ${item.min_quantity} unit)`,
+      description: item.description || 'Deskripsi paket belum tersedia.',
       roi: 'Estimasi placeholder 15% - 25% / tahun',
       duration: 'Placeholder 12 - 24 bulan',
       highlight: idx === 1,
@@ -191,8 +193,10 @@ onMounted(() => {
           :key="item.id"
           :name="item.name"
           :range="item.range"
+          :description="item.description"
           :roi="item.roi"
           :duration="item.duration"
+          info-mode="modal-description"
           :highlight="item.highlight"
           :selected="selectedPackageId === item.id"
           button-label="Pilih Paket Ini"
