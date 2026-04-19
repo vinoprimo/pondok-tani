@@ -2,6 +2,7 @@ package routes
 
 import (
 	investmenthandler "pondok-tani-backend/handlers/investment"
+	pricehandler "pondok-tani-backend/handlers/price"
 	plantbatchhandler "pondok-tani-backend/handlers/plantbatch"
 	userhandler "pondok-tani-backend/handlers/user"
 	"pondok-tani-backend/middleware"
@@ -19,5 +20,14 @@ func AdminRoutes(r *gin.Engine) {
 		admin.GET("/users/:id/plant-batches", plantbatchhandler.ListUserPlantBatches)
 		admin.PUT("/users/:id/activate-package", plantbatchhandler.ActivateUserPackage)
 		admin.PUT("/users/:id/investment-status", investmenthandler.UpdateInvestmentStatus)
+
+		admin.GET("/vanili/grades", pricehandler.ListGrades)
+		admin.POST("/vanili/grades", pricehandler.CreateGrade)
+		admin.PUT("/vanili/grades/:id", pricehandler.UpdateGrade)
+		admin.DELETE("/vanili/grades/:id", pricehandler.DeleteGrade)
+		admin.GET("/vanili/prices", pricehandler.ListNationalPrices)
+		admin.POST("/vanili/prices", pricehandler.CreateNationalPrice)
+		admin.PUT("/vanili/prices/:id", pricehandler.UpdateNationalPrice)
+		admin.DELETE("/vanili/prices/:id", pricehandler.DeleteNationalPrice)
 	}
 }

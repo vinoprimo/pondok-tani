@@ -7,6 +7,7 @@ import { getCurrentUser } from "../services/user/user";
  *   views/landing/Landing.vue
  *   views/dashboard/Dashboard.vue
  *   views/harvest/HarvestSales.vue
+ *   views/admin/VaniliManagement.vue
  *   views/investment/{FinancialProjections,InvestmentPortfolio,InvestorManagement}.vue
  *   views/notifications/{Notifications,ReminderSettings}.vue
  *   views/plant-monitoring/{MaintenanceActivities,MaintenanceValidation,PlantMonitoring}.vue
@@ -69,7 +70,13 @@ const routes = [
         path: "plants",
         name: "dashboard-plants",
         component: () => import("../views/plant-monitoring/PlantMonitoring.vue"),
-        meta: { roles: ["investor", "mitra", "admin"] },
+        meta: { roles: ["investor", "mitra"] },
+      },
+      {
+        path: "vanili-management",
+        name: "dashboard-vanili-management",
+        component: () => import("../views/admin/VaniliManagement.vue"),
+        meta: { roles: ["admin"] },
       },
       {
         path: "maintenance",

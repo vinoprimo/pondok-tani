@@ -47,6 +47,22 @@ func migrateDB() {
 		panic(fmt.Sprintf("failed to migrate database: %v", err))
 	}
 
+	if config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "id") && !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "national_price_id") {
+		if err := config.DB.Exec(`ALTER TABLE national_prices RENAME COLUMN id TO national_price_id`).Error; err != nil {
+			panic(fmt.Sprintf("failed to rename national_prices.id column: %v", err))
+		}
+	}
+	if !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "harvest_type") {
+		if err := config.DB.Exec(`ALTER TABLE national_prices ADD COLUMN IF NOT EXISTS harvest_type varchar(80) NOT NULL DEFAULT ''`).Error; err != nil {
+			panic(fmt.Sprintf("failed to ensure national_prices.harvest_type column: %v", err))
+		}
+	}
+	if config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "source") {
+		if err := config.DB.Migrator().DropColumn(&pricemodels.NationalPrice{}, "source"); err != nil {
+			panic(fmt.Sprintf("failed to drop national_prices.source column: %v", err))
+		}
+	}
+
 	if err := config.DB.Exec(`ALTER TABLE plant_batches ADD COLUMN IF NOT EXISTS location varchar(150) NOT NULL DEFAULT ''`).Error; err != nil {
 		panic(fmt.Sprintf("failed to ensure plant_batches.location column: %v", err))
 	}
@@ -93,6 +109,22 @@ func main() {
 	)
 	if err != nil {
 		panic(fmt.Sprintf("failed to migrate database: %v", err))
+	}
+
+	if config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "id") && !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "national_price_id") {
+		if err := config.DB.Exec(`ALTER TABLE national_prices RENAME COLUMN id TO national_price_id`).Error; err != nil {
+			panic(fmt.Sprintf("failed to rename national_prices.id column: %v", err))
+		}
+	}
+	if !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "harvest_type") {
+		if err := config.DB.Exec(`ALTER TABLE national_prices ADD COLUMN IF NOT EXISTS harvest_type varchar(80) NOT NULL DEFAULT ''`).Error; err != nil {
+			panic(fmt.Sprintf("failed to ensure national_prices.harvest_type column: %v", err))
+		}
+	}
+	if config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "source") {
+		if err := config.DB.Migrator().DropColumn(&pricemodels.NationalPrice{}, "source"); err != nil {
+			panic(fmt.Sprintf("failed to drop national_prices.source column: %v", err))
+		}
 	}
 
 	if err := config.DB.Exec(`ALTER TABLE plant_batches ADD COLUMN IF NOT EXISTS location varchar(150) NOT NULL DEFAULT ''`).Error; err != nil {
