@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import {
   TrendingUp,
   Sprout,
@@ -11,21 +11,160 @@ import {
   X,
   Calculator,
 } from "lucide-vue-next";
+import {
+  createInvestmentPackage,
+  deleteInvestmentPackage,
+  getInvestmentPackages,
+  updateInvestmentPackage,
+} from "../../services/investment/package";
 
-type UserRole = "investor" | "admin";
+type UserRole = "investor" | "mitra" | "admin";
+
+type InvestmentPackageItem = {
+  id: number;
+  package_name: string;
+  description?: string | null;
+  min_quantity: number;
+  price: number;
+  status: string;
+};
 
 const userRole = ref<UserRole>(
   (localStorage.getItem("userRole") as UserRole) || "investor"
 );
 
-onMounted(() => {
-  const stored = localStorage.getItem("userRole") as UserRole | null;
-  if (stored === "admin" || stored === "investor") {
-    userRole.value = stored;
-  }
+const showProjectionModal = ref(false);
+
+const adminPackages = ref<InvestmentPackageItem[]>([]);
+const packageLoading = ref(false);
+const packageSaving = ref(false);
+const packageError = ref("");
+const packageSuccess = ref("");
+const editingPackageId = ref<number | null>(null);
+
+const packageForm = reactive({
+  package_name: "",
+  description: "",
+  min_quantity: 1,
+  price: 0,
+  status: "active",
 });
 
-const showProjectionModal = ref(false);
+const isAdmin = computed(() => userRole.value === "admin");
+
+const formatRupiah = (value: number) =>
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(value);
+
+function resetPackageForm() {
+  packageForm.package_name = "";
+  packageForm.description = "";
+  packageForm.min_quantity = 1;
+  packageForm.price = 0;
+  packageForm.status = "active";
+  editingPackageId.value = null;
+}
+
+async function loadAdminPackages() {
+  if (!isAdmin.value) return;
+
+  packageLoading.value = true;
+  packageError.value = "";
+  try {
+    const res = await getInvestmentPackages();
+    adminPackages.value = Array.isArray(res.data) ? res.data : [];
+  } catch (err) {
+    console.error("Failed to load investment packages", err);
+    packageError.value = "Gagal memuat data paket investasi.";
+  } finally {
+    packageLoading.value = false;
+  }
+}
+
+function startEditPackage(item: InvestmentPackageItem) {
+  editingPackageId.value = item.id;
+  packageForm.package_name = item.package_name;
+  packageForm.description = item.description || "";
+  packageForm.min_quantity = item.min_quantity;
+  packageForm.price = item.price;
+  packageForm.status = item.status || "active";
+}
+
+async function submitPackageForm() {
+  packageError.value = "";
+  packageSuccess.value = "";
+
+  if (!packageForm.package_name.trim()) {
+    packageError.value = "Nama paket wajib diisi.";
+    return;
+  }
+  if (packageForm.min_quantity <= 0) {
+    packageError.value = "Minimum kuantitas harus lebih dari 0.";
+    return;
+  }
+  if (packageForm.price <= 0) {
+    packageError.value = "Harga harus lebih dari 0.";
+    return;
+  }
+
+  const payload = {
+    package_name: packageForm.package_name.trim(),
+    description: packageForm.description.trim() || null,
+    min_quantity: Number(packageForm.min_quantity),
+    price: Number(packageForm.price),
+    status: packageForm.status,
+  };
+
+  packageSaving.value = true;
+  try {
+    if (editingPackageId.value) {
+      await updateInvestmentPackage(editingPackageId.value, payload);
+      packageSuccess.value = "Paket investasi berhasil diperbarui.";
+    } else {
+      await createInvestmentPackage(payload);
+      packageSuccess.value = "Paket investasi berhasil dibuat.";
+    }
+
+    resetPackageForm();
+    await loadAdminPackages();
+  } catch (err) {
+    console.error("Failed to save investment package", err);
+    packageError.value = "Gagal menyimpan paket investasi.";
+  } finally {
+    packageSaving.value = false;
+  }
+}
+
+async function removePackage(id: number) {
+  packageError.value = "";
+  packageSuccess.value = "";
+  const confirmed = window.confirm("Hapus paket investasi ini?");
+  if (!confirmed) return;
+
+  try {
+    await deleteInvestmentPackage(id);
+    packageSuccess.value = "Paket investasi berhasil dihapus.";
+    if (editingPackageId.value === id) {
+      resetPackageForm();
+    }
+    await loadAdminPackages();
+  } catch (err) {
+    console.error("Failed to delete investment package", err);
+    packageError.value = "Gagal menghapus paket investasi.";
+  }
+}
+
+onMounted(() => {
+  const stored = localStorage.getItem("userRole") as UserRole | null;
+  if (stored === "admin" || stored === "investor" || stored === "mitra") {
+    userRole.value = stored;
+  }
+
+  loadAdminPackages();
+});
 
 const monthlyData = [
   { month: "Jan", revenue: 12000, costs: 8000 },
@@ -235,13 +374,15 @@ function closeModal() {
   <div class="space-y-6">
     <div>
       <h2 class="text-2xl font-semibold text-gray-900">
-        {{ userRole === "admin" ? "Dasbor admin" : "Ringkasan investasi" }}
+        {{ userRole === "admin" ? "Dasbor admin" : userRole === "mitra" ? "Dasbor mitra" : "Ringkasan investasi" }}
       </h2>
       <p class="text-gray-600 mt-1">
         {{
           userRole === "admin"
             ? "Kelola operasional perkebunan vanili Anda"
-            : "Pantau investasi perkebunan vanili Anda"
+            : userRole === "mitra"
+              ? "Pantau aktivitas operasional kebun vanili Anda"
+              : "Pantau investasi perkebunan vanili Anda"
         }}
       </p>
     </div>
@@ -272,11 +413,156 @@ function closeModal() {
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <template v-if="isAdmin">
+      <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">CRUD Paket Investasi</h3>
+            <p class="text-sm text-gray-600 mt-1">
+              Kelola paket investasi yang akan tampil di landing page.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50"
+            @click="loadAdminPackages"
+          >
+            Refresh Data
+          </button>
+        </div>
+
+        <p v-if="packageError" class="text-sm text-red-600">{{ packageError }}</p>
+        <p v-if="packageSuccess" class="text-sm text-emerald-600">{{ packageSuccess }}</p>
+
+        <form class="grid grid-cols-1 md:grid-cols-2 gap-4" @submit.prevent="submitPackageForm">
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nama Paket</label>
+            <input
+              v-model="packageForm.package_name"
+              type="text"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Contoh: Growth Vanili"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Harga (IDR)</label>
+            <input
+              v-model.number="packageForm.price"
+              type="number"
+              min="1"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Min Quantity</label>
+            <input
+              v-model.number="packageForm.min_quantity"
+              type="number"
+              min="1"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              v-model="packageForm.status"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+            <textarea
+              v-model="packageForm.description"
+              rows="3"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Deskripsi singkat paket investasi"
+            />
+          </div>
+
+          <div class="md:col-span-2 flex items-center gap-3">
+            <button
+              type="submit"
+              class="px-5 py-2.5 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
+              :disabled="packageSaving"
+            >
+              {{ editingPackageId ? "Update Paket" : "Tambah Paket" }}
+            </button>
+            <button
+              v-if="editingPackageId"
+              type="button"
+              class="px-5 py-2.5 rounded-lg border border-gray-300 font-medium hover:bg-gray-50"
+              @click="resetPackageForm"
+            >
+              Batal Edit
+            </button>
+          </div>
+        </form>
+
+        <div class="overflow-x-auto rounded-lg border border-gray-100">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 text-left text-gray-600">
+              <tr>
+                <th class="px-3 py-2 font-medium">Nama Paket</th>
+                <th class="px-3 py-2 font-medium">Harga</th>
+                <th class="px-3 py-2 font-medium">Min Qty</th>
+                <th class="px-3 py-2 font-medium">Status</th>
+                <th class="px-3 py-2 font-medium">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr v-if="packageLoading">
+                <td colspan="5" class="px-3 py-4 text-center text-gray-500">Memuat data paket...</td>
+              </tr>
+              <tr v-else-if="adminPackages.length === 0">
+                <td colspan="5" class="px-3 py-4 text-center text-gray-500">Belum ada paket investasi.</td>
+              </tr>
+              <tr v-for="item in adminPackages" :key="item.id">
+                <td class="px-3 py-2 font-medium text-gray-900">{{ item.package_name }}</td>
+                <td class="px-3 py-2">{{ formatRupiah(item.price) }}</td>
+                <td class="px-3 py-2">{{ item.min_quantity }}</td>
+                <td class="px-3 py-2">
+                  <span
+                    class="px-2 py-1 rounded-full text-xs font-medium"
+                    :class="item.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'"
+                  >
+                    {{ item.status }}
+                  </span>
+                </td>
+                <td class="px-3 py-2">
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium hover:bg-gray-50"
+                      @click="startEditPackage(item)"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      class="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50"
+                      @click="removePackage(item.id)"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </template>
+
+    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">
-          {{ userRole === "admin" ? "Tren pendapatan & biaya" : "Kinerja investasi" }}
-        </h3>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Kinerja investasi</h3>
         <p class="text-xs text-gray-500 mb-3">Grafik batang (placeholder) — data di bawah</p>
         <div class="overflow-x-auto rounded-lg border border-gray-100">
           <table class="w-full text-sm">

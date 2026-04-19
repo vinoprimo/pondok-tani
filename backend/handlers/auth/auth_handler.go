@@ -32,7 +32,7 @@ func normalizeRole(role string) string {
 	if normalized == "" {
 		return "investor"
 	}
-	if normalized != "admin" && normalized != "investor" && normalized != "mitra" {
+	if normalized != "investor" && normalized != "mitra" {
 		return "investor"
 	}
 	return normalized

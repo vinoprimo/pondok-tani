@@ -1,24 +1,26 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
 import { Sprout, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-vue-next';
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { login, register } from "../../services/auth/auth";
+import { getCurrentUser } from '../../services/user/user';
 
 const router = useRouter();
+const route = useRoute();
 
 const props = withDefaults(
   defineProps<{
-    initialRole?: 'investor' | 'admin';
+    initialRole?: 'investor' | 'mitra' | 'admin';
   }>(),
   { initialRole: 'investor' }
 );
 
 const emit = defineEmits<{
-  login: [role: 'investor' | 'admin', credentials: { email: string; password: string }];
+  login: [role: 'investor' | 'mitra' | 'admin', credentials: { email: string; password: string }];
   back: [];
 }>();
 
-const role = ref<'investor' | 'admin'>(props.initialRole);
+const role = ref<'investor' | 'mitra' | 'admin'>(props.initialRole);
 const showPassword = ref(false);
 const isRegistering = ref(false);
 const formData = reactive({
@@ -34,10 +36,16 @@ const errors = reactive({
   fullName: '',
 });
 
-const demoCredentials = {
-  investor: { email: 'investor@omahvanili.com', password: 'investor123' },
-  admin: { email: 'admin@omahvanili.com', password: 'admin123' },
-} as const;
+function extractRoleFromToken(token: string): 'investor' | 'mitra' | 'admin' {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload?.role === 'admin') return 'admin';
+    if (payload?.role === 'mitra') return 'mitra';
+    return 'investor';
+  } catch {
+    return 'investor';
+  }
+}
 
 function validateEmail(email: string) {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -49,6 +57,14 @@ function resetErrors() {
   errors.password = '';
   errors.confirmPassword = '';
   errors.fullName = '';
+}
+
+function syncRegisterModeFromQuery() {
+  const mode = String(route.query.mode || '').toLowerCase();
+  const shouldRegister = mode === 'register' || mode === 'daftar' || mode === '1';
+  if (shouldRegister) {
+    isRegistering.value = true;
+  }
 }
 
 async function handleSubmit(e: Event) {
@@ -125,8 +141,36 @@ async function handleLogin() {
 
   console.log("LOGIN SUCCESS:", res);
 
-  localStorage.setItem("token", res.data.token);
-  localStorage.setItem("userRole", role.value);
+  const token = res.data.token;
+  const detectedRole = extractRoleFromToken(token);
+
+  localStorage.setItem("token", token);
+  localStorage.setItem("userRole", detectedRole);
+  role.value = detectedRole;
+
+  const selectedPackageId = String(route.query.package_id || '').trim();
+  if (selectedPackageId) {
+    router.push({
+      path: '/pilih-paket',
+      query: { package_id: selectedPackageId },
+    });
+    return;
+  }
+
+  if (detectedRole === 'investor' || detectedRole === 'mitra') {
+    try {
+      const userRes = await getCurrentUser();
+      const hasSelectedPackage = Boolean(userRes?.data?.selected_package_id);
+      if (!hasSelectedPackage) {
+        router.push('/pilih-paket');
+        return;
+      }
+    } catch (err) {
+      console.error('FAILED TO VERIFY PACKAGE STATUS:', err);
+      router.push('/pilih-paket');
+      return;
+    }
+  }
 
   router.push("/dashboard");
 }
@@ -151,27 +195,61 @@ async function handleRegister() {
 
   console.log("AUTO LOGIN SUCCESS:", loginRes);
 
-  localStorage.setItem("token", loginRes.data.token);
-  localStorage.setItem("userRole", role.value);
+  const token = loginRes.data.token;
+  const detectedRole = extractRoleFromToken(token);
+
+  localStorage.setItem("token", token);
+  localStorage.setItem("userRole", detectedRole);
+  role.value = detectedRole;
+
+  const selectedPackageId = String(route.query.package_id || '').trim();
+  if (selectedPackageId) {
+    router.push({
+      path: '/pilih-paket',
+      query: { package_id: selectedPackageId },
+    });
+    return;
+  }
+
+  if (detectedRole === 'investor' || detectedRole === 'mitra') {
+    try {
+      const userRes = await getCurrentUser();
+      const hasSelectedPackage = Boolean(userRes?.data?.selected_package_id);
+      if (!hasSelectedPackage) {
+        router.push('/pilih-paket');
+        return;
+      }
+    } catch (err) {
+      console.error('FAILED TO VERIFY PACKAGE STATUS:', err);
+      router.push('/pilih-paket');
+      return;
+    }
+  }
 
   router.push("/dashboard");
-}
-
-function fillDemoCredentials() {
-  const creds = demoCredentials[role.value];
-  formData.email = creds.email;
-  formData.password = creds.password;
 }
 
 function toggleRegistering() {
   isRegistering.value = !isRegistering.value;
   resetErrors();
+  role.value = 'investor';
   // Reset form data saat toggle
   formData.email = '';
   formData.password = '';
   formData.confirmPassword = '';
   formData.fullName = '';
 }
+
+onMounted(() => {
+  syncRegisterModeFromQuery();
+});
+
+watch(
+  () => route.query.mode,
+  () => {
+    syncRegisterModeFromQuery();
+  }
+);
 </script>
 
 <template>
@@ -245,7 +323,7 @@ function toggleRegistering() {
         </div>
 
         <div class="p-8">
-          <div class="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
+          <div v-if="isRegistering" class="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
             <button
               type="button"
               class="flex-1 py-2.5 rounded-lg font-medium transition-all"
@@ -262,28 +340,17 @@ function toggleRegistering() {
               type="button"
               class="flex-1 py-2.5 rounded-lg font-medium transition-all"
               :class="
-                role === 'admin' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                role === 'mitra' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
               "
-              @click="role = 'admin'"
+              @click="role = 'mitra'"
             >
-              Admin
+              Mitra
             </button>
           </div>
 
-          <div v-if="!isRegistering" class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p class="text-sm text-blue-800 font-medium mb-2">🎯 Kredensial demo:</p>
-            <div class="text-xs text-blue-700 space-y-1">
-              <p>Email: {{ demoCredentials[role].email }}</p>
-              <p>Kata sandi: {{ demoCredentials[role].password }}</p>
-            </div>
-            <button
-              type="button"
-              class="mt-3 text-xs text-blue-700 font-medium hover:text-blue-900 underline"
-              @click="fillDemoCredentials"
-            >
-              Isi otomatis kredensial demo
-            </button>
-          </div>
+          <p v-else class="mb-6 text-sm text-gray-500">
+            Role akun akan terdeteksi otomatis setelah login.
+          </p>
 
           <form class="space-y-4" @submit="handleSubmit">
             <div v-if="isRegistering">

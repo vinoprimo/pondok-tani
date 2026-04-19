@@ -1,46 +1,13 @@
 <script setup lang="ts">
 import { ArrowRight, Sprout, TrendingUp, Shield, BarChart3, Users } from 'lucide-vue-next';
 import { useRouter } from "vue-router";
+import LandingLayout from '../../layouts/LandingLayout.vue';
 
 const router = useRouter();
-
-const emit = defineEmits<{
-  getStarted: [role: 'investor' | 'admin'];
-}>();
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50">
-    <!-- Header -->
-    <header class="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-      <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-            <Sprout class="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 class="font-semibold text-gray-900">Omah Vanili</h1>
-            <p class="text-xs text-gray-500">Sistem Investasi Vanili</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-4">
-          <button
-            type="button"
-            class="px-4 py-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors font-medium"
-            @click="router.push('/login')"
-          >
-            Masuk
-          </button>
-          <button
-            type="button"
-            class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-            @click="emit('getStarted', 'investor')"
-          >
-            Daftar Sekarang
-          </button>
-        </div>
-      </div>
-    </header>
+  <LandingLayout>
 
     <!-- Hero Section -->
     <section class="max-w-7xl mx-auto px-6 py-20">
@@ -70,6 +37,7 @@ const emit = defineEmits<{
             <button
               type="button"
               class="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold text-lg"
+              @click="router.push('/paket-investasi')"
             >
               Pelajari Lebih Lanjut
             </button>
@@ -215,7 +183,7 @@ const emit = defineEmits<{
           <button
             type="button"
             class="px-8 py-4 bg-white text-green-600 rounded-xl hover:bg-green-50 transition-colors font-semibold text-lg flex items-center gap-2"
-            @click="emit('getStarted', 'investor')"
+            @click="router.push({ path: '/login', query: { mode: 'register' } })"
           >
             Mulai Sekarang
             <ArrowRight class="w-5 h-5" />
@@ -223,7 +191,7 @@ const emit = defineEmits<{
           <button
             type="button"
             class="px-8 py-4 border-2 border-white text-white rounded-xl hover:bg-white/10 transition-colors font-semibold text-lg"
-            @click="emit('getStarted', 'admin')"
+            @click="router.push('/login')"
           >
             Masuk sebagai admin
           </button>
@@ -231,54 +199,5 @@ const emit = defineEmits<{
       </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-gray-300 py-12">
-      <div class="max-w-7xl mx-auto px-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          <div>
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-                <Sprout class="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h4 class="font-semibold text-white">Omah Vanili</h4>
-              </div>
-            </div>
-            <p class="text-sm text-gray-400">Platform investasi pertanian vanili terpercaya di Indonesia</p>
-          </div>
-
-          <div>
-            <h5 class="font-semibold text-white mb-4">Tentang</h5>
-            <ul class="space-y-2 text-sm">
-              <li><a href="#" class="hover:text-green-400 transition-colors">Tentang Kami</a></li>
-              <li><a href="#" class="hover:text-green-400 transition-colors">Tim</a></li>
-              <li><a href="#" class="hover:text-green-400 transition-colors">Karir</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <h5 class="font-semibold text-white mb-4">Layanan</h5>
-            <ul class="space-y-2 text-sm">
-              <li><a href="#" class="hover:text-green-400 transition-colors">Investasi</a></li>
-              <li><a href="#" class="hover:text-green-400 transition-colors">Monitoring</a></li>
-              <li><a href="#" class="hover:text-green-400 transition-colors">Laporan</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <h5 class="font-semibold text-white mb-4">Kontak</h5>
-            <ul class="space-y-2 text-sm">
-              <li class="text-gray-400">Email: info@omahvanili.com</li>
-              <li class="text-gray-400">Telp: +62 812-3456-7890</li>
-              <li class="text-gray-400">Alamat: Yogyakarta, Indonesia</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
-          <p>&copy; 2024 Sistem Investasi Omah Vanili. Semua hak dilindungi.</p>
-        </div>
-      </div>
-    </footer>
-  </div>
+  </LandingLayout>
 </template>
