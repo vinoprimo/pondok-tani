@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { Clock } from 'lucide-vue-next';
 import LandingLayout from '../../layouts/LandingLayout.vue';
 import PaketHero from '../../components/landing-paket/PaketHero.vue';
 import PaketCard from '../../components/landing-paket/PaketCard.vue';
 import PaketBenefitList from '../../components/landing-paket/PaketBenefitList.vue';
 import { getInvestmentPackages } from '../../services/investment/package';
+import { getCurrentUser } from '../../services/user/user';
 
 type PaketItem = {
   id: number;
@@ -18,8 +20,10 @@ type PaketItem = {
 
 const paketItems = ref<PaketItem[]>([]);
 const loadingPackages = ref(false);
+const loadingUser = ref(false);
 const router = useRouter();
 const selectedPackageId = ref<number | null>(null);
+const userInvestments = ref<any[]>([]);
 
 const formatRupiah = (value: number) =>
   new Intl.NumberFormat('id-ID', {
@@ -46,6 +50,24 @@ async function loadPackages() {
     paketItems.value = [];
   } finally {
     loadingPackages.value = false;
+  }
+}
+
+async function loadUserStatus() {
+  if (!localStorage.getItem('token')) {
+    userInvestments.value = [];
+    return;
+  }
+
+  loadingUser.value = true;
+  try {
+    const response = await getCurrentUser();
+    userInvestments.value = Array.isArray(response.data?.investments) ? response.data.investments : [];
+  } catch (error) {
+    console.error('Failed to load user status:', error);
+    userInvestments.value = [];
+  } finally {
+    loadingUser.value = false;
   }
 }
 
@@ -77,8 +99,15 @@ const benefits = [
   'Ringkasan finansial dan proyeksi ROI berkala.',
 ];
 
+const onProcessPackages = computed(() =>
+  userInvestments.value.filter((investment) => investment.status === 'on_process')
+);
+
+const hasOnProcessInvestment = computed(() => onProcessPackages.value.length > 0);
+
 onMounted(() => {
   loadPackages();
+  loadUserStatus();
 });
 </script>
 
@@ -95,7 +124,32 @@ onMounted(() => {
       <p v-else-if="paketItems.length === 0" class="mb-4 text-sm text-gray-500">
         Belum ada paket aktif. Konten akan diperbarui setelah data tersedia.
       </p>
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <div v-if="loadingUser" class="mb-4 text-sm text-gray-500">
+        Memuat status investasi Anda...
+      </div>
+
+      <div v-if="hasOnProcessInvestment" class="rounded-3xl border border-yellow-200 bg-yellow-50 p-6 lg:p-8">
+        <div class="flex gap-4">
+          <Clock class="h-6 w-6 flex-shrink-0 text-yellow-600 mt-1" />
+          <div>
+            <h3 class="text-lg font-bold text-gray-900">Status paket: On Process</h3>
+            <p class="mt-2 text-sm text-gray-700">
+              Pembayaran paket investasi Anda sudah diterima. Saat ini kami menunggu tahap selanjutnya yaitu penanaman awal.
+            </p>
+            <div class="mt-4 space-y-2">
+              <p class="text-sm font-medium text-gray-800">Paket yang sudah terbayar:</p>
+              <ul class="list-inside list-disc space-y-1 text-sm text-gray-700">
+                <li v-for="investment in onProcessPackages" :key="investment.id">
+                  {{ investment.package?.package_name || `Paket #${investment.package_id}` }}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <PaketCard
           v-for="item in paketItems"
           :key="item.id"

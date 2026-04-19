@@ -47,6 +47,13 @@ func migrateDB() {
 		panic(fmt.Sprintf("failed to migrate database: %v", err))
 	}
 
+	if err := config.DB.Exec(`ALTER TABLE plant_batches ADD COLUMN IF NOT EXISTS location varchar(150) NOT NULL DEFAULT ''`).Error; err != nil {
+		panic(fmt.Sprintf("failed to ensure plant_batches.location column: %v", err))
+	}
+	if err := config.DB.Exec(`ALTER TABLE plant_batches ADD COLUMN IF NOT EXISTS seed_count bigint NOT NULL DEFAULT 0`).Error; err != nil {
+		panic(fmt.Sprintf("failed to ensure plant_batches.seed_count column: %v", err))
+	}
+
 	if config.DB.Migrator().HasColumn(&coremodels.Investment{}, "expected_return_at") {
 		if err := config.DB.Migrator().DropColumn(&coremodels.Investment{}, "expected_return_at"); err != nil {
 			panic(fmt.Sprintf("failed to drop expected_return_at column: %v", err))
@@ -64,7 +71,7 @@ func main() {
 	}
 
 	config.ConnectDB()
-	config.DB.AutoMigrate(
+	err := config.DB.AutoMigrate(
 		&authmodels.User{},
 		&coremodels.InvestmentPackage{},
 		&coremodels.Investment{},
@@ -84,6 +91,16 @@ func main() {
 		&notificationmodels.Notification{},
 		&pricemodels.NationalPrice{},
 	)
+	if err != nil {
+		panic(fmt.Sprintf("failed to migrate database: %v", err))
+	}
+
+	if err := config.DB.Exec(`ALTER TABLE plant_batches ADD COLUMN IF NOT EXISTS location varchar(150) NOT NULL DEFAULT ''`).Error; err != nil {
+		panic(fmt.Sprintf("failed to ensure plant_batches.location column: %v", err))
+	}
+	if err := config.DB.Exec(`ALTER TABLE plant_batches ADD COLUMN IF NOT EXISTS seed_count bigint NOT NULL DEFAULT 0`).Error; err != nil {
+		panic(fmt.Sprintf("failed to ensure plant_batches.seed_count column: %v", err))
+	}
 
 	if config.DB.Migrator().HasColumn(&coremodels.Investment{}, "expected_return_at") {
 		if err := config.DB.Migrator().DropColumn(&coremodels.Investment{}, "expected_return_at"); err != nil {

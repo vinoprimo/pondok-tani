@@ -13,11 +13,15 @@ import {
   Package,
   Loader2,
 } from 'lucide-vue-next';
-import { activateUserPackage, getAdminUsers } from '../../services/user/user';
+import { activateUserPackage, updateInvestmentStatus, getAdminUsers } from '../../services/user/user';
 
 const users = ref<any[]>([]);
 const loading = ref(false);
 const activatingUserId = ref<string | null>(null);
+const updatingUserId = ref<string | null>(null);
+const activationFormUser = ref<any | null>(null);
+const activationFormError = ref('');
+const activationForms = ref<any[]>([]);
 const searchTerm = ref('');
 const statusFilter = ref('all');
 
@@ -75,12 +79,14 @@ function investorInitials(name: string) {
 
 function statusBadgeClass(status: string) {
   if (status === 'active') return 'bg-green-100 text-green-700';
+  if (status === 'on_process') return 'bg-blue-100 text-blue-700';
   if (status === 'pending') return 'bg-yellow-100 text-yellow-700';
   return 'bg-gray-100 text-gray-700';
 }
 
 function investorStatusLabel(status: string) {
   if (status === 'active') return 'Aktif';
+  if (status === 'on_process') return 'Proses';
   if (status === 'pending') return 'Menunggu';
   return 'Belum memilih';
 }
@@ -98,16 +104,102 @@ async function loadUsers() {
   }
 }
 
-async function handleActivate(userId: string) {
-  activatingUserId.value = userId;
+async function handleMarkAsPaid(userId: string) {
+  updatingUserId.value = userId;
   try {
-    await activateUserPackage(userId);
+    await updateInvestmentStatus(userId, 'on_process');
     await loadUsers();
   } catch (error) {
+    console.error('Failed to mark as paid:', error);
+  } finally {
+    updatingUserId.value = null;
+  }
+}
+
+async function handleActivate(userId: string) {
+  if (!activationForms.value.length) {
+    activationFormError.value = 'Data paket on process tidak ditemukan';
+    return;
+  }
+
+  for (const item of activationForms.value) {
+    if (!String(item.batchCode || '').trim()) {
+      activationFormError.value = `Batch code wajib diisi untuk paket ${item.packageName}`;
+      return;
+    }
+    if (!item.plantingDate) {
+      activationFormError.value = `Tanggal tanam wajib diisi untuk paket ${item.packageName}`;
+      return;
+    }
+    if (!String(item.location || '').trim()) {
+      activationFormError.value = `Lokasi wajib diisi untuk paket ${item.packageName}`;
+      return;
+    }
+
+    const seedCount = Number(item.seedCount);
+    if (!Number.isFinite(seedCount) || seedCount <= 0) {
+      activationFormError.value = `Jumlah bibit harus lebih dari 0 untuk paket ${item.packageName}`;
+      return;
+    }
+
+    const landArea = Number(item.landArea);
+    if (!Number.isFinite(landArea) || landArea <= 0) {
+      activationFormError.value = `Luas lahan harus lebih dari 0 untuk paket ${item.packageName}`;
+      return;
+    }
+  }
+
+  activatingUserId.value = userId;
+  activationFormError.value = '';
+  try {
+    await activateUserPackage(userId, {
+      plant_batches: activationForms.value.map((item) => ({
+        package_id: item.packageId,
+        batch_code: String(item.batchCode || '').trim(),
+        planting_date: item.plantingDate,
+        location: String(item.location || '').trim(),
+        seed_count: Math.floor(Number(item.seedCount)),
+        land_area: Number(item.landArea),
+      })),
+    });
+    await loadUsers();
+    closeActivationForm();
+  } catch (error) {
     console.error('Failed to activate package:', error);
+    activationFormError.value = 'Aktivasi gagal. Periksa data plant batch dan coba lagi.';
   } finally {
     activatingUserId.value = null;
   }
+}
+
+function getOnProcessInvestmentItems(user: any) {
+  return getUserInvestmentItems(user).filter((investment: any) => investment.status === 'on_process');
+}
+
+function openActivationForm(user: any) {
+  const onProcessItems = getOnProcessInvestmentItems(user);
+  if (!onProcessItems.length) {
+    activationFormError.value = 'User ini belum memiliki paket on process';
+    return;
+  }
+
+  activationFormUser.value = user;
+  activationFormError.value = '';
+  activationForms.value = onProcessItems.map((investment: any, index: number) => ({
+    packageId: investment.package_id,
+    packageName: investment.package?.package_name || `Paket #${investment.package_id}`,
+    batchCode: `PB-${String(user.id).slice(0, 6).toUpperCase()}-${investment.package_id}-${index + 1}`,
+    plantingDate: new Date().toISOString().slice(0, 10),
+    location: '',
+    seedCount: '',
+    landArea: '',
+  }));
+}
+
+function closeActivationForm() {
+  activationFormUser.value = null;
+  activationFormError.value = '';
+  activationForms.value = [];
 }
 
 onMounted(() => {
@@ -204,6 +296,7 @@ onMounted(() => {
         >
           <option value="all">Semua status</option>
           <option value="active">Aktif</option>
+          <option value="on_process">Proses</option>
           <option value="pending">Menunggu</option>
           <option value="none">Belum memilih</option>
         </select>
@@ -289,18 +382,30 @@ onMounted(() => {
                 {{ user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID') : '-' }}
               </td>
               <td class="px-6 py-4">
-                <div class="flex items-center gap-2">
-                  <button
-                    v-if="getUserInvestmentItems(user).length && user.package_status !== 'active'"
-                    type="button"
-                    class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-60"
-                    :disabled="activatingUserId === user.id"
-                    @click="handleActivate(user.id)"
-                  >
-                    <Loader2 v-if="activatingUserId === user.id" class="h-4 w-4 animate-spin" />
-                    <span>{{ activatingUserId === user.id ? 'Mengaktifkan...' : 'Aktifkan paket' }}</span>
-                  </button>
-                  <button type="button" class="text-gray-400 hover:text-gray-600">
+                <div class="flex flex-col gap-2">
+                  <div class="flex items-center gap-2">
+                    <button
+                      v-if="getUserInvestmentItems(user).length && user.package_status === 'pending'"
+                      type="button"
+                      class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                      :disabled="updatingUserId === user.id"
+                      @click="handleMarkAsPaid(user.id)"
+                    >
+                      <Loader2 v-if="updatingUserId === user.id" class="h-4 w-4 animate-spin" />
+                      <span>{{ updatingUserId === user.id ? 'Memproses...' : 'Tandai Telah Bayar' }}</span>
+                    </button>
+                    <button
+                      v-else-if="getUserInvestmentItems(user).length && user.package_status === 'on_process'"
+                      type="button"
+                      class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-60"
+                      :disabled="activatingUserId === user.id"
+                      @click="openActivationForm(user)"
+                    >
+                      <Loader2 v-if="activatingUserId === user.id" class="h-4 w-4 animate-spin" />
+                      <span>{{ activatingUserId === user.id ? 'Mengaktifkan...' : 'Aktifkan (Penanaman Awal)' }}</span>
+                    </button>
+                  </div>
+                  <button type="button" class="text-gray-400 hover:text-gray-600 text-left">
                     <MoreVertical class="w-5 h-5" />
                   </button>
                 </div>
@@ -308,6 +413,101 @@ onMounted(() => {
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <div v-if="activationFormUser" class="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">
+      <div class="mx-auto my-6 w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl max-h-[88vh] overflow-y-auto">
+        <h3 class="text-xl font-semibold text-gray-900">Validasi Penanaman Awal</h3>
+        <p class="mt-1 text-sm text-gray-600">
+          Isi data plant batch untuk aktivasi paket user <span class="font-medium text-gray-900">{{ activationFormUser.name }}</span>.
+        </p>
+
+        <div class="mt-5 space-y-4">
+          <div
+            v-for="(formItem, index) in activationForms"
+            :key="`${formItem.packageId}-${index}`"
+            class="rounded-xl border border-gray-200 p-4"
+          >
+            <p class="mb-3 text-sm font-semibold text-gray-800">{{ formItem.packageName }}</p>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700">Batch Code</label>
+                <input
+                  v-model="formItem.batchCode"
+                  type="text"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                  placeholder="Contoh: PB-INVESTOR01"
+                />
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700">Tanggal Tanam</label>
+                <input
+                  v-model="formItem.plantingDate"
+                  type="date"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                />
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700">Lokasi Penanaman</label>
+                <input
+                  v-model="formItem.location"
+                  type="text"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                  placeholder="Contoh: Blok A - Kebun Timur"
+                />
+              </div>
+
+              <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700">Jumlah Bibit</label>
+                <input
+                  v-model="formItem.seedCount"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                  placeholder="Contoh: 120"
+                />
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="mb-1 block text-sm font-medium text-gray-700">Luas Lahan (m²)</label>
+                <input
+                  v-model="formItem.landArea"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                  placeholder="Contoh: 250"
+                />
+              </div>
+            </div>
+          </div>
+
+          <p v-if="activationFormError" class="text-sm text-red-600">{{ activationFormError }}</p>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            @click="closeActivationForm"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-60"
+            :disabled="activatingUserId === activationFormUser.id"
+            @click="handleActivate(activationFormUser.id)"
+          >
+            <Loader2 v-if="activatingUserId === activationFormUser.id" class="h-4 w-4 animate-spin" />
+            <span>{{ activatingUserId === activationFormUser.id ? 'Memproses...' : 'Aktifkan Paket' }}</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

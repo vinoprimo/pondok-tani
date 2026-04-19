@@ -19,6 +19,10 @@ export const getAdminUsers = () => {
   return api.get('/admin/users');
 };
 
-export const activateUserPackage = (userId) => {
-  return api.put(`/admin/users/${userId}/activate-package`);
+export const activateUserPackage = (userId, payload) => {
+  return api.put(`/admin/users/${userId}/activate-package`, payload);
+};
+
+export const updateInvestmentStatus = (userId, status) => {
+  return api.put(`/admin/users/${userId}/investment-status`, { status });
 };

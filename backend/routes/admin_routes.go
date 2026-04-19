@@ -12,5 +12,6 @@ func AdminRoutes(r *gin.Engine) {
 	{
 		admin.GET("/users", userhandler.ListUsers)
 		admin.PUT("/users/:id/activate-package", userhandler.ActivateUserPackage)
+		admin.PUT("/users/:id/investment-status", userhandler.UpdateInvestmentStatus)
 	}
 }

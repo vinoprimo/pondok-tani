@@ -140,6 +140,7 @@ router.beforeEach(async (to, from, next) => {
   const isAuth = Boolean(token);
   const normalizedRole = role === "admin" ? "admin" : role === "mitra" ? "mitra" : "investor";
   const requiresAuthRoute = to.matched.some((record) => record.meta.requiresAuth);
+  const packageFlowRouteNames = ["package-selection", "order-confirmation"];
 
   if (requiresAuthRoute && !isAuth) {
     return next({ name: "login" });
@@ -149,12 +150,12 @@ router.beforeEach(async (to, from, next) => {
     requiresAuthRoute &&
     isAuth &&
     (normalizedRole === "investor" || normalizedRole === "mitra") &&
-    to.name !== "package-selection"
+    !packageFlowRouteNames.includes(String(to.name || ""))
   ) {
     try {
       const userRes = await getCurrentUser();
-      const hasSelectedPackage = Boolean(userRes?.data?.investments?.length || userRes?.data?.selected_package_id);
-      if (!hasSelectedPackage) {
+      const hasActivePackage = userRes?.data?.package_status === "active";
+      if (!hasActivePackage) {
         return next({ name: "package-selection" });
       }
     } catch (err) {
