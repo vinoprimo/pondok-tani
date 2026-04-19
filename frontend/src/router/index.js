@@ -133,16 +133,22 @@ router.beforeEach(async (to, from, next) => {
   const role = localStorage.getItem("userRole");
   const isAuth = Boolean(token);
   const normalizedRole = role === "admin" ? "admin" : role === "mitra" ? "mitra" : "investor";
+  const requiresAuthRoute = to.matched.some((record) => record.meta.requiresAuth);
 
-  if (to.matched.some((record) => record.meta.requiresAuth) && !isAuth) {
+  if (requiresAuthRoute && !isAuth) {
     return next({ name: "login" });
   }
 
-  if (isAuth && (normalizedRole === "investor" || normalizedRole === "mitra")) {
+  if (
+    requiresAuthRoute &&
+    isAuth &&
+    (normalizedRole === "investor" || normalizedRole === "mitra") &&
+    to.name !== "package-selection"
+  ) {
     try {
       const userRes = await getCurrentUser();
       const hasSelectedPackage = Boolean(userRes?.data?.selected_package_id);
-      if (!hasSelectedPackage && to.name !== "package-selection") {
+      if (!hasSelectedPackage) {
         return next({ name: "package-selection" });
       }
     } catch (err) {
