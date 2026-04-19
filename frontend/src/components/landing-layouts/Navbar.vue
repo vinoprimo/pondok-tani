@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ChevronDown, Sprout, UserCircle2 } from 'lucide-vue-next';
 import { getCurrentUser } from '../../services/user/user';
@@ -8,13 +8,22 @@ const router = useRouter();
 const route = useRoute();
 const isProfileOpen = ref(false);
 const isLoadingProfile = ref(false);
+const isLoggedIn = ref(false);
 const profile = ref({
   name: 'Guest',
   email: '-',
   role: 'guest',
+  packageStatus: 'none',
 });
 
-const isLoggedIn = computed(() => Boolean(localStorage.getItem('token')));
+const canEnterDashboard = computed(() => {
+  if (!isLoggedIn.value) return false;
+  if (profile.value.role === 'admin') return true;
+  if (profile.value.role === 'investor' || profile.value.role === 'mitra') {
+    return profile.value.packageStatus === 'active';
+  }
+  return false;
+});
 
 const navItems = [
   { label: 'Beranda', path: '/' },
@@ -34,11 +43,14 @@ const mobileTitle = computed(() => {
 });
 
 async function loadProfile() {
+  isLoggedIn.value = Boolean(localStorage.getItem('token'));
+
   if (!isLoggedIn.value) {
     profile.value = {
       name: 'Guest',
       email: '-',
       role: 'guest',
+      packageStatus: 'none',
     };
     return;
   }
@@ -50,12 +62,15 @@ async function loadProfile() {
       name: response.data?.name || 'User',
       email: response.data?.email || '-',
       role: response.data?.role || 'investor',
+      packageStatus: response.data?.package_status || 'none',
     };
   } catch (error) {
+    isLoggedIn.value = false;
     profile.value = {
       name: 'Guest',
       email: '-',
       role: 'guest',
+      packageStatus: 'none',
     };
   } finally {
     isLoadingProfile.value = false;
@@ -69,6 +84,13 @@ function toggleProfile() {
 onMounted(() => {
   loadProfile();
 });
+
+watch(
+  () => route.fullPath,
+  () => {
+    loadProfile();
+  }
+);
 </script>
 
 <template>
@@ -98,7 +120,25 @@ onMounted(() => {
       </nav>
 
       <div class="hidden md:flex items-center gap-3 relative">
-        <template v-if="!isLoggedIn">
+        <template v-if="isLoggedIn && canEnterDashboard">
+          <button
+            type="button"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+            @click="router.push('/dashboard')"
+          >
+            Masuk ke Dashboard
+          </button>
+        </template>
+        <template v-else-if="isLoggedIn">
+          <button
+            type="button"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+            @click="router.push('/pilih-paket')"
+          >
+            Pilih Paket
+          </button>
+        </template>
+        <template v-else>
           <button
             type="button"
             class="px-4 py-2 text-green-700 hover:bg-green-50 rounded-lg transition-colors font-medium"
@@ -114,14 +154,6 @@ onMounted(() => {
             Daftar Sekarang
           </button>
         </template>
-        <button
-          v-else
-          type="button"
-          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-          @click="router.push('/dashboard')"
-        >
-          Masuk ke Dashboard
-        </button>
         <button
           type="button"
           class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-700 hover:bg-gray-50"
@@ -157,12 +189,20 @@ onMounted(() => {
           Daftar
         </button>
         <button
-          v-else
+          v-else-if="canEnterDashboard"
           type="button"
           class="text-sm text-green-700 font-medium"
           @click="router.push('/dashboard')"
         >
           Dashboard
+        </button>
+        <button
+          v-else
+          type="button"
+          class="text-sm text-green-700 font-medium"
+          @click="router.push('/pilih-paket')"
+        >
+          Pilih Paket
         </button>
         <button
           type="button"
