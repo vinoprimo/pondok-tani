@@ -1,6 +1,7 @@
 package routes
 
 import (
+	investmenthandler "pondok-tani-backend/handlers/investment"
 	userhandler "pondok-tani-backend/handlers/user"
 	"pondok-tani-backend/middleware"
 
@@ -11,6 +12,6 @@ func UserRoutes(r *gin.Engine) {
 	user := r.Group("/users", middleware.AuthMiddleware())
 	{
 		user.GET("/me", userhandler.GetCurrentUser)
-		user.PUT("/me/package", middleware.RequireRoles("investor", "mitra"), userhandler.SelectPackage)
+		user.PUT("/me/package", middleware.RequireRoles("investor", "mitra"), investmenthandler.SelectPackage)
 	}
 }

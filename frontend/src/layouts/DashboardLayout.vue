@@ -35,7 +35,7 @@ const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
   admin: [
     "dashboard",
     "investors",
-    "plants",
+    "vanili-management",
     "maintenance-validation",
     "harvest-sales",
     "warehouse",
@@ -51,6 +51,7 @@ const activeView = computed(() => {
   const matchMap: Record<string, string> = {
     "/dashboard/portfolio": "portfolio",
     "/dashboard/plants": "plants",
+    "/dashboard/vanili-management": "vanili-management",
     "/dashboard/maintenance": "maintenance",
     "/dashboard/reminder-settings": "reminder-settings",
     "/dashboard/financials": "financials",
@@ -78,6 +79,7 @@ function handleSetActiveView(view: string) {
     dashboard: "/dashboard",
     portfolio: "/dashboard/portfolio",
     plants: "/dashboard/plants",
+    "vanili-management": "/dashboard/vanili-management",
     maintenance: "/dashboard/maintenance",
     "reminder-settings": "/dashboard/reminder-settings",
     financials: "/dashboard/financials",
