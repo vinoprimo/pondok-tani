@@ -112,15 +112,12 @@ async function confirmSelection() {
   savingSelection.value = true;
   try {
     await saveSelectedPackage(selectedPackageIds.value);
-
-    const packageNames = selectedPackages.value.map((item) => item.name);
-    const messageContent = packageNames.length
-      ? `saya tertarik dengan paket berikut:\n- ${packageNames.join('\n- ')}`
-      : 'saya tertarik dengan paket investasi';
-
-    const message = encodeURIComponent(messageContent);
-    const whatsappUrl = `https://wa.me/6281328164003?text=${message}`;
-    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    router.push({
+      path: '/konfirmasi-pesanan',
+      query: {
+        package_ids: selectedPackageIds.value.join(','),
+      },
+    });
   } catch (error) {
     console.error('Failed to save package selection:', error);
   } finally {
@@ -199,7 +196,7 @@ onMounted(() => {
               @click="confirmSelection"
             >
               <MessageCircle class="h-4 w-4" />
-              {{ savingSelection ? 'Memproses...' : 'Konfirmasi via WhatsApp' }}
+              {{ savingSelection ? 'Memproses...' : 'Konfirmasi Pesanan' }}
             </button>
             <button
               type="button"

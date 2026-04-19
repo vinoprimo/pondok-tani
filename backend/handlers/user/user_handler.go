@@ -9,8 +9,8 @@ import (
 	coremodels "pondok-tani-backend/models/core"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm/clause"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func GetCurrentUser(c *gin.Context) {
@@ -137,9 +137,9 @@ func SelectPackage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":      "Package selection saved",
-		"package_ids":   packageIDs,
-		"package_id":    primaryPackageID,
+		"message":        "Package selection saved",
+		"package_ids":    packageIDs,
+		"package_id":     primaryPackageID,
 		"packages_count": len(packageIDs),
 	})
 }

@@ -43,6 +43,12 @@ const routes = [
     meta: { requiresAuth: true, roles: ["investor", "mitra"] },
   },
   {
+    path: "/konfirmasi-pesanan",
+    name: "order-confirmation",
+    component: () => import("../views/investment/OrderConfirmation.vue"),
+    meta: { requiresAuth: true, roles: ["investor", "mitra"] },
+  },
+  {
     path: "/dashboard",
     component: () => import("../layouts/DashboardLayout.vue"),
     meta: { requiresAuth: true },
