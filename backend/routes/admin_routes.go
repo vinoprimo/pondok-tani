@@ -1,6 +1,8 @@
 package routes
 
 import (
+	investmenthandler "pondok-tani-backend/handlers/investment"
+	plantbatchhandler "pondok-tani-backend/handlers/plantbatch"
 	userhandler "pondok-tani-backend/handlers/user"
 	"pondok-tani-backend/middleware"
 
@@ -11,7 +13,7 @@ func AdminRoutes(r *gin.Engine) {
 	admin := r.Group("/admin", middleware.AuthMiddleware(), middleware.RequireRoles("admin"))
 	{
 		admin.GET("/users", userhandler.ListUsers)
-		admin.PUT("/users/:id/activate-package", userhandler.ActivateUserPackage)
-		admin.PUT("/users/:id/investment-status", userhandler.UpdateInvestmentStatus)
+		admin.PUT("/users/:id/activate-package", plantbatchhandler.ActivateUserPackage)
+		admin.PUT("/users/:id/investment-status", investmenthandler.UpdateInvestmentStatus)
 	}
 }
