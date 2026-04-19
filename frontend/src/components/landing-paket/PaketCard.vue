@@ -20,7 +20,9 @@ const emit = defineEmits<{
   <article
     class="rounded-2xl border p-6 transition-all relative overflow-hidden"
     :class="[
-      highlight ? 'border-green-500 bg-green-50 shadow-lg' : 'border-gray-200 bg-white hover:shadow-md',
+      highlight
+        ? 'border-gray-200 bg-white shadow-lg hover:border-green-300 hover:bg-green-50'
+        : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50 hover:shadow-md',
       selected ? 'ring-2 ring-green-600 ring-offset-2' : '',
     ]"
   >

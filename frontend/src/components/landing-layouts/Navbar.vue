@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ChevronDown, Sprout, UserCircle2 } from 'lucide-vue-next';
+import { ChevronDown, LogOut, Sprout, UserCircle2 } from 'lucide-vue-next';
 import { getCurrentUser } from '../../services/user/user';
 
 const router = useRouter();
@@ -79,6 +79,20 @@ async function loadProfile() {
 
 function toggleProfile() {
   isProfileOpen.value = !isProfileOpen.value;
+}
+
+function handleLogout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('userRole');
+  isLoggedIn.value = false;
+  isProfileOpen.value = false;
+  profile.value = {
+    name: 'Guest',
+    email: '-',
+    role: 'guest',
+    packageStatus: 'none',
+  };
+  router.push('/login');
 }
 
 onMounted(() => {
@@ -173,6 +187,15 @@ watch(
           <p class="mt-2 inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
             {{ isLoadingProfile ? 'loading' : profile.role }}
           </p>
+          <button
+            v-if="isLoggedIn"
+            type="button"
+            class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+            @click="handleLogout"
+          >
+            <LogOut class="h-4 w-4" />
+            Keluar
+          </button>
         </div>
       </div>
     </div>
@@ -225,6 +248,15 @@ watch(
       <p class="mt-2 inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
         {{ isLoadingProfile ? 'loading' : profile.role }}
       </p>
+      <button
+        v-if="isLoggedIn"
+        type="button"
+        class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+        @click="handleLogout"
+      >
+        <LogOut class="h-4 w-4" />
+        Keluar
+      </button>
     </div>
   </header>
 </template>

@@ -1,8 +1,9 @@
 package auth
 
-import coremodels "pondok-tani-backend/models/core"
-
-import "time"
+import (
+	coremodels "pondok-tani-backend/models/core"
+	"time"
+)
 
 type User struct {
 	ID                 string                        `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
