@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ChevronDown, Sprout, UserCircle2 } from 'lucide-vue-next';
+import { ChevronDown, LogOut, Sprout, UserCircle2 } from 'lucide-vue-next';
 import { getCurrentUser } from '../../services/user/user';
 
 const router = useRouter();
@@ -46,6 +46,7 @@ async function loadProfile() {
   isLoggedIn.value = Boolean(localStorage.getItem('token'));
 
   if (!isLoggedIn.value) {
+    isProfileOpen.value = false;
     profile.value = {
       name: 'Guest',
       email: '-',
@@ -79,6 +80,20 @@ async function loadProfile() {
 
 function toggleProfile() {
   isProfileOpen.value = !isProfileOpen.value;
+}
+
+function handleLogout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('userRole');
+  isLoggedIn.value = false;
+  isProfileOpen.value = false;
+  profile.value = {
+    name: 'Guest',
+    email: '-',
+    role: 'guest',
+    packageStatus: 'none',
+  };
+  router.push('/login');
 }
 
 onMounted(() => {
@@ -155,6 +170,7 @@ watch(
           </button>
         </template>
         <button
+          v-if="isLoggedIn"
           type="button"
           class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-700 hover:bg-gray-50"
           @click="toggleProfile"
@@ -164,7 +180,7 @@ watch(
         </button>
 
         <div
-          v-if="isProfileOpen"
+          v-if="isLoggedIn && isProfileOpen"
           class="absolute right-0 top-12 w-64 rounded-xl border border-gray-200 bg-white p-4 shadow-lg"
         >
           <p class="text-xs uppercase tracking-wide text-gray-500 mb-2">Profil</p>
@@ -173,6 +189,15 @@ watch(
           <p class="mt-2 inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
             {{ isLoadingProfile ? 'loading' : profile.role }}
           </p>
+          <button
+            v-if="isLoggedIn"
+            type="button"
+            class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+            @click="handleLogout"
+          >
+            <LogOut class="h-4 w-4" />
+            Keluar
+          </button>
         </div>
       </div>
     </div>
@@ -205,6 +230,7 @@ watch(
           Pilih Paket
         </button>
         <button
+          v-if="isLoggedIn"
           type="button"
           class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-gray-700"
           @click="toggleProfile"
@@ -216,7 +242,7 @@ watch(
     </div>
 
     <div
-      v-if="isProfileOpen"
+      v-if="isLoggedIn && isProfileOpen"
       class="md:hidden mx-6 mb-3 rounded-xl border border-gray-200 bg-white p-3"
     >
       <p class="text-xs uppercase tracking-wide text-gray-500 mb-2">Profil</p>
@@ -225,6 +251,15 @@ watch(
       <p class="mt-2 inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
         {{ isLoadingProfile ? 'loading' : profile.role }}
       </p>
+      <button
+        v-if="isLoggedIn"
+        type="button"
+        class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+        @click="handleLogout"
+      >
+        <LogOut class="h-4 w-4" />
+        Keluar
+      </button>
     </div>
   </header>
 </template>

@@ -160,7 +160,7 @@ async function handleLogin() {
   if (detectedRole === 'investor' || detectedRole === 'mitra') {
     try {
       const userRes = await getCurrentUser();
-      const hasSelectedPackage = Boolean(userRes?.data?.selected_package_id);
+      const hasSelectedPackage = Boolean(userRes?.data?.investments?.length || userRes?.data?.selected_package_id);
       if (!hasSelectedPackage) {
         router.push('/pilih-paket');
         return;
@@ -214,7 +214,7 @@ async function handleRegister() {
   if (detectedRole === 'investor' || detectedRole === 'mitra') {
     try {
       const userRes = await getCurrentUser();
-      const hasSelectedPackage = Boolean(userRes?.data?.selected_package_id);
+      const hasSelectedPackage = Boolean(userRes?.data?.investments?.length || userRes?.data?.selected_package_id);
       if (!hasSelectedPackage) {
         router.push('/pilih-paket');
         return;

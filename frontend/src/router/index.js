@@ -7,6 +7,7 @@ import { getCurrentUser } from "../services/user/user";
  *   views/landing/Landing.vue
  *   views/dashboard/Dashboard.vue
  *   views/harvest/HarvestSales.vue
+ *   views/admin/VaniliManagement.vue
  *   views/investment/{FinancialProjections,InvestmentPortfolio,InvestorManagement}.vue
  *   views/notifications/{Notifications,ReminderSettings}.vue
  *   views/plant-monitoring/{MaintenanceActivities,MaintenanceValidation,PlantMonitoring}.vue
@@ -43,6 +44,12 @@ const routes = [
     meta: { requiresAuth: true, roles: ["investor", "mitra"] },
   },
   {
+    path: "/konfirmasi-pesanan",
+    name: "order-confirmation",
+    component: () => import("../views/investment/OrderConfirmation.vue"),
+    meta: { requiresAuth: true, roles: ["investor", "mitra"] },
+  },
+  {
     path: "/dashboard",
     component: () => import("../layouts/DashboardLayout.vue"),
     meta: { requiresAuth: true },
@@ -63,7 +70,13 @@ const routes = [
         path: "plants",
         name: "dashboard-plants",
         component: () => import("../views/plant-monitoring/PlantMonitoring.vue"),
-        meta: { roles: ["investor", "mitra", "admin"] },
+        meta: { roles: ["investor", "mitra"] },
+      },
+      {
+        path: "vanili-management",
+        name: "dashboard-vanili-management",
+        component: () => import("../views/admin/VaniliManagement.vue"),
+        meta: { roles: ["admin"] },
       },
       {
         path: "maintenance",
@@ -134,6 +147,7 @@ router.beforeEach(async (to, from, next) => {
   const isAuth = Boolean(token);
   const normalizedRole = role === "admin" ? "admin" : role === "mitra" ? "mitra" : "investor";
   const requiresAuthRoute = to.matched.some((record) => record.meta.requiresAuth);
+  const packageFlowRouteNames = ["package-selection", "order-confirmation"];
 
   if (requiresAuthRoute && !isAuth) {
     return next({ name: "login" });
@@ -143,12 +157,12 @@ router.beforeEach(async (to, from, next) => {
     requiresAuthRoute &&
     isAuth &&
     (normalizedRole === "investor" || normalizedRole === "mitra") &&
-    to.name !== "package-selection"
+    !packageFlowRouteNames.includes(String(to.name || ""))
   ) {
     try {
       const userRes = await getCurrentUser();
-      const hasSelectedPackage = Boolean(userRes?.data?.selected_package_id);
-      if (!hasSelectedPackage) {
+      const hasActivePackage = userRes?.data?.package_status === "active";
+      if (!hasActivePackage) {
         return next({ name: "package-selection" });
       }
     } catch (err) {
