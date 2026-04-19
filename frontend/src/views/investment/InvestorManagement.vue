@@ -21,6 +21,25 @@ const activatingUserId = ref<string | null>(null);
 const searchTerm = ref('');
 const statusFilter = ref('all');
 
+function getUserInvestmentItems(user: any) {
+  if (Array.isArray(user.investments) && user.investments.length > 0) {
+    return user.investments;
+  }
+
+  if (user.selected_package) {
+    return [
+      {
+        id: `legacy-${user.id}`,
+        package_id: user.selected_package_id,
+        package: user.selected_package,
+        status: user.package_status,
+      },
+    ];
+  }
+
+  return [];
+}
+
 const visibleUsers = computed(() => {
   const keyword = searchTerm.value.trim().toLowerCase();
   return users.value.filter((user) => {
@@ -35,7 +54,7 @@ const visibleUsers = computed(() => {
   });
 });
 
-const totalSelected = computed(() => users.value.filter((user) => user.selected_package_id).length);
+const totalSelected = computed(() => users.value.filter((user) => getUserInvestmentItems(user).length > 0).length);
 const activeUsers = computed(() => users.value.filter((user) => user.package_status === 'active').length);
 const pendingUsers = computed(() => users.value.filter((user) => user.package_status === 'pending').length);
 const activeRatio = computed(() => {
@@ -246,9 +265,18 @@ onMounted(() => {
                 </div>
               </td>
               <td class="px-6 py-4">
-                <div v-if="user.selected_package" class="space-y-1">
-                  <p class="font-medium text-gray-900">{{ user.selected_package.package_name }}</p>
-                  <p class="text-sm text-gray-500">{{ user.selected_package.description }}</p>
+                <div v-if="getUserInvestmentItems(user).length" class="space-y-2">
+                  <div v-for="investment in getUserInvestmentItems(user)" :key="investment.id" class="space-y-1 rounded-lg bg-gray-50 px-3 py-2">
+                    <p class="font-medium text-gray-900">
+                      {{ investment.package?.package_name || `Paket #${investment.package_id}` }}
+                    </p>
+                    <p class="text-sm text-gray-500">
+                      {{ investment.package?.description || 'Tidak ada deskripsi' }}
+                    </p>
+                    <p class="text-xs text-gray-500 uppercase tracking-wide">
+                      Status: {{ investment.status }}
+                    </p>
+                  </div>
                 </div>
                 <p v-else class="text-sm text-gray-500">Belum memilih paket</p>
               </td>
@@ -263,7 +291,7 @@ onMounted(() => {
               <td class="px-6 py-4">
                 <div class="flex items-center gap-2">
                   <button
-                    v-if="user.selected_package_id && user.package_status !== 'active'"
+                    v-if="getUserInvestmentItems(user).length && user.package_status !== 'active'"
                     type="button"
                     class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-60"
                     :disabled="activatingUserId === user.id"

@@ -46,6 +46,12 @@ func migrateDB() {
 	if err != nil {
 		panic(fmt.Sprintf("failed to migrate database: %v", err))
 	}
+
+	if config.DB.Migrator().HasColumn(&coremodels.Investment{}, "expected_return_at") {
+		if err := config.DB.Migrator().DropColumn(&coremodels.Investment{}, "expected_return_at"); err != nil {
+			panic(fmt.Sprintf("failed to drop expected_return_at column: %v", err))
+		}
+	}
 	fmt.Println("database migrated successfully")
 }
 
@@ -78,6 +84,12 @@ func main() {
 		&notificationmodels.Notification{},
 		&pricemodels.NationalPrice{},
 	)
+
+	if config.DB.Migrator().HasColumn(&coremodels.Investment{}, "expected_return_at") {
+		if err := config.DB.Migrator().DropColumn(&coremodels.Investment{}, "expected_return_at"); err != nil {
+			panic(fmt.Sprintf("failed to drop expected_return_at column: %v", err))
+		}
+	}
 
 	r := gin.Default()
 

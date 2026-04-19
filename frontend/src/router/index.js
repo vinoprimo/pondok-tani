@@ -147,7 +147,7 @@ router.beforeEach(async (to, from, next) => {
   ) {
     try {
       const userRes = await getCurrentUser();
-      const hasSelectedPackage = Boolean(userRes?.data?.selected_package_id);
+      const hasSelectedPackage = Boolean(userRes?.data?.investments?.length || userRes?.data?.selected_package_id);
       if (!hasSelectedPackage) {
         return next({ name: "package-selection" });
       }

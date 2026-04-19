@@ -15,6 +15,7 @@ type User struct {
 	Address            *string                       `gorm:"type:text" json:"address,omitempty"`
 	SelectedPackageID  *uint                         `gorm:"index" json:"selected_package_id,omitempty"`
 	SelectedPackage    *coremodels.InvestmentPackage `gorm:"foreignKey:SelectedPackageID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"selected_package,omitempty"`
+	Investments        []coremodels.Investment       `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"investments,omitempty"`
 	PackageStatus      string                        `gorm:"type:varchar(20);not null;default:none;index" json:"package_status"`
 	PackageSelectedAt  *time.Time                    `json:"package_selected_at,omitempty"`
 	PackageActivatedAt *time.Time                    `json:"package_activated_at,omitempty"`

@@ -4,8 +4,15 @@ export const getCurrentUser = () => {
   return api.get("/auth/me");
 };
 
-export const saveSelectedPackage = (packageId) => {
-  return api.put('/users/me/package', { package_id: packageId });
+export const saveSelectedPackage = (packageIds) => {
+  const normalizedPackageIds = Array.isArray(packageIds)
+    ? packageIds.filter(Boolean)
+    : [packageIds].filter(Boolean);
+
+  return api.put('/users/me/package', {
+    package_id: normalizedPackageIds[0],
+    package_ids: normalizedPackageIds,
+  });
 };
 
 export const getAdminUsers = () => {
