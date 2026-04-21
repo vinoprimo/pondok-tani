@@ -17,6 +17,7 @@ import {
   Plus,
   Pencil,
   Trash2,
+  Image,
 } from 'lucide-vue-next';
 import {
   activateUserPackage,
@@ -190,21 +191,34 @@ async function handleActivate(userId: string) {
       activationFormError.value = `Luas lahan harus lebih dari 0 untuk paket ${item.packageName}`;
       return;
     }
+
+    if (!(item.imageFile instanceof File)) {
+      activationFormError.value = `Foto batch wajib diunggah untuk paket ${item.packageName}`;
+      return;
+    }
   }
 
   activatingUserId.value = userId;
   activationFormError.value = '';
   try {
-    await activateUserPackage(userId, {
-      plant_batches: activationForms.value.map((item) => ({
+    const plantBatchesPayload = activationForms.value.map((item) => ({
         package_id: item.packageId,
         batch_code: String(item.batchCode || '').trim(),
         planting_date: item.plantingDate,
         location: String(item.location || '').trim(),
         seed_count: Math.floor(Number(item.seedCount)),
         land_area: Number(item.landArea),
-      })),
+    }));
+
+    const formData = new FormData();
+    formData.append('plant_batches', JSON.stringify(plantBatchesPayload));
+    activationForms.value.forEach((item) => {
+      if (item.imageFile instanceof File) {
+        formData.append(`batch_image_${item.packageId}`, item.imageFile);
+      }
     });
+
+    await activateUserPackage(userId, formData);
     await loadUsers();
     closeActivationForm();
   } catch (error) {
@@ -236,10 +250,29 @@ function openActivationForm(user: any) {
     location: '',
     seedCount: '',
     landArea: '',
+    imageFile: null,
+    imagePreview: '',
   }));
 }
 
+function handleBatchImageChange(formItem: any, event: Event) {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0] ?? null;
+
+  if (formItem.imagePreview) {
+    URL.revokeObjectURL(formItem.imagePreview);
+  }
+
+  formItem.imageFile = file;
+  formItem.imagePreview = file ? URL.createObjectURL(file) : '';
+}
+
 function closeActivationForm() {
+  activationForms.value.forEach((item) => {
+    if (item.imagePreview) {
+      URL.revokeObjectURL(item.imagePreview);
+    }
+  });
   activationFormUser.value = null;
   activationFormError.value = '';
   activationForms.value = [];
@@ -677,6 +710,21 @@ onMounted(() => {
                   placeholder="Contoh: 250"
                 />
               </div>
+
+              <div class="md:col-span-2">
+                <label class="mb-1 block text-sm font-medium text-gray-700">Foto Batch</label>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-green-50 file:px-3 file:py-1.5 file:text-green-700 hover:file:bg-green-100"
+                  @change="handleBatchImageChange(formItem, $event)"
+                />
+                <p class="mt-1 text-xs text-gray-500">Format: JPG, PNG, WEBP</p>
+
+                <div v-if="formItem.imagePreview" class="mt-3 overflow-hidden rounded-lg border border-gray-200">
+                  <img :src="formItem.imagePreview" alt="Preview foto batch" class="h-40 w-full object-cover" />
+                </div>
+              </div>
             </div>
           </div>
 
@@ -750,6 +798,14 @@ onMounted(() => {
               <p class="inline-flex items-center gap-2"><Sprout class="h-4 w-4 text-gray-500" /> {{ item.seed_count }} bibit</p>
               <p>Tanggal Tanam: {{ formatDisplayDate(item.planting_date) }}</p>
               <p>Luas Lahan: {{ Number(item.land_area || 0).toLocaleString('id-ID') }} m²</p>
+            </div>
+
+            <div v-if="item.photo_url" class="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+              <img :src="`http://localhost:8000${item.photo_url}`" alt="Foto batch" class="h-48 w-full object-cover" />
+            </div>
+            <div v-else class="mt-4 inline-flex items-center gap-2 text-xs text-gray-500">
+              <Image class="h-3.5 w-3.5" />
+              Foto batch belum tersedia.
             </div>
           </article>
         </div>

@@ -1,328 +1,433 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import {
-  Sprout,
-  Calendar,
-  Camera,
-  TrendingUp,
-  Droplets,
-  Sun,
-  ThermometerSun,
-  CheckCircle2,
-} from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
+import { Camera, Loader2, NotebookText, PlusCircle, Sprout } from 'lucide-vue-next'
+import { createPlantMonitoring, listPlantMonitorings } from '../../services/plant-monitoring/monitoring'
 
-const ERROR_IMG_SRC =
-  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODgiIGhlaWdodD0iODgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgc3Ryb2tlPSIjMDAwIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBvcGFjaXR5PSIuMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIzLjciPjxyZWN0IHg9IjE2IiB5PSIxNiIgd2lkdGg9IjU2IiBoZWlnaHQ9IjU2IiByeD0iNiIvPjxwYXRoIGQ9Im0xNiA1OCAxNi0xOCAzMiAzMiIvPjxjaXJjbGUgY3g9IjUzIiBjeT0iMzUiIHI9IjciLz48L3N2Zz4KCg=='
+const monitorings = ref<any[]>([])
+const loading = ref(false)
+const saving = ref(false)
+const errorMessage = ref('')
+const successMessage = ref('')
 
-function onImgError(e: Event) {
-  const el = e.target as HTMLImageElement
-  if (el) el.src = ERROR_IMG_SRC
-}
+const selectedBatchId = ref<number | null>(null)
+const photoFile = ref<File | null>(null)
+const photoPreview = ref('')
 
-const selectedPlant = ref('P-001')
+const form = ref({
+  phase: 'penanaman',
+  healthStatus: 'sehat',
+  disease: '',
+  diseaseNote: '',
+  affectedCount: 0,
+  totalPlants: 0,
+  note: '',
+})
 
-const plants = [
-  {
-    id: 'P-001',
-    name: 'Tanaman vanili #001',
-    batch: 'Batch premium A',
-    age: '18 bulan',
-    status: 'Berbunga',
-    health: 95,
-    lastInspection: '2026-01-18',
-    nextInspection: '2026-01-25',
-    location: 'Sektor A-12',
-  },
-  {
-    id: 'P-002',
-    name: 'Tanaman vanili #002',
-    batch: 'Batch organik B',
-    age: '14 bulan',
-    status: 'Tumbuh',
-    health: 92,
-    lastInspection: '2026-01-19',
-    nextInspection: '2026-01-26',
-    location: 'Sektor B-08',
-  },
-  {
-    id: 'P-003',
-    name: 'Tanaman vanili #003',
-    batch: 'Batch premium A',
-    age: '22 bulan',
-    status: 'Panen',
-    health: 98,
-    lastInspection: '2026-01-20',
-    nextInspection: '2026-01-27',
-    location: 'Sektor A-15',
-  },
+const phaseOptions = [
+  { value: 'penanaman', label: 'Penanaman' },
+  { value: 'pertumbuhan_awal', label: 'Pertumbuhan Awal' },
+  { value: 'vegetatif', label: 'Vegetatif' },
+  { value: 'pra-berbunga', label: 'Pra-berbunga' },
+  { value: 'berbunga', label: 'Berbunga' },
+  { value: 'panen', label: 'Panen' },
 ]
 
-const timeline = [
-  {
-    stage: 'Penanaman',
-    date: '2024-07-15',
-    status: 'completed' as const,
-    description: 'Penanaman awal dan persiapan lahan',
-    images: 1,
-  },
-  {
-    stage: 'Pertumbuhan awal',
-    date: '2024-10-20',
-    status: 'completed' as const,
-    description: '3 bulan pertama perkembangan',
-    images: 3,
-  },
-  {
-    stage: 'Fase vegetatif',
-    date: '2025-02-10',
-    status: 'completed' as const,
-    description: 'Perkembangan sulur kuat',
-    images: 4,
-  },
-  {
-    stage: 'Pra-berbunga',
-    date: '2025-08-05',
-    status: 'completed' as const,
-    description: 'Kuncup bunga terbentuk',
-    images: 5,
-  },
-  {
-    stage: 'Berbunga',
-    date: '2025-11-15',
-    status: 'current' as const,
-    description: 'Fase berbunga aktif',
-    images: 6,
-  },
-  {
-    stage: 'Pembentukan polong',
-    date: 'Perkiraan: 2026-03-01',
-    status: 'upcoming' as const,
-    description: 'Pembentukan polong biji',
-    images: 0,
-  },
-  {
-    stage: 'Panen',
-    date: 'Perkiraan: 2026-08-15',
-    status: 'upcoming' as const,
-    description: 'Siap dipanen',
-    images: 0,
-  },
+const phaseLabelMap: Record<string, string> = phaseOptions.reduce((acc, item) => {
+  acc[item.value] = item.label
+  return acc
+}, {} as Record<string, string>)
+
+const healthStatusOptions = [
+  { value: 'sehat', label: 'Sehat' },
+  { value: 'sebagian_terdampak', label: 'Sebagian terdampak' },
+  { value: 'mati', label: 'Mati' },
 ]
 
-const environmentalData = [
-  { label: 'Suhu', value: '26°C', status: 'optimal', icon: ThermometerSun },
-  { label: 'Kelembapan', value: '75%', status: 'optimal', icon: Droplets },
-  { label: 'Sinar matahari', value: '6,5 jam', status: 'good', icon: Sun },
-  { label: 'Kesehatan tanah', value: '8,2/10', status: 'excellent', icon: Sprout },
+const diseaseOptions = [
+  { value: '', label: 'Tidak ada' },
+  { value: 'batang_busuk', label: 'Batang busuk' },
+  { value: 'lainnya', label: 'Lainnya' },
 ]
 
-const envStatusLabel: Record<string, string> = {
-  optimal: 'Optimal',
-  excellent: 'Sangat baik',
-  good: 'Baik',
+const groupedBatches = computed(() => {
+  const map = new Map<number, any>()
+  monitorings.value.forEach((item) => {
+    if (!map.has(item.plant_batch_id)) {
+      map.set(item.plant_batch_id, {
+        id: item.plant_batch_id,
+        batchCode: item.batch_code,
+        packageName: item.package_name,
+      })
+    }
+  })
+  return Array.from(map.values())
+})
+
+const selectedBatch = computed(() => groupedBatches.value.find((item) => item.id === selectedBatchId.value) ?? null)
+
+const selectedBatchMonitorings = computed(() => {
+  if (!selectedBatchId.value) return []
+  return monitorings.value
+    .filter((item) => item.plant_batch_id === selectedBatchId.value)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+})
+
+const latestMonitoring = computed(() => selectedBatchMonitorings.value[0] ?? null)
+
+function formatDate(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  })
 }
 
-const currentPlant = computed(() => plants.find((p) => p.id === selectedPlant.value) ?? plants[0])
-
-const mainPlantSrc =
-  'https://images.unsplash.com/photo-1763050233345-7945d724d009?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2YW5pbGxhJTIwcGxhbnQlMjBmbG93ZXJ8ZW58MXx8fHwxNzY5MDI4MDU4fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
-
-const gallerySrcs = [
-  'https://images.unsplash.com/photo-1763050233345-7945d724d009?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2YW5pbGxhJTIwcGxhbnQlMjBmbG93ZXJ8ZW58MXx8fHwxNzY5MDI4MDU4fDA&ixlib=rb-4.1.0&q=80&w=400',
-  'https://images.unsplash.com/photo-1637922808382-0e5930886159?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2YW5pbGxhJTIwcGxhbnRhdGlvbiUyMGZhcm18ZW58MXx8fHwxNzY5MDI4MDU4fDA&ixlib=rb-4.1.0&q=80&w=400',
-  'https://images.unsplash.com/photo-1675501343762-fc726e82809c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2YW5pbGxhJTIwYmVhbnMlMjBwb2RzfGVufDF8fHx8MTc2OTAyODA1OXww&ixlib=rb-4.1.0&q=80&w=400',
-]
-
-function plantButtonClass(id: string) {
-  return selectedPlant.value === id
-    ? 'border-green-600 bg-green-50'
-    : 'border-gray-200 bg-white hover:border-gray-300'
+function healthBadgeClass(status: string) {
+  if (status === 'sehat') return 'bg-green-100 text-green-700'
+  if (status === 'sebagian_terdampak') return 'bg-amber-100 text-amber-700'
+  return 'bg-red-100 text-red-700'
 }
 
-function plantTitleClass(id: string) {
-  return selectedPlant.value === id ? 'text-green-700' : 'text-gray-900'
+function healthLabel(status: string) {
+  const match = healthStatusOptions.find((item) => item.value === status)
+  return match ? match.label : status
 }
 
-function statusBadgeClass(status: string) {
-  if (status === 'Berbunga') return 'bg-purple-100 text-purple-700'
-  if (status === 'Tumbuh') return 'bg-blue-100 text-blue-700'
-  return 'bg-yellow-100 text-yellow-700'
+function diseaseLabel(value: string) {
+  const match = diseaseOptions.find((item) => item.value === value)
+  return match ? match.label : value || 'Tidak ada'
 }
 
-function envStatusClass(status: string) {
-  if (status === 'optimal') return 'text-green-600'
-  if (status === 'excellent') return 'text-blue-600'
-  return 'text-yellow-600'
+function resetFormDefaults() {
+  form.value.phase = 'penanaman'
+  form.value.healthStatus = 'sehat'
+  form.value.disease = ''
+  form.value.diseaseNote = ''
+  form.value.affectedCount = 0
+  form.value.totalPlants = Number(latestMonitoring.value?.total_plants || 0)
+  form.value.note = ''
 }
 
-function timelineDotClass(status: string) {
-  if (status === 'completed') return 'bg-green-100'
-  if (status === 'current') return 'bg-blue-100'
-  return 'bg-gray-100'
+function handlePhotoChange(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0] ?? null
+
+  if (photoPreview.value) {
+    URL.revokeObjectURL(photoPreview.value)
+  }
+
+  photoFile.value = file
+  photoPreview.value = file ? URL.createObjectURL(file) : ''
 }
+
+async function fetchMonitorings() {
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const response = await listPlantMonitorings()
+    monitorings.value = Array.isArray(response.data) ? response.data : []
+
+    if (!selectedBatchId.value && groupedBatches.value.length) {
+      selectedBatchId.value = groupedBatches.value[0].id
+    }
+
+    if (!selectedBatchId.value) {
+      resetFormDefaults()
+      return
+    }
+
+    const selectedStillExists = groupedBatches.value.some((item) => item.id === selectedBatchId.value)
+    if (!selectedStillExists) {
+      selectedBatchId.value = groupedBatches.value[0]?.id ?? null
+    }
+
+    resetFormDefaults()
+  } catch (error) {
+    console.error('Failed to load plant monitorings:', error)
+    errorMessage.value = 'Gagal memuat data monitoring tanaman.'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function submitMonitoring() {
+  successMessage.value = ''
+  errorMessage.value = ''
+
+  if (!selectedBatchId.value) {
+    errorMessage.value = 'Pilih batch terlebih dahulu.'
+    return
+  }
+
+  const affectedCount = Number(form.value.affectedCount)
+  const totalPlants = Number(form.value.totalPlants)
+  if (!Number.isFinite(totalPlants) || totalPlants <= 0) {
+    errorMessage.value = 'Total tanaman harus lebih dari 0.'
+    return
+  }
+  if (!Number.isFinite(affectedCount) || affectedCount < 0) {
+    errorMessage.value = 'Jumlah tanaman terdampak tidak valid.'
+    return
+  }
+  if (affectedCount > totalPlants) {
+    errorMessage.value = 'Jumlah tanaman terdampak tidak boleh melebihi total tanaman.'
+    return
+  }
+
+  if (!photoFile.value) {
+    errorMessage.value = 'Foto monitoring wajib diunggah.'
+    return
+  }
+
+  const payload = new FormData()
+  payload.append('plant_batch_id', String(selectedBatchId.value))
+  payload.append('phase', form.value.phase)
+  payload.append('health_status', form.value.healthStatus)
+  payload.append('disease', form.value.disease)
+  payload.append('disease_note', form.value.disease === 'lainnya' ? form.value.diseaseNote : '')
+  payload.append('affected_count', String(Math.floor(affectedCount)))
+  payload.append('total_plants', String(Math.floor(totalPlants)))
+  payload.append('note', form.value.note.trim())
+  payload.append('photo', photoFile.value)
+
+  saving.value = true
+  try {
+    await createPlantMonitoring(payload)
+    successMessage.value = 'Monitoring tanaman berhasil disimpan.'
+    if (photoPreview.value) {
+      URL.revokeObjectURL(photoPreview.value)
+    }
+    photoFile.value = null
+    photoPreview.value = ''
+    resetFormDefaults()
+    await fetchMonitorings()
+  } catch (error) {
+    console.error('Failed to create monitoring:', error)
+    errorMessage.value = 'Gagal menyimpan monitoring tanaman.'
+  } finally {
+    saving.value = false
+  }
+}
+
+onMounted(() => {
+  fetchMonitorings()
+})
 </script>
 
 <template>
   <div class="space-y-6">
     <div>
       <h2 class="text-2xl font-semibold text-gray-900">Monitoring tanaman</h2>
-      <p class="text-gray-600 mt-1">Pantau fase pertumbuhan dan kesehatan tanaman vanili Anda</p>
+      <p class="mt-1 text-gray-600">Monitoring per batch tanaman dan paket investasi</p>
     </div>
 
-    <div class="flex gap-3 overflow-x-auto pb-2">
-      <button
-        v-for="plant in plants"
-        :key="plant.id"
-        type="button"
-        :class="[
-          'flex-shrink-0 px-6 py-3 rounded-lg border-2 transition-all',
-          plantButtonClass(plant.id),
-        ]"
-        @click="selectedPlant = plant.id"
-      >
-        <div class="text-left">
-          <p :class="['font-medium', plantTitleClass(plant.id)]">{{ plant.name }}</p>
-          <p class="text-sm text-gray-600 mt-1">{{ plant.batch }}</p>
-        </div>
-      </button>
+    <div v-if="errorMessage" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      {{ errorMessage }}
+    </div>
+    <div v-if="successMessage" class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+      {{ successMessage }}
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
-        <div class="flex items-start justify-between mb-6">
-          <div>
-            <h3 class="text-xl font-semibold text-gray-900">{{ currentPlant.name }}</h3>
-            <p class="text-gray-600 mt-1">
-              Usia: {{ currentPlant.age }} • Lokasi: {{ currentPlant.location }}
-            </p>
-          </div>
-          <span :class="['px-3 py-1 rounded-full text-sm font-medium', statusBadgeClass(currentPlant.status)]">
-            {{ currentPlant.status }}
-          </span>
-        </div>
-
-        <div class="aspect-video bg-gray-100 rounded-lg overflow-hidden mb-6">
-          <img
-            :src="mainPlantSrc"
-            alt="Tanaman vanili"
-            class="w-full h-full object-cover"
-            @error="onImgError"
-          />
-        </div>
-
-        <div>
-          <h4 class="font-semibold text-gray-900 mb-4">Kondisi lingkungan</h4>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div v-for="(item, index) in environmentalData" :key="index" class="bg-gray-50 rounded-lg p-4">
-              <div class="flex items-center gap-2 mb-2">
-                <component :is="item.icon" class="w-4 h-4 text-gray-600" />
-                <span class="text-sm text-gray-600">{{ item.label }}</span>
-              </div>
-              <p class="text-lg font-semibold text-gray-900">{{ item.value }}</p>
-              <span :class="['text-xs', envStatusClass(item.status)]">{{ envStatusLabel[item.status] ?? item.status }}</span>
-            </div>
-          </div>
-        </div>
+    <div class="rounded-xl border border-gray-200 bg-white p-4">
+      <p class="mb-3 text-sm font-medium text-gray-700">Pilih batch</p>
+      <div v-if="loading" class="flex items-center gap-2 text-sm text-gray-500">
+        <Loader2 class="h-4 w-4 animate-spin" />
+        Memuat batch monitoring...
       </div>
-
-      <div class="space-y-6">
-        <div class="bg-white rounded-xl border border-gray-200 p-6">
-          <h4 class="font-semibold text-gray-900 mb-4">Kesehatan tanaman</h4>
-          <div class="text-center mb-4">
-            <div class="inline-flex items-center justify-center w-24 h-24 bg-green-50 rounded-full mb-3">
-              <span class="text-3xl font-semibold text-green-600">{{ currentPlant.health }}%</span>
-            </div>
-            <p class="text-sm text-gray-600">Skor kesehatan keseluruhan</p>
-          </div>
-          <div class="space-y-3">
-            <div class="flex items-center justify-between text-sm">
-              <span class="text-gray-600">Laju pertumbuhan</span>
-              <span class="font-medium text-gray-900">Sangat baik</span>
-            </div>
-            <div class="flex items-center justify-between text-sm">
-              <span class="text-gray-600">Risiko penyakit</span>
-              <span class="font-medium text-green-600">Rendah</span>
-            </div>
-            <div class="flex items-center justify-between text-sm">
-              <span class="text-gray-600">Aktivitas hama</span>
-              <span class="font-medium text-green-600">Tidak ada</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-xl border border-gray-200 p-6">
-          <h4 class="font-semibold text-gray-900 mb-4">Inspeksi</h4>
-          <div class="space-y-3">
-            <div>
-              <p class="text-sm text-gray-600">Inspeksi terakhir</p>
-              <p class="font-medium text-gray-900">{{ currentPlant.lastInspection }}</p>
-            </div>
-            <div>
-              <p class="text-sm text-gray-600">Jadwal berikutnya</p>
-              <p class="font-medium text-gray-900">{{ currentPlant.nextInspection }}</p>
-            </div>
-          </div>
-        </div>
+      <div v-else-if="!groupedBatches.length" class="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500">
+        Belum ada data monitoring. Data awal akan otomatis terbentuk setelah validasi penanaman awal.
       </div>
-    </div>
-
-    <div class="bg-white rounded-xl border border-gray-200 p-6">
-      <div class="flex items-center justify-between mb-6">
-        <h3 class="text-lg font-semibold text-gray-900">Linimasa pertumbuhan</h3>
-        <button type="button" class="text-sm text-green-600 hover:text-green-700 font-medium">
-          Lihat semua foto
+      <div v-else class="flex gap-3 overflow-x-auto pb-1">
+        <button
+          v-for="item in groupedBatches"
+          :key="item.id"
+          type="button"
+          :class="[
+            'min-w-[230px] rounded-lg border px-4 py-3 text-left transition-colors',
+            selectedBatchId === item.id ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white hover:border-gray-300',
+          ]"
+          @click="selectedBatchId = item.id; resetFormDefaults()"
+        >
+          <p class="font-semibold text-gray-900">{{ item.batchCode }}</p>
+          <p class="mt-1 text-sm text-gray-600">{{ item.packageName || '-' }}</p>
         </button>
       </div>
+    </div>
 
-      <div class="relative">
-        <div class="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200" />
+    <div v-if="selectedBatch" class="grid grid-cols-1 gap-6 xl:grid-cols-5">
+      <section class="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-2">
+        <div class="mb-4 flex items-center gap-2">
+          <PlusCircle class="h-4 w-4 text-green-600" />
+          <h3 class="text-lg font-semibold text-gray-900">Input monitoring</h3>
+        </div>
 
-        <div class="space-y-6">
-          <div v-for="(item, index) in timeline" :key="index" class="relative flex gap-6">
-            <div
-              :class="[
-                'relative z-10 flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center',
-                timelineDotClass(item.status),
-              ]"
-            >
-              <CheckCircle2 v-if="item.status === 'completed'" class="w-6 h-6 text-green-600" />
-              <TrendingUp v-else-if="item.status === 'current'" class="w-6 h-6 text-blue-600" />
-              <Calendar v-else class="w-6 h-6 text-gray-400" />
+        <div class="space-y-4">
+          <div>
+            <label class="mb-1 block text-sm font-medium text-gray-700">Batch</label>
+            <input
+              type="text"
+              :value="`${selectedBatch.batchCode} • ${selectedBatch.packageName || '-'}`"
+              class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600"
+              disabled
+            />
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700">Fase</label>
+              <select v-model="form.phase" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100">
+                <option v-for="phase in phaseOptions" :key="phase.value" :value="phase.value">{{ phase.label }}</option>
+              </select>
             </div>
 
-            <div class="flex-1 pb-6">
-              <div class="bg-gray-50 rounded-lg p-4">
-                <div class="flex items-start justify-between mb-2">
-                  <div>
-                    <h4 class="font-semibold text-gray-900">{{ item.stage }}</h4>
-                    <p class="text-sm text-gray-600 mt-1">{{ item.date }}</p>
-                  </div>
-                  <div v-if="item.images > 0" class="flex items-center gap-1 text-sm text-gray-600">
-                    <Camera class="w-4 h-4" />
-                    <span>{{ item.images }} foto</span>
-                  </div>
-                </div>
-                <p class="text-sm text-gray-600">{{ item.description }}</p>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700">Status kesehatan</label>
+              <select v-model="form.healthStatus" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100">
+                <option v-for="item in healthStatusOptions" :key="item.value" :value="item.value">{{ item.label }}</option>
+              </select>
+            </div>
 
-                <div v-if="item.status === 'current'" class="grid grid-cols-3 gap-2 mt-4">
-                  <div
-                    v-for="(src, gi) in gallerySrcs"
-                    :key="gi"
-                    class="aspect-square bg-white rounded-lg overflow-hidden"
-                  >
-                    <img
-                      :src="src"
-                      alt="Foto tanaman"
-                      class="w-full h-full object-cover"
-                      @error="onImgError"
-                    />
-                  </div>
-                </div>
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700">Disease</label>
+              <select v-model="form.disease" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100">
+                <option v-for="item in diseaseOptions" :key="item.value || 'none'" :value="item.value">{{ item.label }}</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700">Tanaman terdampak</label>
+              <input
+                v-model.number="form.affectedCount"
+                type="number"
+                min="0"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+              />
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm font-medium text-gray-700">Total tanaman</label>
+              <input
+                v-model.number="form.totalPlants"
+                type="number"
+                min="1"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+              />
+            </div>
+
+            <div v-if="form.disease === 'lainnya'" class="md:col-span-2">
+              <label class="mb-1 block text-sm font-medium text-gray-700">Disease note</label>
+              <textarea
+                v-model="form.diseaseNote"
+                rows="2"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                placeholder="Deskripsi penyakit lainnya"
+              />
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm font-medium text-gray-700">Catatan monitoring</label>
+              <textarea
+                v-model="form.note"
+                rows="3"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                placeholder="Catatan tambahan"
+              />
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="mb-1 block text-sm font-medium text-gray-700">Foto monitoring</label>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-green-50 file:px-3 file:py-1.5 file:text-green-700 hover:file:bg-green-100"
+                @change="handlePhotoChange"
+              />
+              <div v-if="photoPreview" class="mt-3 overflow-hidden rounded-lg border border-gray-200">
+                <img :src="photoPreview" alt="Preview monitoring" class="h-40 w-full object-cover" />
               </div>
             </div>
           </div>
+
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60"
+            :disabled="saving"
+            @click="submitMonitoring"
+          >
+            <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
+            <Camera v-else class="h-4 w-4" />
+            {{ saving ? 'Menyimpan...' : 'Simpan Monitoring' }}
+          </button>
         </div>
-      </div>
+      </section>
+
+      <section class="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-3">
+        <div class="mb-4 flex items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Riwayat monitoring</h3>
+            <p class="mt-1 text-sm text-gray-600">Batch {{ selectedBatch.batchCode }} • Paket {{ selectedBatch.packageName || '-' }}</p>
+          </div>
+
+          <div v-if="latestMonitoring" class="rounded-lg bg-green-50 px-3 py-2 text-right">
+            <p class="text-xs text-green-700">Progress terbaru</p>
+            <p class="text-xl font-semibold text-green-700">{{ latestMonitoring.progress }}%</p>
+          </div>
+        </div>
+
+        <div v-if="!selectedBatchMonitorings.length" class="rounded-lg border border-dashed border-gray-300 p-5 text-sm text-gray-500">
+          Belum ada riwayat monitoring pada batch ini.
+        </div>
+
+        <div v-else class="space-y-4">
+          <article
+            v-for="item in selectedBatchMonitorings"
+            :key="item.id"
+            class="overflow-hidden rounded-xl border border-gray-200"
+          >
+            <div class="grid grid-cols-1 gap-0 lg:grid-cols-5">
+              <div class="lg:col-span-2">
+                <img
+                  v-if="item.photo_url"
+                  :src="`http://localhost:8000${item.photo_url}`"
+                  alt="Foto monitoring"
+                  class="h-full min-h-[180px] w-full object-cover"
+                />
+                <div v-else class="flex h-full min-h-[180px] items-center justify-center bg-gray-100 text-sm text-gray-500">
+                  Foto tidak tersedia
+                </div>
+              </div>
+
+              <div class="space-y-3 p-4 lg:col-span-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="inline-flex items-center gap-2">
+                    <Sprout class="h-4 w-4 text-green-600" />
+                    <span class="font-semibold text-gray-900">{{ phaseLabelMap[item.phase] || item.phase }}</span>
+                    <span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">{{ item.progress }}%</span>
+                  </div>
+                  <span :class="['rounded-full px-2.5 py-1 text-xs font-medium', healthBadgeClass(item.health_status)]">
+                    {{ healthLabel(item.health_status) }}
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
+                  <p>Disease: <span class="font-medium">{{ diseaseLabel(item.disease) }}</span></p>
+                  <p>Terdampak: <span class="font-medium">{{ item.affected_count }} / {{ item.total_plants }}</span></p>
+                  <p class="md:col-span-2">Tanggal: <span class="font-medium">{{ formatDate(item.created_at) }}</span></p>
+                  <p v-if="item.disease_note" class="md:col-span-2">Disease note: <span class="font-medium">{{ item.disease_note }}</span></p>
+                  <p v-if="item.note" class="md:col-span-2">Catatan: <span class="font-medium">{{ item.note }}</span></p>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <div v-else-if="!loading" class="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-500">
+      <NotebookText class="mx-auto mb-2 h-5 w-5 text-gray-400" />
+      Tidak ada batch monitoring yang bisa dipilih.
     </div>
   </div>
 </template>

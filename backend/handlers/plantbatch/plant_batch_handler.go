@@ -1,14 +1,18 @@
 package plantbatch
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"pondok-tani-backend/config"
 	authmodels "pondok-tani-backend/models/auth"
 	coremodels "pondok-tani-backend/models/core"
+	maintenancemodels "pondok-tani-backend/models/maintenance"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,6 +27,7 @@ type plantBatchSummary struct {
 	Location     string    `json:"location"`
 	SeedCount    uint      `json:"seed_count"`
 	LandArea     float64   `json:"land_area"`
+	PhotoURL     string    `json:"photo_url"`
 	Status       string    `json:"status"`
 	CreatedAt    time.Time `json:"created_at"`
 }
@@ -34,22 +39,83 @@ type activatePlantBatchItem struct {
 	Location     string  `json:"location" binding:"required,min=3,max=150"`
 	SeedCount    uint    `json:"seed_count" binding:"required,gt=0"`
 	LandArea     float64 `json:"land_area" binding:"required,gt=0"`
+	PhotoURL     string  `json:"photo_url"`
 }
 
 type activatePackageRequest struct {
 	PlantBatches []activatePlantBatchItem `json:"plant_batches" binding:"required"`
 }
 
+var phaseProgressMap = map[string]int{
+	"penanaman":        0,
+	"pertumbuhan_awal": 20,
+	"vegetatif":        40,
+	"pra-berbunga":     60,
+	"berbunga":         80,
+	"panen":            100,
+}
+
+func saveBatchImage(c *gin.Context, fieldKey string) (string, error) {
+	fileHeader, err := c.FormFile(fieldKey)
+	if err != nil {
+		return "", err
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	switch ext {
+	case ".jpg", ".jpeg", ".png", ".webp":
+	default:
+		return "", fmt.Errorf("unsupported file extension")
+	}
+
+	if err := os.MkdirAll("uploads/batches", 0o755); err != nil {
+		return "", err
+	}
+
+	fileName := fmt.Sprintf("batch_%d%s", time.Now().UnixNano(), ext)
+	fullPath := filepath.Join("uploads", "batches", fileName)
+	if err := c.SaveUploadedFile(fileHeader, fullPath); err != nil {
+		return "", err
+	}
+
+	return "/uploads/batches/" + fileName, nil
+}
+
+func getPhaseProgress(phase string) (int, bool) {
+	progress, ok := phaseProgressMap[strings.ToLower(strings.TrimSpace(phase))]
+	return progress, ok
+}
+
 func ActivateUserPackage(c *gin.Context) {
 	userID := c.Param("id")
 
 	var req activatePackageRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plant batch form"})
-		return
+	isMultipart := strings.Contains(strings.ToLower(c.GetHeader("Content-Type")), "multipart/form-data")
+	if isMultipart {
+		payload := c.PostForm("plant_batches")
+		if strings.TrimSpace(payload) == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "plant_batches is required"})
+			return
+		}
+		if err := json.Unmarshal([]byte(payload), &req.PlantBatches); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plant batch form"})
+			return
+		}
+	} else {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid plant batch form"})
+			return
+		}
 	}
 	if len(req.PlantBatches) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "plant_batches is required"})
+		return
+	}
+
+	createdBy, exists := c.Get("user_id")
+	createdByStr, ok := createdBy.(string)
+	if !exists || !ok || strings.TrimSpace(createdByStr) == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized user"})
 		return
 	}
 
@@ -158,6 +224,24 @@ func ActivateUserPackage(c *gin.Context) {
 			return
 		}
 
+		photoURL := strings.TrimSpace(item.PhotoURL)
+		if isMultipart {
+			fieldKey := fmt.Sprintf("batch_image_%d", item.PackageID)
+			uploadedPhotoURL, err := saveBatchImage(c, fieldKey)
+			if err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Photo upload failed for package %d", item.PackageID)})
+				return
+			}
+			photoURL = uploadedPhotoURL
+		}
+
+		if photoURL == "" {
+			tx.Rollback()
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Photo is required for package %d", item.PackageID)})
+			return
+		}
+
 		plantBatch := coremodels.PlantBatch{
 			InvestmentID: investment.ID,
 			BatchCode:    batchCode,
@@ -165,12 +249,36 @@ func ActivateUserPackage(c *gin.Context) {
 			Location:     location,
 			SeedCount:    item.SeedCount,
 			LandArea:     item.LandArea,
+			PhotoURL:     photoURL,
 			Status:       "active",
 		}
 
 		if err := tx.Create(&plantBatch).Error; err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to save plant batch. Ensure batch_code is unique"})
+			return
+		}
+
+		progress, _ := getPhaseProgress("penanaman")
+		initialNote := fmt.Sprintf("Validasi penanaman awal untuk batch %s", batchCode)
+		creatorID := createdByStr
+		initialMonitoring := maintenancemodels.PlantMonitoring{
+			PlantBatchID:  plantBatch.ID,
+			Phase:         "penanaman",
+			Progress:      progress,
+			HealthStatus:  "sehat",
+			Disease:       "",
+			DiseaseNote:   "",
+			AffectedCount: 0,
+			TotalPlants:   int(item.SeedCount),
+			Note:          initialNote,
+			CreatedBy:     &creatorID,
+			PhotoURL:      photoURL,
+		}
+
+		if err := tx.Create(&initialMonitoring).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create initial plant monitoring"})
 			return
 		}
 	}
@@ -241,6 +349,7 @@ func ListUserPlantBatches(c *gin.Context) {
 			Location:     item.Location,
 			SeedCount:    item.SeedCount,
 			LandArea:     item.LandArea,
+			PhotoURL:     item.PhotoURL,
 			Status:       item.Status,
 			CreatedAt:    item.CreatedAt,
 		})
