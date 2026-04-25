@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { getCurrentUser } from "../services/user/user";
+import { clearAuthSession, isSessionExpired, touchSession } from "../utils/session";
 
 /**
  * Struktur views (relatif ke src/):
@@ -143,11 +144,23 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const token = localStorage.getItem("token");
+  if (token && isSessionExpired()) {
+    clearAuthSession();
+    if (to.name !== "login") {
+      return next({ name: "login", query: { expired: "1" } });
+    }
+  }
+
+  const activeToken = localStorage.getItem("token");
   const role = localStorage.getItem("userRole");
-  const isAuth = Boolean(token);
+  const isAuth = Boolean(activeToken);
   const normalizedRole = role === "admin" ? "admin" : role === "mitra" ? "mitra" : "investor";
   const requiresAuthRoute = to.matched.some((record) => record.meta.requiresAuth);
   const packageFlowRouteNames = ["package-selection", "order-confirmation"];
+
+  if (isAuth) {
+    touchSession();
+  }
 
   if (requiresAuthRoute && !isAuth) {
     return next({ name: "login" });
@@ -166,8 +179,7 @@ router.beforeEach(async (to, from, next) => {
         return next({ name: "package-selection" });
       }
     } catch (err) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("userRole");
+      clearAuthSession();
       return next({ name: "login" });
     }
   }

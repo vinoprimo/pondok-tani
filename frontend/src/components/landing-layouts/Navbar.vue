@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ChevronDown, LogOut, Sprout, UserCircle2 } from 'lucide-vue-next';
 import { getCurrentUser } from '../../services/user/user';
+import { clearAuthSession } from '../../utils/session';
 
 const router = useRouter();
 const route = useRoute();
@@ -83,8 +84,7 @@ function toggleProfile() {
 }
 
 function handleLogout() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('userRole');
+  clearAuthSession();
   isLoggedIn.value = false;
   isProfileOpen.value = false;
   profile.value = {
