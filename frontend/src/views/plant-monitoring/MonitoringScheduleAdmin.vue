@@ -34,7 +34,7 @@ type UserScheduleSummary = {
   total: number;
   nearestActivity: string | null;
   nearestDueDate: string | null;
-  status: "pending" | "overdue" | "aman";
+  status: "mendatang" | "overdue" | "aman";
 };
 
 const router = useRouter();
@@ -78,14 +78,14 @@ const userSummaries = computed<UserScheduleSummary[]>(() => {
     const hasOverdue = userSchedules.some((s) => {
       const due = new Date(s.next_due_date);
       due.setHours(0, 0, 0, 0);
-      return s.status === "overdue" || (s.status === "pending" && due.getTime() < todayDateOnly.value.getTime());
+      return s.status === "overdue" || (s.status === "mendatang" && due.getTime() < todayDateOnly.value.getTime());
     });
 
-    const hasPending = userSchedules.some((s) => s.status === "pending");
+    const hasPending = userSchedules.some((s) => s.status === "mendatang");
 
-    let status: "pending" | "overdue" | "aman" = "aman";
+    let status: "mendatang" | "overdue" | "aman" = "aman";
     if (hasOverdue) status = "overdue";
-    else if (hasPending) status = "pending";
+    else if (hasPending) status = "mendatang";
 
     return {
       id: user.id,
@@ -141,13 +141,13 @@ function formatDate(dateStr?: string | null) {
 
 function statusLabel(status: string) {
   if (status === "overdue") return "Overdue";
-  if (status === "pending") return "Pending";
+  if (status === "mendatang") return "Mendatang";
   return "Aman";
 }
 
 function statusClass(status: string) {
   if (status === "overdue") return "bg-red-50 text-red-700";
-  if (status === "pending") return "bg-yellow-50 text-yellow-700";
+  if (status === "mendatang") return "bg-blue-50 text-blue-700";
   return "bg-green-50 text-green-700";
 }
 

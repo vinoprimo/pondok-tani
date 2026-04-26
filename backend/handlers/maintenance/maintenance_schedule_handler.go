@@ -1,6 +1,7 @@
 package maintenance
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -17,10 +18,19 @@ func syncOverdueMaintenanceSchedules() error {
 	today := time.Now()
 	startOfDay := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 
+	// Normalize legacy pending status to the new status naming.
+	if err := config.DB.Exec(`
+		UPDATE maintenance_schedules
+		SET status = 'mendatang', updated_at = NOW()
+		WHERE status = 'pending'
+	`).Error; err != nil {
+		return err
+	}
+
 	return config.DB.Exec(`
 		UPDATE maintenance_schedules AS ms
 		SET status = 'overdue', updated_at = NOW()
-		WHERE ms.status = 'pending'
+		WHERE ms.status = 'mendatang'
 		  AND DATE(ms.next_due_date) < ?
 		  AND NOT EXISTS (
 			SELECT 1
@@ -59,6 +69,54 @@ type maintenanceScheduleSummaryResponse struct {
 	TotalCount    int64 `json:"total_count"`
 }
 
+type myMaintenanceScheduleResponse struct {
+	ID                uint      `json:"id"`
+	ScheduleCode      string    `json:"schedule_code"`
+	PlantBatchID      uint      `json:"plant_batch_id"`
+	BatchCode         string    `json:"batch_code"`
+	ActivityType      string    `json:"activity_type"`
+	FrequencyDays     uint      `json:"frequency_days"`
+	NextDueDate       time.Time `json:"next_due_date"`
+	Status            string    `json:"status"`
+	HasSubmittedProof bool      `json:"has_submitted_proof"`
+}
+
+type myMaintenanceActivityResponse struct {
+	ID               uint       `json:"id"`
+	ScheduleID       uint       `json:"schedule_id"`
+	ScheduleCode     string     `json:"schedule_code"`
+	ActivityType     string     `json:"activity_type"`
+	ActivityDate     time.Time  `json:"activity_date"`
+	ValidationStatus string     `json:"validation_status"`
+	ValidationNotes  *string    `json:"validation_notes,omitempty"`
+	ValidatedAt      *time.Time `json:"validated_at,omitempty"`
+}
+
+type submitMaintenanceActivityRequest struct {
+	ScheduleID   uint    `json:"schedule_id" binding:"required,gt=0"`
+	ActivityDate string  `json:"activity_date" binding:"required"`
+	Description  *string `json:"description"`
+}
+
+func deriveInvestorScheduleStatus(scheduleStatus string, latestActivity *maintenancemodels.MaintenanceActivity) string {
+	if latestActivity != nil {
+		switch latestActivity.ValidationStatus {
+		case "approved", "verified":
+			return "terverifikasi"
+		case "rejected":
+			return "ditolak"
+		default:
+			return "menunggu_verifikasi"
+		}
+	}
+
+	if scheduleStatus == "overdue" {
+		return "overdue"
+	}
+
+	return "mendatang"
+}
+
 func GetMaintenanceScheduleSummary(c *gin.Context) {
 	if err := syncOverdueMaintenanceSchedules(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sync overdue maintenance schedules"})
@@ -77,7 +135,7 @@ func GetMaintenanceScheduleSummary(c *gin.Context) {
 
 	var pendingCount int64
 	if err := config.DB.Model(&maintenancemodels.MaintenanceSchedule{}).
-		Where("status = ? AND DATE(next_due_date) >= ?", "pending", todayKey).
+		Where("status = ? AND DATE(next_due_date) >= ?", "mendatang", todayKey).
 		Count(&pendingCount).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count pending schedules"})
 		return
@@ -93,7 +151,7 @@ func GetMaintenanceScheduleSummary(c *gin.Context) {
 
 	var overdueCount int64
 	if err := config.DB.Model(&maintenancemodels.MaintenanceSchedule{}).
-		Where("status = ? OR (status = ? AND DATE(next_due_date) < ?)", "overdue", "pending", todayKey).
+		Where("status = ? OR (status = ? AND DATE(next_due_date) < ?)", "overdue", "mendatang", todayKey).
 		Count(&overdueCount).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count overdue schedules"})
 		return
@@ -187,7 +245,7 @@ func CreateMaintenanceSchedule(c *gin.Context) {
 		ActivityType:  strings.TrimSpace(req.ActivityType),
 		FrequencyDays: req.FrequencyDays,
 		NextDueDate:   nextDueDate,
-		Status:        "pending",
+		Status:        "mendatang",
 	}
 
 	if err := config.DB.Create(&schedule).Error; err != nil {
@@ -196,4 +254,187 @@ func CreateMaintenanceSchedule(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Maintenance schedule created", "id": schedule.ID})
+}
+
+func ListMyMaintenanceSchedules(c *gin.Context) {
+	if err := syncOverdueMaintenanceSchedules(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sync overdue maintenance schedules"})
+		return
+	}
+
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var schedules []maintenancemodels.MaintenanceSchedule
+	if err := config.DB.Preload("PlantBatch").
+		Where("user_id = ?", userID).
+		Order("next_due_date ASC").
+		Find(&schedules).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch maintenance schedules"})
+		return
+	}
+
+	scheduleIDs := make([]uint, 0, len(schedules))
+	for _, item := range schedules {
+		scheduleIDs = append(scheduleIDs, item.ID)
+	}
+
+	latestActivityMap := map[uint]maintenancemodels.MaintenanceActivity{}
+	if len(scheduleIDs) > 0 {
+		var activities []maintenancemodels.MaintenanceActivity
+		if err := config.DB.
+			Where("schedule_id IN ?", scheduleIDs).
+			Order("schedule_id ASC, created_at DESC").
+			Find(&activities).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch maintenance activities"})
+			return
+		}
+
+		for _, activity := range activities {
+			if _, exists := latestActivityMap[activity.ScheduleID]; !exists {
+				latestActivityMap[activity.ScheduleID] = activity
+			}
+		}
+	}
+
+	response := make([]myMaintenanceScheduleResponse, 0, len(schedules))
+	for _, item := range schedules {
+		latest, hasLatest := latestActivityMap[item.ID]
+		var latestPtr *maintenancemodels.MaintenanceActivity
+		if hasLatest {
+			latestPtr = &latest
+		}
+
+		response = append(response, myMaintenanceScheduleResponse{
+			ID:                item.ID,
+			ScheduleCode:      fmt.Sprintf("MA-%03d", item.ID),
+			PlantBatchID:      item.PlantBatchID,
+			BatchCode:         item.PlantBatch.BatchCode,
+			ActivityType:      item.ActivityType,
+			FrequencyDays:     item.FrequencyDays,
+			NextDueDate:       item.NextDueDate,
+			Status:            deriveInvestorScheduleStatus(item.Status, latestPtr),
+			HasSubmittedProof: hasLatest && latest.ValidationStatus == "pending",
+		})
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func ListMyMaintenanceActivities(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var activities []maintenancemodels.MaintenanceActivity
+	if err := config.DB.
+		Preload("Schedule").
+		Where("schedule_id IN (?)", config.DB.Model(&maintenancemodels.MaintenanceSchedule{}).Select("id").Where("user_id = ?", userID)).
+		Order("activity_date DESC").
+		Find(&activities).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch maintenance activities"})
+		return
+	}
+
+	response := make([]myMaintenanceActivityResponse, 0, len(activities))
+	for _, item := range activities {
+		var validatedAt *time.Time
+		if item.ValidationStatus == "approved" || item.ValidationStatus == "verified" || item.ValidationStatus == "rejected" {
+			t := item.UpdatedAt
+			validatedAt = &t
+		}
+
+		response = append(response, myMaintenanceActivityResponse{
+			ID:               item.ID,
+			ScheduleID:       item.ScheduleID,
+			ScheduleCode:     fmt.Sprintf("MA-%03d", item.ScheduleID),
+			ActivityType:     item.ActivityType,
+			ActivityDate:     item.ActivityDate,
+			ValidationStatus: item.ValidationStatus,
+			ValidationNotes:  item.ValidationNotes,
+			ValidatedAt:      validatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func SubmitMyMaintenanceActivity(c *gin.Context) {
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	userID := userIDValue.(string)
+
+	var req submitMaintenanceActivityRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	activityDate, err := time.Parse("2006-01-02", req.ActivityDate)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid activity_date format. Use YYYY-MM-DD"})
+		return
+	}
+
+	var schedule maintenancemodels.MaintenanceSchedule
+	if err := config.DB.First(&schedule, "id = ? AND user_id = ?", req.ScheduleID, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Maintenance schedule not found"})
+		return
+	}
+
+	var pendingSubmissionCount int64
+	if err := config.DB.Model(&maintenancemodels.MaintenanceActivity{}).
+		Where("schedule_id = ? AND validation_status = ?", req.ScheduleID, "pending").
+		Count(&pendingSubmissionCount).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate existing activity"})
+		return
+	}
+	if pendingSubmissionCount > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Laporan untuk jadwal ini sedang menunggu verifikasi"})
+		return
+	}
+
+	activity := maintenancemodels.MaintenanceActivity{
+		ScheduleID:       schedule.ID,
+		PlantBatchID:     schedule.PlantBatchID,
+		ActivityType:     schedule.ActivityType,
+		Description:      req.Description,
+		ActivityDate:     activityDate,
+		ValidationStatus: "pending",
+	}
+
+	tx := config.DB.Begin()
+	if tx.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
+
+	if err := tx.Create(&activity).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to submit maintenance activity"})
+		return
+	}
+
+	if err := tx.Model(&maintenancemodels.MaintenanceSchedule{}).
+		Where("id = ?", schedule.ID).
+		Updates(map[string]interface{}{"status": "menunggu_verifikasi", "updated_at": time.Now()}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update schedule status"})
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save maintenance activity"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Laporan aktivitas berhasil dikirim"})
 }
