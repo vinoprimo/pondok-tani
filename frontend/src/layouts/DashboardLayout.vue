@@ -37,6 +37,7 @@ const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
     "investors",
     "vanili-management",
     "maintenance-validation",
+    "monitoring-schedule",
     "harvest-sales",
     "warehouse",
     "financials",
@@ -47,6 +48,7 @@ const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
 
 const activeView = computed(() => {
   if (route.path === "/dashboard") return "dashboard";
+  if (route.path.startsWith("/dashboard/monitoring-schedule")) return "monitoring-schedule";
 
   const matchMap: Record<string, string> = {
     "/dashboard/portfolio": "portfolio",
@@ -59,6 +61,7 @@ const activeView = computed(() => {
     "/dashboard/notifications": "notifications",
     "/dashboard/investors": "investors",
     "/dashboard/maintenance-validation": "maintenance-validation",
+    "/dashboard/monitoring-schedule": "monitoring-schedule",
     "/dashboard/harvest-sales": "harvest-sales",
     "/dashboard/warehouse": "warehouse",
   };
@@ -87,6 +90,7 @@ function handleSetActiveView(view: string) {
     notifications: "/dashboard/notifications",
     investors: "/dashboard/investors",
     "maintenance-validation": "/dashboard/maintenance-validation",
+    "monitoring-schedule": "/dashboard/monitoring-schedule",
     "harvest-sales": "/dashboard/harvest-sales",
     warehouse: "/dashboard/warehouse",
   };
