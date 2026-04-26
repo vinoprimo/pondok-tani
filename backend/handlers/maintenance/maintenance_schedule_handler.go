@@ -1,8 +1,12 @@
 package maintenance
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -87,6 +91,7 @@ type myMaintenanceActivityResponse struct {
 	ScheduleCode     string     `json:"schedule_code"`
 	ActivityType     string     `json:"activity_type"`
 	ActivityDate     time.Time  `json:"activity_date"`
+	PhotoURL         *string    `json:"photo_url,omitempty"`
 	ValidationStatus string     `json:"validation_status"`
 	ValidationNotes  *string    `json:"validation_notes,omitempty"`
 	ValidatedAt      *time.Time `json:"validated_at,omitempty"`
@@ -96,6 +101,67 @@ type submitMaintenanceActivityRequest struct {
 	ScheduleID   uint    `json:"schedule_id" binding:"required,gt=0"`
 	ActivityDate string  `json:"activity_date" binding:"required"`
 	Description  *string `json:"description"`
+}
+
+func saveMaintenanceActivityImage(c *gin.Context, fieldKey string) (string, error) {
+	fileHeader, err := c.FormFile(fieldKey)
+	if err != nil {
+		return "", err
+	}
+
+	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+	switch ext {
+	case ".jpg", ".jpeg", ".png", ".webp":
+	default:
+		return "", errors.New("unsupported file extension")
+	}
+
+	if err := os.MkdirAll("uploads/maintenance-activities", 0o755); err != nil {
+		return "", err
+	}
+
+	fileName := fmt.Sprintf("maintenance_activity_%d%s", time.Now().UnixNano(), ext)
+	fullPath := filepath.Join("uploads", "maintenance-activities", fileName)
+	if err := c.SaveUploadedFile(fileHeader, fullPath); err != nil {
+		return "", err
+	}
+
+	return "/uploads/maintenance-activities/" + fileName, nil
+}
+
+func parseSubmitActivityInput(c *gin.Context) (submitMaintenanceActivityRequest, bool, error) {
+	var req submitMaintenanceActivityRequest
+	isMultipart := strings.Contains(strings.ToLower(c.GetHeader("Content-Type")), "multipart/form-data")
+
+	if isMultipart {
+		scheduleIDValue := strings.TrimSpace(c.PostForm("schedule_id"))
+		if scheduleIDValue == "" {
+			return req, true, errors.New("schedule_id is required")
+		}
+		scheduleIDParsed, err := strconv.ParseUint(scheduleIDValue, 10, 64)
+		if err != nil || scheduleIDParsed == 0 {
+			return req, true, errors.New("invalid schedule_id")
+		}
+
+		req.ScheduleID = uint(scheduleIDParsed)
+		req.ActivityDate = strings.TrimSpace(c.PostForm("activity_date"))
+		description := strings.TrimSpace(c.PostForm("description"))
+		if description != "" {
+			req.Description = &description
+		}
+
+		if req.ActivityDate == "" {
+			return req, true, errors.New("activity_date is required")
+		}
+
+		return req, true, nil
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		return req, false, err
+	}
+
+	return req, false, nil
 }
 
 func deriveInvestorScheduleStatus(scheduleStatus string, latestActivity *maintenancemodels.MaintenanceActivity) string {
@@ -355,6 +421,7 @@ func ListMyMaintenanceActivities(c *gin.Context) {
 			ScheduleCode:     fmt.Sprintf("MA-%03d", item.ScheduleID),
 			ActivityType:     item.ActivityType,
 			ActivityDate:     item.ActivityDate,
+			PhotoURL:         item.PhotoURL,
 			ValidationStatus: item.ValidationStatus,
 			ValidationNotes:  item.ValidationNotes,
 			ValidatedAt:      validatedAt,
@@ -372,8 +439,8 @@ func SubmitMyMaintenanceActivity(c *gin.Context) {
 	}
 	userID := userIDValue.(string)
 
-	var req submitMaintenanceActivityRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	req, isMultipart, err := parseSubmitActivityInput(c)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
@@ -402,11 +469,28 @@ func SubmitMyMaintenanceActivity(c *gin.Context) {
 		return
 	}
 
+	photoURL := ""
+	if isMultipart {
+		uploadedPhotoURL, uploadErr := saveMaintenanceActivityImage(c, "photo")
+		if uploadErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Photo upload failed"})
+			return
+		}
+		photoURL = uploadedPhotoURL
+	}
+	if strings.TrimSpace(photoURL) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Photo is required"})
+		return
+	}
+
+	photoURLValue := photoURL
+
 	activity := maintenancemodels.MaintenanceActivity{
 		ScheduleID:       schedule.ID,
 		PlantBatchID:     schedule.PlantBatchID,
 		ActivityType:     schedule.ActivityType,
 		Description:      req.Description,
+		PhotoURL:         &photoURLValue,
 		ActivityDate:     activityDate,
 		ValidationStatus: "pending",
 	}

@@ -44,6 +44,7 @@ const schedules = ref<ScheduleItem[]>([]);
 const activityHistory = ref<ActivityHistoryItem[]>([]);
 const showSubmitForm = ref(false);
 const selectedFile = ref<string | null>(null);
+const selectedPhotoFile = ref<File | null>(null);
 const selectedSchedule = ref<ScheduleItem | null>(null);
 
 const formData = reactive({
@@ -132,17 +133,21 @@ function openSubmitModal(item: ScheduleItem) {
   formData.description = "";
   formData.notes = "";
   selectedFile.value = null;
+  selectedPhotoFile.value = null;
 }
 
 function closeModal() {
   showSubmitForm.value = false;
   selectedSchedule.value = null;
+  selectedPhotoFile.value = null;
 }
 
 function handleFileUpload(e: Event) {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file) return;
+
+  selectedPhotoFile.value = file;
 
   const reader = new FileReader();
   reader.onloadend = () => {
@@ -166,7 +171,7 @@ async function loadData() {
 }
 
 async function handleSubmit() {
-  if (!selectedSchedule.value || !formData.activityDate) {
+  if (!selectedSchedule.value || !formData.activityDate || !selectedPhotoFile.value) {
     alert("Data laporan belum lengkap.");
     return;
   }
@@ -174,12 +179,13 @@ async function handleSubmit() {
   isSubmitting.value = true;
   try {
     const description = [formData.description, formData.notes].filter(Boolean).join("\n").trim();
+    const payload = new FormData();
+    payload.append("schedule_id", String(selectedSchedule.value.id));
+    payload.append("activity_date", formData.activityDate);
+    if (description) payload.append("description", description);
+    payload.append("photo", selectedPhotoFile.value);
 
-    await submitMyMaintenanceActivity({
-      schedule_id: selectedSchedule.value.id,
-      activity_date: formData.activityDate,
-      description: description || null,
-    });
+    await submitMyMaintenanceActivity(payload);
 
     await loadData();
     closeModal();
@@ -380,12 +386,16 @@ onMounted(() => {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Bukti foto (sementara frontend only)
+              Bukti foto
             </label>
             <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-green-500 transition-colors">
               <div v-if="selectedFile" class="space-y-2">
                 <img :src="selectedFile" alt="Pratinjau" class="max-h-48 mx-auto rounded-lg" />
-                <button type="button" class="text-sm text-red-600 hover:text-red-700" @click="selectedFile = null">
+                <button
+                  type="button"
+                  class="text-sm text-red-600 hover:text-red-700"
+                  @click="selectedFile = null; selectedPhotoFile = null"
+                >
                   Hapus gambar
                 </button>
               </div>
