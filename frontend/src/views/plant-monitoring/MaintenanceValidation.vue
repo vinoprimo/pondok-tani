@@ -1,96 +1,143 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { CheckCircle, XCircle, Eye, User, Calendar } from 'lucide-vue-next';
+import { computed, onMounted, ref } from "vue";
+import { Calendar, CheckCircle, Eye, User, XCircle } from "lucide-vue-next";
+import {
+  getAdminMaintenanceActivities,
+  getAdminMaintenanceActivitiesSummary,
+  reviewAdminMaintenanceActivity,
+} from "../../services/maintenance/schedule";
 
-const selectedActivity = ref<string | null>(null);
+type Summary = {
+  waiting_count: number;
+  approved_today: number;
+  rejected_today: number;
+  reviewed_month: number;
+};
+
+type ActivityItem = {
+  id: number;
+  activity_code: string;
+  user_id: string;
+  user_name: string;
+  batch_code: string;
+  activity_type: string;
+  activity_date: string;
+  submission_date: string;
+  description?: string;
+  photo_url?: string;
+  status: string;
+};
+
+const isLoading = ref(false);
+const isReviewing = ref(false);
+const summary = ref<Summary>({
+  waiting_count: 0,
+  approved_today: 0,
+  rejected_today: 0,
+  reviewed_month: 0,
+});
+const submittedActivities = ref<ActivityItem[]>([]);
+
+const selectedActivityId = ref<number | null>(null);
 const showReviewModal = ref(false);
-const rejectionReason = ref('');
-
-const submittedActivities = [
-  {
-    id: 'MA-003',
-    userName: 'Sarah Johnson',
-    userId: 'INV-001',
-    batchId: 'BATCH-045',
-    activityType: 'Pemangkasan',
-    submissionDate: '2024-01-23',
-    activityDate: '2024-01-23',
-    description:
-      'Pemangkasan rutin sulur vanili, menghapus daun mati dan tunas berlebih untuk merangsang berbunga.',
-    quantity: '15 sulur dipangkas',
-    notes: 'Semua alat disterilisasi sebelum digunakan',
-    photoUrl: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800',
-    status: 'Pending',
-  },
-  {
-    id: 'MA-006',
-    userName: 'Michael Chen',
-    userId: 'INV-002',
-    batchId: 'BATCH-038',
-    activityType: 'Pemupukan',
-    submissionDate: '2024-01-23',
-    activityDate: '2024-01-22',
-    description: 'Pupuk organik diterapkan pada seluruh tanaman. Formula NPK 15-15-15.',
-    quantity: '25 kg pupuk',
-    notes: 'Cuaca mendukung, tidak ada hujan dalam 24 jam',
-    photoUrl: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800',
-    status: 'Pending',
-  },
-  {
-    id: 'MA-007',
-    userName: 'Emma Davis',
-    userId: 'INV-003',
-    batchId: 'BATCH-052',
-    activityType: 'Penyiraman',
-    submissionDate: '2024-01-22',
-    activityDate: '2024-01-22',
-    description: 'Penyiraman mendalam pagi hari untuk seluruh tanaman.',
-    quantity: '500 liter',
-    notes: 'Kelembaban tanah dicek sebelum menyiram',
-    photoUrl: 'https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=800',
-    status: 'Pending',
-  },
-];
+const rejectionReason = ref("");
 
 const selectedActivityData = computed(() =>
-  submittedActivities.find((a) => a.id === selectedActivity.value)
+  submittedActivities.value.find((a) => a.id === selectedActivityId.value)
 );
 
-function handleReview(activityId: string) {
-  selectedActivity.value = activityId;
+function formatDate(dateStr?: string | null) {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("id-ID", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+function photoUrl(url?: string) {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  return `http://localhost:8000${url}`;
+}
+
+async function loadData() {
+  isLoading.value = true;
+  try {
+    const [summaryRes, activitiesRes] = await Promise.all([
+      getAdminMaintenanceActivitiesSummary(),
+      getAdminMaintenanceActivities({ status: "pending" }),
+    ]);
+    summary.value = summaryRes.data || summary.value;
+    submittedActivities.value = Array.isArray(activitiesRes.data) ? activitiesRes.data : [];
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+function handleReview(activityId: number) {
+  selectedActivityId.value = activityId;
   showReviewModal.value = true;
+  rejectionReason.value = "";
 }
 
-function handleApprove() {
-  alert(`Aktivitas ${selectedActivity.value} berhasil disetujui!`);
-  showReviewModal.value = false;
-  selectedActivity.value = null;
+async function handleApprove() {
+  if (!selectedActivityId.value) return;
+  isReviewing.value = true;
+  try {
+    await reviewAdminMaintenanceActivity(selectedActivityId.value, { action: "approve" });
+    showReviewModal.value = false;
+    selectedActivityId.value = null;
+    await loadData();
+  } catch (error: any) {
+    alert(error?.response?.data?.error || "Gagal menyetujui aktivitas");
+  } finally {
+    isReviewing.value = false;
+  }
 }
 
-function handleReject() {
+async function handleReject() {
+  if (!selectedActivityId.value) return;
   if (!rejectionReason.value.trim()) {
-    alert('Mohon isi alasan penolakan');
+    alert("Mohon isi alasan penolakan");
     return;
   }
-  alert(`Aktivitas ${selectedActivity.value} ditolak. Alasan: ${rejectionReason.value}`);
-  showReviewModal.value = false;
-  selectedActivity.value = null;
-  rejectionReason.value = '';
+
+  isReviewing.value = true;
+  try {
+    await reviewAdminMaintenanceActivity(selectedActivityId.value, {
+      action: "reject",
+      notes: rejectionReason.value.trim(),
+    });
+    showReviewModal.value = false;
+    selectedActivityId.value = null;
+    rejectionReason.value = "";
+    await loadData();
+  } catch (error: any) {
+    alert(error?.response?.data?.error || "Gagal menolak aktivitas");
+  } finally {
+    isReviewing.value = false;
+  }
 }
 
 function closeReviewModal() {
   showReviewModal.value = false;
-  rejectionReason.value = '';
+  selectedActivityId.value = null;
+  rejectionReason.value = "";
 }
+
+onMounted(() => {
+  loadData();
+});
 </script>
 
 <template>
   <div class="space-y-6">
     <div>
       <h2 class="text-2xl font-semibold text-gray-900">Validasi perawatan</h2>
-      <p class="text-gray-600 mt-1">
-        Tinjau dan validasi aktivitas perawatan yang dikirim investor
-      </p>
+      <p class="text-gray-600 mt-1">Tinjau dan validasi aktivitas perawatan yang dikirim investor</p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -99,7 +146,7 @@ function closeReviewModal() {
           <p class="text-sm text-gray-600">Menunggu tinjauan</p>
           <Calendar class="w-5 h-5 text-yellow-600" />
         </div>
-        <p class="text-2xl font-semibold text-yellow-600">3</p>
+        <p class="text-2xl font-semibold text-yellow-600">{{ summary.waiting_count }}</p>
         <p class="text-xs text-gray-500 mt-1">Perlu perhatian</p>
       </div>
 
@@ -108,8 +155,8 @@ function closeReviewModal() {
           <p class="text-sm text-gray-600">Disetujui hari ini</p>
           <CheckCircle class="w-5 h-5 text-green-600" />
         </div>
-        <p class="text-2xl font-semibold text-gray-900">12</p>
-        <p class="text-xs text-green-600 mt-1">+8 dari kemarin</p>
+        <p class="text-2xl font-semibold text-gray-900">{{ summary.approved_today }}</p>
+        <p class="text-xs text-green-600 mt-1">Aktivitas lolos validasi</p>
       </div>
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
@@ -117,7 +164,7 @@ function closeReviewModal() {
           <p class="text-sm text-gray-600">Ditolak hari ini</p>
           <XCircle class="w-5 h-5 text-red-600" />
         </div>
-        <p class="text-2xl font-semibold text-gray-900">2</p>
+        <p class="text-2xl font-semibold text-gray-900">{{ summary.rejected_today }}</p>
         <p class="text-xs text-red-600 mt-1">Masalah kualitas</p>
       </div>
 
@@ -126,7 +173,7 @@ function closeReviewModal() {
           <p class="text-sm text-gray-600">Total bulan ini</p>
           <Calendar class="w-5 h-5 text-blue-600" />
         </div>
-        <p class="text-2xl font-semibold text-gray-900">87</p>
+        <p class="text-2xl font-semibold text-gray-900">{{ summary.reviewed_month }}</p>
         <p class="text-xs text-gray-500 mt-1">Aktivitas ditinjau</p>
       </div>
     </div>
@@ -136,7 +183,8 @@ function closeReviewModal() {
         <h3 class="text-lg font-semibold text-gray-900">Aktivitas menunggu</h3>
         <p class="text-sm text-gray-600 mt-1">Tinjau laporan perawatan yang dikirim</p>
       </div>
-      <div class="overflow-x-auto">
+      <div v-if="isLoading" class="px-6 py-8 text-sm text-gray-600">Memuat data...</div>
+      <div v-else class="overflow-x-auto">
         <table class="w-full">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
@@ -153,42 +201,40 @@ function closeReviewModal() {
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr v-for="activity in submittedActivities" :key="activity.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4 font-medium text-gray-900">{{ activity.id }}</td>
+              <td class="px-6 py-4 font-medium text-gray-900">{{ activity.activity_code }}</td>
               <td class="px-6 py-4">
                 <div class="flex items-center gap-2">
                   <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                     <User class="w-4 h-4 text-green-600" />
                   </div>
                   <div>
-                    <p class="font-medium text-gray-900">{{ activity.userName }}</p>
-                    <p class="text-xs text-gray-500">{{ activity.userId }}</p>
+                    <p class="font-medium text-gray-900">{{ activity.user_name }}</p>
+                    <p class="text-xs text-gray-500">{{ activity.user_id }}</p>
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4 text-gray-900">{{ activity.batchId }}</td>
+              <td class="px-6 py-4 text-gray-900">{{ activity.batch_code }}</td>
               <td class="px-6 py-4">
-                <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                >
-                  {{ activity.activityType }}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {{ activity.activity_type }}
                 </span>
               </td>
-              <td class="px-6 py-4 text-gray-900">{{ activity.activityDate }}</td>
-              <td class="px-6 py-4 text-gray-900">{{ activity.submissionDate }}</td>
+              <td class="px-6 py-4 text-gray-900">{{ formatDate(activity.activity_date) }}</td>
+              <td class="px-6 py-4 text-gray-900">{{ formatDate(activity.submission_date) }}</td>
               <td class="px-6 py-4 text-center">
                 <div class="flex justify-center">
                   <img
-                    :src="activity.photoUrl"
+                    v-if="activity.photo_url"
+                    :src="photoUrl(activity.photo_url)"
                     alt="Pratinjau aktivitas"
                     class="w-12 h-12 rounded-lg object-cover cursor-pointer hover:opacity-75 transition-opacity"
                     @click="handleReview(activity.id)"
                   />
+                  <span v-else class="text-xs text-gray-400">-</span>
                 </div>
               </td>
               <td class="px-6 py-4 text-center">
-                <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
-                >
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                   Menunggu
                 </span>
               </td>
@@ -203,6 +249,9 @@ function closeReviewModal() {
                 </button>
               </td>
             </tr>
+            <tr v-if="!submittedActivities.length">
+              <td colspan="9" class="px-6 py-10 text-center text-sm text-gray-500">Belum ada aktivitas menunggu validasi.</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -215,12 +264,8 @@ function closeReviewModal() {
       <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
           <div>
-            <h3 class="text-xl font-semibold text-gray-900">
-              Tinjau aktivitas — {{ selectedActivityData.id }}
-            </h3>
-            <p class="text-sm text-gray-600 mt-1">
-              Dikirim oleh {{ selectedActivityData.userName }}
-            </p>
+            <h3 class="text-xl font-semibold text-gray-900">Tinjau aktivitas - {{ selectedActivityData.activity_code }}</h3>
+            <p class="text-sm text-gray-600 mt-1">Dikirim oleh {{ selectedActivityData.user_name }}</p>
           </div>
           <button
             type="button"
@@ -236,51 +281,38 @@ function closeReviewModal() {
             <h4 class="text-sm font-medium text-gray-700 mb-3">Bukti foto</h4>
             <div class="border border-gray-200 rounded-xl overflow-hidden">
               <img
-                :src="selectedActivityData.photoUrl"
+                v-if="selectedActivityData.photo_url"
+                :src="photoUrl(selectedActivityData.photo_url)"
                 alt="Bukti aktivitas"
                 class="w-full h-96 object-cover"
               />
+              <div v-else class="h-40 flex items-center justify-center text-sm text-gray-500">Tidak ada foto</div>
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div class="bg-gray-50 rounded-lg p-4">
               <p class="text-sm text-gray-600 mb-1">Jenis aktivitas</p>
-              <p class="font-semibold text-gray-900">{{ selectedActivityData.activityType }}</p>
+              <p class="font-semibold text-gray-900">{{ selectedActivityData.activity_type }}</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-4">
               <p class="text-sm text-gray-600 mb-1">ID batch</p>
-              <p class="font-semibold text-gray-900">{{ selectedActivityData.batchId }}</p>
+              <p class="font-semibold text-gray-900">{{ selectedActivityData.batch_code }}</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-4">
               <p class="text-sm text-gray-600 mb-1">Tanggal aktivitas</p>
-              <p class="font-semibold text-gray-900">{{ selectedActivityData.activityDate }}</p>
+              <p class="font-semibold text-gray-900">{{ formatDate(selectedActivityData.activity_date) }}</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-4">
               <p class="text-sm text-gray-600 mb-1">Tanggal pengiriman</p>
-              <p class="font-semibold text-gray-900">{{ selectedActivityData.submissionDate }}</p>
+              <p class="font-semibold text-gray-900">{{ formatDate(selectedActivityData.submission_date) }}</p>
             </div>
           </div>
 
           <div>
             <h4 class="text-sm font-medium text-gray-700 mb-2">Deskripsi</h4>
             <div class="bg-gray-50 rounded-lg p-4">
-              <p class="text-gray-900">{{ selectedActivityData.description }}</p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <h4 class="text-sm font-medium text-gray-700 mb-2">Kuantitas / material</h4>
-              <div class="bg-gray-50 rounded-lg p-4">
-                <p class="text-gray-900">{{ selectedActivityData.quantity }}</p>
-              </div>
-            </div>
-            <div>
-              <h4 class="text-sm font-medium text-gray-700 mb-2">Catatan tambahan</h4>
-              <div class="bg-gray-50 rounded-lg p-4">
-                <p class="text-gray-900">{{ selectedActivityData.notes }}</p>
-              </div>
+              <p class="text-gray-900">{{ selectedActivityData.description || '-' }}</p>
             </div>
           </div>
 
@@ -297,19 +329,21 @@ function closeReviewModal() {
           <div class="flex gap-3 pt-4">
             <button
               type="button"
-              class="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2"
+              class="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-60"
               @click="handleReject"
+              :disabled="isReviewing"
             >
               <XCircle class="w-5 h-5" />
-              Tolak aktivitas
+              {{ isReviewing ? 'Memproses...' : 'Tolak aktivitas' }}
             </button>
             <button
               type="button"
-              class="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2"
+              class="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-60"
               @click="handleApprove"
+              :disabled="isReviewing"
             >
               <CheckCircle class="w-5 h-5" />
-              Setujui aktivitas
+              {{ isReviewing ? 'Memproses...' : 'Setujui aktivitas' }}
             </button>
           </div>
         </div>

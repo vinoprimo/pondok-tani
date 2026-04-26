@@ -103,6 +103,48 @@ type submitMaintenanceActivityRequest struct {
 	Description  *string `json:"description"`
 }
 
+type reviewMaintenanceActivityRequest struct {
+	Action string  `json:"action" binding:"required"`
+	Notes  *string `json:"notes"`
+}
+
+type adminMaintenanceActivitySummaryResponse struct {
+	WaitingCount  int64 `json:"waiting_count"`
+	ApprovedToday int64 `json:"approved_today"`
+	RejectedToday int64 `json:"rejected_today"`
+	ReviewedMonth int64 `json:"reviewed_month"`
+}
+
+type adminMaintenanceActivityItem struct {
+	ID             uint      `json:"id"`
+	ActivityCode   string    `json:"activity_code"`
+	UserID         string    `json:"user_id"`
+	UserName       string    `json:"user_name"`
+	BatchCode      string    `json:"batch_code"`
+	ActivityType   string    `json:"activity_type"`
+	ActivityDate   time.Time `json:"activity_date"`
+	SubmissionDate time.Time `json:"submission_date"`
+	Description    *string   `json:"description,omitempty"`
+	PhotoURL       *string   `json:"photo_url,omitempty"`
+	Status         string    `json:"status"`
+}
+
+type adminMaintenanceActivityRaw struct {
+	ID               uint
+	ScheduleID       uint
+	ActivityType     string
+	ActivityDate     time.Time
+	Description      *string
+	PhotoURL         *string
+	ValidationStatus string
+	ValidationNotes  *string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	UserID           string
+	UserName         string
+	BatchCode        string
+}
+
 func saveMaintenanceActivityImage(c *gin.Context, fieldKey string) (string, error) {
 	fileHeader, err := c.FormFile(fieldKey)
 	if err != nil {
@@ -181,6 +223,201 @@ func deriveInvestorScheduleStatus(scheduleStatus string, latestActivity *mainten
 	}
 
 	return "mendatang"
+}
+
+func GetAdminMaintenanceActivitySummary(c *gin.Context) {
+	today := time.Now()
+	startOfDay := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+	startOfMonth := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, today.Location())
+
+	var waitingCount int64
+	if err := config.DB.Model(&maintenancemodels.MaintenanceActivity{}).
+		Where("validation_status = ?", "pending").
+		Count(&waitingCount).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count waiting activities"})
+		return
+	}
+
+	var approvedToday int64
+	if err := config.DB.Model(&maintenancemodels.MaintenanceActivity{}).
+		Where("validation_status IN ? AND updated_at >= ?", []string{"approved", "verified"}, startOfDay).
+		Count(&approvedToday).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count approved activities"})
+		return
+	}
+
+	var rejectedToday int64
+	if err := config.DB.Model(&maintenancemodels.MaintenanceActivity{}).
+		Where("validation_status = ? AND updated_at >= ?", "rejected", startOfDay).
+		Count(&rejectedToday).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count rejected activities"})
+		return
+	}
+
+	var reviewedMonth int64
+	if err := config.DB.Model(&maintenancemodels.MaintenanceActivity{}).
+		Where("validation_status IN ? AND updated_at >= ?", []string{"approved", "verified", "rejected"}, startOfMonth).
+		Count(&reviewedMonth).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count monthly reviewed activities"})
+		return
+	}
+
+	c.JSON(http.StatusOK, adminMaintenanceActivitySummaryResponse{
+		WaitingCount:  waitingCount,
+		ApprovedToday: approvedToday,
+		RejectedToday: rejectedToday,
+		ReviewedMonth: reviewedMonth,
+	})
+}
+
+func ListAdminMaintenanceActivities(c *gin.Context) {
+	status := strings.ToLower(strings.TrimSpace(c.Query("status")))
+	if status == "" {
+		status = "pending"
+	}
+
+	query := config.DB.Table("maintenance_activities AS ma").
+		Select(`
+			ma.id,
+			ma.schedule_id,
+			ma.activity_type,
+			ma.activity_date,
+			ma.description,
+			ma.photo_url,
+			ma.validation_status,
+			ma.validation_notes,
+			ma.created_at,
+			ma.updated_at,
+			ms.user_id,
+			u.name AS user_name,
+			pb.batch_code
+		`).
+		Joins("JOIN maintenance_schedules ms ON ms.id = ma.schedule_id").
+		Joins("JOIN users u ON u.id = ms.user_id").
+		Joins("JOIN plant_batches pb ON pb.id = ma.plant_batch_id")
+
+	if status == "all" {
+		// no status filter
+	} else {
+		query = query.Where("ma.validation_status = ?", status)
+	}
+
+	var rows []adminMaintenanceActivityRaw
+	if err := query.Order("ma.created_at DESC").Scan(&rows).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch maintenance activities"})
+		return
+	}
+
+	response := make([]adminMaintenanceActivityItem, 0, len(rows))
+	for _, row := range rows {
+		statusText := "Menunggu"
+		switch row.ValidationStatus {
+		case "approved", "verified":
+			statusText = "Disetujui"
+		case "rejected":
+			statusText = "Ditolak"
+		}
+
+		response = append(response, adminMaintenanceActivityItem{
+			ID:             row.ID,
+			ActivityCode:   fmt.Sprintf("MA-%03d", row.ID),
+			UserID:         row.UserID,
+			UserName:       row.UserName,
+			BatchCode:      row.BatchCode,
+			ActivityType:   row.ActivityType,
+			ActivityDate:   row.ActivityDate,
+			SubmissionDate: row.CreatedAt,
+			Description:    row.Description,
+			PhotoURL:       row.PhotoURL,
+			Status:         statusText,
+		})
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func ReviewMaintenanceActivity(c *gin.Context) {
+	activityID := c.Param("id")
+	adminIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	adminID := adminIDValue.(string)
+
+	var req reviewMaintenanceActivityRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	action := strings.ToLower(strings.TrimSpace(req.Action))
+	if action != "approve" && action != "reject" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action. Use approve or reject"})
+		return
+	}
+
+	var activity maintenancemodels.MaintenanceActivity
+	if err := config.DB.First(&activity, "id = ?", activityID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Maintenance activity not found"})
+		return
+	}
+	if activity.ValidationStatus != "pending" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Activity already reviewed"})
+		return
+	}
+
+	newValidationStatus := "approved"
+	newScheduleStatus := "terverifikasi"
+	if action == "reject" {
+		newValidationStatus = "rejected"
+		newScheduleStatus = "ditolak"
+	}
+
+	notes := strings.TrimSpace(func() string {
+		if req.Notes == nil {
+			return ""
+		}
+		return *req.Notes
+	}())
+
+	tx := config.DB.Begin()
+	if tx.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
+
+	activityUpdates := map[string]interface{}{
+		"validation_status": newValidationStatus,
+		"validated_by":      adminID,
+		"updated_at":        time.Now(),
+	}
+	if notes != "" {
+		activityUpdates["validation_notes"] = notes
+	}
+
+	if err := tx.Model(&maintenancemodels.MaintenanceActivity{}).
+		Where("id = ?", activity.ID).
+		Updates(activityUpdates).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update maintenance activity"})
+		return
+	}
+
+	if err := tx.Model(&maintenancemodels.MaintenanceSchedule{}).
+		Where("id = ?", activity.ScheduleID).
+		Updates(map[string]interface{}{"status": newScheduleStatus, "updated_at": time.Now()}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update maintenance schedule"})
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to finalize review"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Maintenance activity reviewed"})
 }
 
 func GetMaintenanceScheduleSummary(c *gin.Context) {
