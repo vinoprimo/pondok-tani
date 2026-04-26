@@ -4,6 +4,7 @@ import { Sprout, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-vue-next';
 import { useRoute, useRouter } from "vue-router";
 import { login, register } from "../../services/auth/auth";
 import { getCurrentUser } from '../../services/user/user';
+import { touchSession } from '../../utils/session';
 
 const router = useRouter();
 const route = useRoute();
@@ -146,6 +147,7 @@ async function handleLogin() {
 
   localStorage.setItem("token", token);
   localStorage.setItem("userRole", detectedRole);
+  touchSession();
   role.value = detectedRole;
 
   const selectedPackageId = String(route.query.package_id || '').trim();
@@ -200,6 +202,7 @@ async function handleRegister() {
 
   localStorage.setItem("token", token);
   localStorage.setItem("userRole", detectedRole);
+  touchSession();
   role.value = detectedRole;
 
   const selectedPackageId = String(route.query.package_id || '').trim();

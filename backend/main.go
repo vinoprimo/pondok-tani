@@ -76,6 +76,7 @@ func migrateDB() {
 		&coremodels.PlantBatch{},
 		&maintenancemodels.MaintenanceSchedule{},
 		&maintenancemodels.MaintenanceActivity{},
+		&maintenancemodels.PlantMonitoring{},
 		&harvestmodels.Harvest{},
 		&harvestmodels.HarvestOutput{},
 		&postharvestmodels.DryingProcess{},
@@ -153,6 +154,7 @@ func main() {
 		&coremodels.PlantBatch{},
 		&maintenancemodels.MaintenanceSchedule{},
 		&maintenancemodels.MaintenanceActivity{},
+		&maintenancemodels.PlantMonitoring{},
 		&harvestmodels.Harvest{},
 		&harvestmodels.HarvestOutput{},
 		&postharvestmodels.DryingProcess{},
@@ -227,10 +229,12 @@ func main() {
 			"message": "API is running",
 		})
 	})
+	r.Static("/uploads", "./uploads")
 	routes.AuthRoutes(r)
 	routes.UserRoutes(r)
 	routes.AdminRoutes(r)
 	routes.HarvestRoutes(r)
+	routes.PlantMonitoringRoutes(r)
 	routes.InvestmentPackageRoutes(r)
 	r.Run(":8000")
 }

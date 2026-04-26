@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ChevronDown, LogOut, Sprout, UserCircle2 } from 'lucide-vue-next';
 import { getCurrentUser } from '../../services/user/user';
-import logoPondokTani from '../../assets/logo-pondok-tani.png';
+import { clearAuthSession } from '../../utils/session';
 
 const router = useRouter();
 const route = useRoute();
@@ -84,8 +84,7 @@ function toggleProfile() {
 }
 
 function handleLogout() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('userRole');
+  clearAuthSession();
   isLoggedIn.value = false;
   isProfileOpen.value = false;
   profile.value = {
@@ -113,7 +112,13 @@ watch(
   <header class="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
       <button type="button" class="flex items-center gap-3" @click="router.push('/')">
-        <img :src="logoPondokTani" alt="Logo Pondok Tani" class="w-24 h-16 flex items-center justify-center" />
+        <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+          <Sprout class="w-6 h-6 text-white" />
+        </div>
+        <div class="text-left">
+          <h1 class="font-semibold text-gray-900">Omah Vanili</h1>
+          <p class="text-xs text-gray-500">Sistem Investasi Vanili</p>
+        </div>
       </button>
 
       <nav class="hidden md:flex items-center gap-1">

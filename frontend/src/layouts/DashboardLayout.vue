@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Bell } from "lucide-vue-next";
 import Sidebar from "../components/dashboard-layouts/Sidebar.vue";
+import { clearAuthSession } from "../utils/session";
 
 const router = useRouter();
 const route = useRoute();
@@ -105,8 +106,7 @@ function handleSetActiveView(view: string) {
 }
 
 function handleLogout() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("userRole");
+  clearAuthSession();
   router.push("/login");
 }
 

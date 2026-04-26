@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { CheckCircle2, MessageCircle, Package, ArrowRight, Clock } from 'lucide-vue-next';
+import { CheckCircle2, MessageCircle, Package, ArrowRight, Clock, CalendarDays, Wallet } from 'lucide-vue-next';
 import LandingLayout from '../../layouts/LandingLayout.vue';
 import PaketCard from '../../components/landing-paket/PaketCard.vue';
 import { getInvestmentPackages } from '../../services/investment/package';
@@ -33,6 +33,17 @@ const formatRupiah = (value: number) =>
     currency: 'IDR',
     maximumFractionDigits: 0,
   }).format(value);
+
+const formatDate = (value: string | Date) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+};
 
 async function loadUser() {
   loadingUser.value = true;
@@ -186,23 +197,46 @@ onMounted(() => {
       <p v-if="loadingPackages" class="mb-4 text-sm text-gray-500">Memuat paket investasi terbaru...</p>
       <p v-else-if="paketItems.length === 0" class="mb-4 text-sm text-gray-500">Belum ada paket aktif.</p>
 
-      <div v-if="hasOnProcessInvestment" class="mb-6 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 lg:p-8">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div class="flex gap-4">
-            <Clock class="h-6 w-6 flex-shrink-0 text-yellow-600 mt-1" />
-            <div>
-              <h3 class="text-lg font-bold text-gray-900">Menunggu tahap penanaman awal</h3>
-              <p class="mt-2 text-sm text-gray-700">
-                Paket investasi Anda sudah terbayar. Admin akan melakukan penanaman awal pada tahap selanjutnya.
-              </p>
-              <div v-if="onProcessPackages.length" class="mt-3 space-y-2">
-                <p class="text-sm font-medium text-gray-700">Paket yang terbayar:</p>
-                <ul class="list-inside list-disc space-y-1 text-sm text-gray-700">
-                  <li v-for="inv in onProcessPackages" :key="inv.id">
+      <div v-if="hasOnProcessInvestment" class="mb-6 rounded-3xl border border-yellow-200 bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 p-6 lg:p-8">
+        <div class="flex flex-col items-center gap-6 text-center">
+          <div class="flex max-w-3xl flex-col items-center gap-3">
+            <div class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-yellow-100">
+              <Clock class="h-6 w-6 text-yellow-700" />
+            </div>
+            <h3 class="text-lg font-bold text-gray-900">Status paket: On Process</h3>
+            <p class="text-sm text-gray-700">
+              Pembayaran paket investasi Anda sudah diterima. Saat ini kami menunggu tahap selanjutnya yaitu penanaman awal.
+            </p>
+          </div>
+
+          <div class="w-full">
+            <p class="mb-3 text-sm font-semibold text-gray-800">Paket yang sudah terbayar</p>
+            <div class="grid w-full grid-cols-1 gap-3 md:grid-cols-2">
+              <article
+                v-for="inv in onProcessPackages"
+                :key="inv.id"
+                class="h-full w-full rounded-2xl border border-yellow-200/80 bg-white/90 p-4 shadow-sm"
+              >
+                <div class="flex flex-col items-center gap-2 text-center">
+                  <h4 class="text-sm font-semibold text-gray-900">
                     {{ inv.package?.package_name || `Paket #${inv.package_id}` }}
-                  </li>
-                </ul>
-              </div>
+                  </h4>
+                  <span class="rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-medium text-yellow-800">
+                    On Process
+                  </span>
+                </div>
+
+                <div class="mt-4 space-y-2">
+                  <p class="flex items-center justify-center gap-2 text-sm text-gray-700">
+                    <Wallet class="h-4 w-4 text-yellow-700" />
+                    <span>{{ formatRupiah(Number(inv.amount || 0)) }}</span>
+                  </p>
+                  <p class="flex items-center justify-center gap-2 text-sm text-gray-700">
+                    <CalendarDays class="h-4 w-4 text-yellow-700" />
+                    <span>{{ formatDate(inv.investment_date) }}</span>
+                  </p>
+                </div>
+              </article>
             </div>
           </div>
         </div>

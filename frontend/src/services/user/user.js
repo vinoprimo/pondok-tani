@@ -36,6 +36,14 @@ export const getAdminUserPlantBatches = (userId) => {
 };
 
 export const activateUserPackage = (userId, payload) => {
+  if (payload instanceof FormData) {
+    return api.put(`/admin/users/${userId}/activate-package`, payload, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  }
+
   return api.put(`/admin/users/${userId}/activate-package`, payload);
 };
 
