@@ -43,12 +43,12 @@ const investorMenuItems = [
 const adminMenuItems = [
   { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
   { id: 'investors', label: 'Investor', icon: Users },
-  { id: 'vanili-management', label: 'Harga & Grade Vanili', icon: DollarSign },
   { id: 'maintenance-validation', label: 'Validasi Perawatan', icon: ClipboardCheck },
   { id: 'harvest-sales', label: 'Penjualan Panen', icon: ShoppingCart },
   { id: 'warehouse', label: 'Stok Gudang', icon: Package },
   { id: 'financials', label: 'Keuangan', icon: DollarSign },
   { id: 'reports', label: 'Laporan', icon: FileText },
+  { id: 'vanili-management', label: 'Harga & Grade Vanili', icon: DollarSign },
   { id: 'notifications', label: 'Notifikasi', icon: Bell },
 ];
 

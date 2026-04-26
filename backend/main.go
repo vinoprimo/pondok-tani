@@ -34,6 +34,24 @@ func applyNationalPriceMigrations() error {
 		}
 	}
 
+	if !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "price_min_per_kg") {
+		if err := config.DB.Exec(`ALTER TABLE national_prices ADD COLUMN IF NOT EXISTS price_min_per_kg numeric(14,2) NOT NULL DEFAULT 0`).Error; err != nil {
+			return fmt.Errorf("failed to ensure national_prices.price_min_per_kg column: %w", err)
+		}
+	}
+	if !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "price_max_per_kg") {
+		if err := config.DB.Exec(`ALTER TABLE national_prices ADD COLUMN IF NOT EXISTS price_max_per_kg numeric(14,2) NOT NULL DEFAULT 0`).Error; err != nil {
+			return fmt.Errorf("failed to ensure national_prices.price_max_per_kg column: %w", err)
+		}
+	}
+
+	if err := config.DB.Exec(`UPDATE national_prices SET price_min_per_kg = price_per_kg WHERE price_min_per_kg IS NULL OR price_min_per_kg <= 0`).Error; err != nil {
+		return fmt.Errorf("failed to backfill national_prices.price_min_per_kg values: %w", err)
+	}
+	if err := config.DB.Exec(`UPDATE national_prices SET price_max_per_kg = price_per_kg WHERE price_max_per_kg IS NULL OR price_max_per_kg <= 0`).Error; err != nil {
+		return fmt.Errorf("failed to backfill national_prices.price_max_per_kg values: %w", err)
+	}
+
 	if config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "source") {
 		if err := config.DB.Migrator().DropColumn(&pricemodels.NationalPrice{}, "source"); err != nil {
 			return fmt.Errorf("failed to drop national_prices.source column: %w", err)
