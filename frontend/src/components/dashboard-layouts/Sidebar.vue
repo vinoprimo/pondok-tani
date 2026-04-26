@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   ArrowUpRight,
+  CalendarDays,
   LayoutDashboard,
   Sprout,
   TrendingUp,
@@ -45,6 +46,7 @@ const adminMenuItems = [
   { id: 'investors', label: 'Investor', icon: Users },
   { id: 'vanili-management', label: 'Harga & Grade Vanili', icon: DollarSign },
   { id: 'maintenance-validation', label: 'Validasi Perawatan', icon: ClipboardCheck },
+  { id: 'monitoring-schedule', label: 'Jadwal Monitoring', icon: CalendarDays },
   { id: 'harvest-sales', label: 'Penjualan Panen', icon: ShoppingCart },
   { id: 'warehouse', label: 'Stok Gudang', icon: Package },
   { id: 'financials', label: 'Keuangan', icon: DollarSign },

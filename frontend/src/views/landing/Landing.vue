@@ -63,8 +63,7 @@ const router = useRouter();
     <section class="bg-white py-20">
       <div class="max-w-7xl mx-auto px-6">
         <div class="text-center mb-16">
-          <h3 class="text-4xl font-bold text-gray-900 mb-4">Mengapa Memilih Omah Vanili?</h3>
-          <p class="text-xl text-gray-600">Platform investasi vanili terlengkap dengan fitur canggih</p>
+          <h3 class="text-4xl font-bold text-gray-900 mb-4">Mengapa Memilih Pondok Tani?</h3>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-6">
           <div class="group rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-lg shadow-slate-200/30 transition duration-300 hover:scale-[0.99] hover:border-green-400 hover:shadow-2xl hover:bg-slate-50 xl:col-span-2">

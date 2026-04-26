@@ -104,6 +104,31 @@ func migrateDB() {
 		panic(fmt.Sprintf("failed to ensure plant_batches.seed_count column: %v", err))
 	}
 
+	if err := config.DB.Exec(`ALTER TABLE maintenance_schedules ADD COLUMN IF NOT EXISTS user_id uuid`).Error; err != nil {
+		panic(fmt.Sprintf("failed to ensure maintenance_schedules.user_id column: %v", err))
+	}
+	if err := config.DB.Exec(`
+		UPDATE maintenance_schedules AS ms
+		SET user_id = inv.user_id
+		FROM plant_batches AS pb
+		JOIN investments AS inv ON inv.id = pb.investment_id
+		WHERE ms.plant_batch_id = pb.id
+		  AND ms.user_id IS NULL
+	`).Error; err != nil {
+		panic(fmt.Sprintf("failed to backfill maintenance_schedules.user_id values: %v", err))
+	}
+	if err := config.DB.Exec(`ALTER TABLE maintenance_schedules DROP CONSTRAINT IF EXISTS fk_maintenance_schedules_user`).Error; err != nil {
+		panic(fmt.Sprintf("failed to reset maintenance_schedules.user foreign key: %v", err))
+	}
+	if err := config.DB.Exec(`
+		ALTER TABLE maintenance_schedules
+		ADD CONSTRAINT fk_maintenance_schedules_user
+		FOREIGN KEY (user_id) REFERENCES users(id)
+		ON UPDATE CASCADE ON DELETE RESTRICT
+	`).Error; err != nil {
+		panic(fmt.Sprintf("failed to apply maintenance_schedules.user foreign key: %v", err))
+	}
+
 	if config.DB.Migrator().HasColumn(&coremodels.Investment{}, "expected_return_at") {
 		if err := config.DB.Migrator().DropColumn(&coremodels.Investment{}, "expected_return_at"); err != nil {
 			panic(fmt.Sprintf("failed to drop expected_return_at column: %v", err))
@@ -154,6 +179,31 @@ func main() {
 	}
 	if err := config.DB.Exec(`ALTER TABLE plant_batches ADD COLUMN IF NOT EXISTS seed_count bigint NOT NULL DEFAULT 0`).Error; err != nil {
 		panic(fmt.Sprintf("failed to ensure plant_batches.seed_count column: %v", err))
+	}
+
+	if err := config.DB.Exec(`ALTER TABLE maintenance_schedules ADD COLUMN IF NOT EXISTS user_id uuid`).Error; err != nil {
+		panic(fmt.Sprintf("failed to ensure maintenance_schedules.user_id column: %v", err))
+	}
+	if err := config.DB.Exec(`
+		UPDATE maintenance_schedules AS ms
+		SET user_id = inv.user_id
+		FROM plant_batches AS pb
+		JOIN investments AS inv ON inv.id = pb.investment_id
+		WHERE ms.plant_batch_id = pb.id
+		  AND ms.user_id IS NULL
+	`).Error; err != nil {
+		panic(fmt.Sprintf("failed to backfill maintenance_schedules.user_id values: %v", err))
+	}
+	if err := config.DB.Exec(`ALTER TABLE maintenance_schedules DROP CONSTRAINT IF EXISTS fk_maintenance_schedules_user`).Error; err != nil {
+		panic(fmt.Sprintf("failed to reset maintenance_schedules.user foreign key: %v", err))
+	}
+	if err := config.DB.Exec(`
+		ALTER TABLE maintenance_schedules
+		ADD CONSTRAINT fk_maintenance_schedules_user
+		FOREIGN KEY (user_id) REFERENCES users(id)
+		ON UPDATE CASCADE ON DELETE RESTRICT
+	`).Error; err != nil {
+		panic(fmt.Sprintf("failed to apply maintenance_schedules.user foreign key: %v", err))
 	}
 
 	if config.DB.Migrator().HasColumn(&coremodels.Investment{}, "expected_return_at") {

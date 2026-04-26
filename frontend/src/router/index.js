@@ -121,6 +121,18 @@ const routes = [
         meta: { roles: ["admin"] },
       },
       {
+        path: "monitoring-schedule",
+        name: "dashboard-monitoring-schedule",
+        component: () => import("../views/plant-monitoring/MonitoringScheduleAdmin.vue"),
+        meta: { roles: ["admin"] },
+      },
+      {
+        path: "monitoring-schedule/:userId",
+        name: "dashboard-monitoring-schedule-detail",
+        component: () => import("../views/plant-monitoring/MonitoringScheduleAdminDetail.vue"),
+        meta: { roles: ["admin"] },
+      },
+      {
         path: "harvest-sales",
         name: "dashboard-harvest-sales",
         component: () => import("../views/harvest/HarvestSales.vue"),
