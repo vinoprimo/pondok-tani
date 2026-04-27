@@ -367,6 +367,12 @@ func ReviewMaintenanceActivity(c *gin.Context) {
 		return
 	}
 
+	var schedule maintenancemodels.MaintenanceSchedule
+	if err := config.DB.First(&schedule, "id = ?", activity.ScheduleID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Maintenance schedule not found"})
+		return
+	}
+
 	newValidationStatus := "approved"
 	newScheduleStatus := "terverifikasi"
 	if action == "reject" {
@@ -410,6 +416,36 @@ func ReviewMaintenanceActivity(c *gin.Context) {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update maintenance schedule"})
 		return
+	}
+
+	if action == "approve" && schedule.FrequencyDays > 0 {
+		nextDueDate := schedule.NextDueDate.AddDate(0, 0, int(schedule.FrequencyDays))
+
+		var existingCount int64
+		if err := tx.Model(&maintenancemodels.MaintenanceSchedule{}).
+			Where("user_id = ? AND plant_batch_id = ? AND activity_type = ? AND next_due_date = ?", schedule.UserID, schedule.PlantBatchID, schedule.ActivityType, nextDueDate).
+			Count(&existingCount).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate recurring schedule"})
+			return
+		}
+
+		if existingCount == 0 {
+			nextSchedule := maintenancemodels.MaintenanceSchedule{
+				UserID:        schedule.UserID,
+				PlantBatchID:  schedule.PlantBatchID,
+				ActivityType:  schedule.ActivityType,
+				FrequencyDays: schedule.FrequencyDays,
+				NextDueDate:   nextDueDate,
+				Status:        "mendatang",
+			}
+
+			if err := tx.Create(&nextSchedule).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate recurring schedule"})
+				return
+			}
+		}
 	}
 
 	if err := tx.Commit().Error; err != nil {
