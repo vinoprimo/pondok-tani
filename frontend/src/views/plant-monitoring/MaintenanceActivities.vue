@@ -353,12 +353,13 @@ onMounted(() => {
               </div>
               <div class="mb-3">
                 <p class="text-xs text-gray-500 mb-1">Gambar</p>
-                <img
-                  v-if="activity.photo_url"
-                  :src="activityPhotoUrl(activity.photo_url)"
-                  alt="Bukti aktivitas"
-                  class="h-24 w-24 rounded-lg object-cover border border-gray-200"
-                />
+                <div v-if="activity.photo_url" class="border border-gray-200 rounded-lg overflow-hidden bg-gray-50 inline-block">
+                  <img
+                    :src="activityPhotoUrl(activity.photo_url)"
+                    alt="Bukti aktivitas"
+                    class="h-96 w-auto object-contain"
+                  />
+                </div>
                 <p v-else class="text-sm text-gray-500">-</p>
               </div>
               <div class="flex items-center justify-between text-xs">

@@ -297,7 +297,7 @@ onMounted(() => {
                 v-if="selectedActivityData.photo_url"
                 :src="photoUrl(selectedActivityData.photo_url)"
                 alt="Bukti aktivitas"
-                class="w-full h-96 object-cover"
+                class="w-full h-96 object-contain bg-gray-50"
               />
               <div v-else class="h-40 flex items-center justify-center text-sm text-gray-500">Tidak ada foto</div>
             </div>
