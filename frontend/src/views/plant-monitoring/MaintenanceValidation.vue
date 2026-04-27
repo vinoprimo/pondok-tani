@@ -40,6 +40,7 @@ const submittedActivities = ref<ActivityItem[]>([]);
 
 const selectedActivityId = ref<number | null>(null);
 const showReviewModal = ref(false);
+const showRejectReasonModal = ref(false);
 const rejectionReason = ref("");
 
 const selectedActivityData = computed(() =>
@@ -111,6 +112,7 @@ async function handleReject() {
       action: "reject",
       notes: rejectionReason.value.trim(),
     });
+    showRejectReasonModal.value = false;
     showReviewModal.value = false;
     selectedActivityId.value = null;
     rejectionReason.value = "";
@@ -122,8 +124,19 @@ async function handleReject() {
   }
 }
 
+function openRejectReasonModal() {
+  rejectionReason.value = "";
+  showRejectReasonModal.value = true;
+}
+
+function closeRejectReasonModal() {
+  showRejectReasonModal.value = false;
+  rejectionReason.value = "";
+}
+
 function closeReviewModal() {
   showReviewModal.value = false;
+  showRejectReasonModal.value = false;
   selectedActivityId.value = null;
   rejectionReason.value = "";
 }
@@ -316,25 +329,15 @@ onMounted(() => {
             </div>
           </div>
 
-          <div>
-            <h4 class="text-sm font-medium text-gray-700 mb-2">Alasan penolakan (opsional)</h4>
-            <textarea
-              v-model="rejectionReason"
-              rows="3"
-              placeholder="Jika menolak, berikan alasan yang jelas..."
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
           <div class="flex gap-3 pt-4">
             <button
               type="button"
               class="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-60"
-              @click="handleReject"
+              @click="openRejectReasonModal"
               :disabled="isReviewing"
             >
               <XCircle class="w-5 h-5" />
-              {{ isReviewing ? 'Memproses...' : 'Tolak aktivitas' }}
+              Tolak aktivitas
             </button>
             <button
               type="button"
@@ -344,6 +347,44 @@ onMounted(() => {
             >
               <CheckCircle class="w-5 h-5" />
               {{ isReviewing ? 'Memproses...' : 'Setujui aktivitas' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="showRejectReasonModal"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
+    >
+      <div class="bg-white rounded-xl w-full max-w-lg border border-gray-200">
+        <div class="px-5 py-4 border-b border-gray-200">
+          <h4 class="text-lg font-semibold text-gray-900">Alasan penolakan</h4>
+          <p class="text-sm text-gray-600 mt-1">Wajib diisi sebelum menolak aktivitas.</p>
+        </div>
+        <div class="p-5 space-y-4">
+          <textarea
+            v-model="rejectionReason"
+            rows="4"
+            placeholder="Tuliskan alasan penolakan yang jelas..."
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+          />
+          <div class="flex gap-3">
+            <button
+              type="button"
+              class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+              :disabled="isReviewing"
+              @click="closeRejectReasonModal"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60"
+              :disabled="isReviewing"
+              @click="handleReject"
+            >
+              {{ isReviewing ? 'Memproses...' : 'Konfirmasi Tolak' }}
             </button>
           </div>
         </div>

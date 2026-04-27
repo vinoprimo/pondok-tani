@@ -24,6 +24,7 @@ type ScheduleItem = {
   frequency_days: number;
   next_due_date: string;
   status: string;
+  remark?: string;
   has_submitted_proof: boolean;
 };
 
@@ -31,10 +32,14 @@ type ActivityHistoryItem = {
   id: number;
   schedule_id: number;
   schedule_code: string;
+  batch_code: string;
   activity_type: string;
+  description?: string;
   activity_date: string;
+  photo_url?: string;
   validation_status: string;
   validation_notes?: string;
+  remark?: string;
   validated_at?: string;
 };
 
@@ -92,6 +97,12 @@ function formatDate(dateStr?: string | null) {
     month: "2-digit",
     year: "numeric",
   });
+}
+
+function activityPhotoUrl(url?: string | null) {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  return `http://localhost:8000${url}`;
 }
 
 function scheduleStatusLabel(status: string) {
@@ -259,18 +270,17 @@ onMounted(() => {
         <table class="w-full">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">ID aktivitas</th>
               <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Jenis aktivitas</th>
               <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Batch</th>
               <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Jatuh tempo</th>
               <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Status</th>
               <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Sisa hari</th>
+              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Remark</th>
               <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Aksi</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr v-for="item in upcomingSchedule" :key="item.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4 font-medium text-gray-900">{{ item.schedule_code }}</td>
               <td class="px-6 py-4">
                 <div class="flex items-center gap-2">
                   <Calendar class="w-4 h-4 text-gray-400" />
@@ -289,6 +299,7 @@ onMounted(() => {
                   {{ computeDaysLeft(item.next_due_date) < 0 ? `Terlambat ${Math.abs(computeDaysLeft(item.next_due_date))} hari` : `${computeDaysLeft(item.next_due_date)} hari` }}
                 </span>
               </td>
+              <td class="px-6 py-4 text-sm text-gray-700">{{ item.remark || '-' }}</td>
               <td class="px-6 py-4 text-center">
                 <button
                   v-if="canSubmitReport(item)"
@@ -326,7 +337,30 @@ onMounted(() => {
                 <h4 class="font-semibold text-gray-900">{{ activity.activity_type }}</h4>
                 <span class="text-xs text-gray-500">{{ formatDate(activity.activity_date) }}</span>
               </div>
-              <p class="text-sm text-gray-600 mb-2">ID aktivitas: {{ activity.schedule_code }}</p>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                <div>
+                  <p class="text-xs text-gray-500">Batch</p>
+                  <p class="text-sm text-gray-700">{{ activity.batch_code || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500">Remark</p>
+                  <p class="text-sm text-gray-700">{{ activity.remark || '-' }}</p>
+                </div>
+              </div>
+              <div class="mb-3">
+                <p class="text-xs text-gray-500">Deskripsi</p>
+                <p class="text-sm text-gray-700">{{ activity.description || '-' }}</p>
+              </div>
+              <div class="mb-3">
+                <p class="text-xs text-gray-500 mb-1">Gambar</p>
+                <img
+                  v-if="activity.photo_url"
+                  :src="activityPhotoUrl(activity.photo_url)"
+                  alt="Bukti aktivitas"
+                  class="h-24 w-24 rounded-lg object-cover border border-gray-200"
+                />
+                <p v-else class="text-sm text-gray-500">-</p>
+              </div>
               <div class="flex items-center justify-between text-xs">
                 <span class="font-medium" :class="validationClass(activity.validation_status)">
                   {{ validationLabel(activity.validation_status) }}

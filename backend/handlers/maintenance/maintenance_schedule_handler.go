@@ -82,6 +82,7 @@ type myMaintenanceScheduleResponse struct {
 	FrequencyDays     uint      `json:"frequency_days"`
 	NextDueDate       time.Time `json:"next_due_date"`
 	Status            string    `json:"status"`
+	Remark            *string   `json:"remark,omitempty"`
 	HasSubmittedProof bool      `json:"has_submitted_proof"`
 }
 
@@ -89,11 +90,14 @@ type myMaintenanceActivityResponse struct {
 	ID               uint       `json:"id"`
 	ScheduleID       uint       `json:"schedule_id"`
 	ScheduleCode     string     `json:"schedule_code"`
+	BatchCode        string     `json:"batch_code"`
 	ActivityType     string     `json:"activity_type"`
+	Description      *string    `json:"description,omitempty"`
 	ActivityDate     time.Time  `json:"activity_date"`
 	PhotoURL         *string    `json:"photo_url,omitempty"`
 	ValidationStatus string     `json:"validation_status"`
 	ValidationNotes  *string    `json:"validation_notes,omitempty"`
+	Remark           *string    `json:"remark,omitempty"`
 	ValidatedAt      *time.Time `json:"validated_at,omitempty"`
 }
 
@@ -387,6 +391,14 @@ func ReviewMaintenanceActivity(c *gin.Context) {
 		return *req.Notes
 	}())
 
+	if action == "reject" && notes == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Alasan penolakan wajib diisi"})
+		return
+	}
+	if action == "approve" && notes == "" {
+		notes = "Disetujui oleh admin"
+	}
+
 	tx := config.DB.Begin()
 	if tx.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
@@ -396,10 +408,8 @@ func ReviewMaintenanceActivity(c *gin.Context) {
 	activityUpdates := map[string]interface{}{
 		"validation_status": newValidationStatus,
 		"validated_by":      adminID,
+		"validation_notes":  notes,
 		"updated_at":        time.Now(),
-	}
-	if notes != "" {
-		activityUpdates["validation_notes"] = notes
 	}
 
 	if err := tx.Model(&maintenancemodels.MaintenanceActivity{}).
@@ -643,8 +653,15 @@ func ListMyMaintenanceSchedules(c *gin.Context) {
 	for _, item := range schedules {
 		latest, hasLatest := latestActivityMap[item.ID]
 		var latestPtr *maintenancemodels.MaintenanceActivity
+		var remark *string
 		if hasLatest {
 			latestPtr = &latest
+			if latest.ValidationNotes != nil && strings.TrimSpace(*latest.ValidationNotes) != "" {
+				remark = latest.ValidationNotes
+			} else if latest.ValidationStatus == "approved" || latest.ValidationStatus == "verified" {
+				defaultRemark := "Disetujui oleh admin"
+				remark = &defaultRemark
+			}
 		}
 
 		response = append(response, myMaintenanceScheduleResponse{
@@ -656,6 +673,7 @@ func ListMyMaintenanceSchedules(c *gin.Context) {
 			FrequencyDays:     item.FrequencyDays,
 			NextDueDate:       item.NextDueDate,
 			Status:            deriveInvestorScheduleStatus(item.Status, latestPtr),
+			Remark:            remark,
 			HasSubmittedProof: hasLatest && latest.ValidationStatus == "pending",
 		})
 	}
@@ -673,6 +691,7 @@ func ListMyMaintenanceActivities(c *gin.Context) {
 	var activities []maintenancemodels.MaintenanceActivity
 	if err := config.DB.
 		Preload("Schedule").
+		Preload("PlantBatch").
 		Where("schedule_id IN (?)", config.DB.Model(&maintenancemodels.MaintenanceSchedule{}).Select("id").Where("user_id = ?", userID)).
 		Order("activity_date DESC").
 		Find(&activities).Error; err != nil {
@@ -683,20 +702,30 @@ func ListMyMaintenanceActivities(c *gin.Context) {
 	response := make([]myMaintenanceActivityResponse, 0, len(activities))
 	for _, item := range activities {
 		var validatedAt *time.Time
+		var remark *string
 		if item.ValidationStatus == "approved" || item.ValidationStatus == "verified" || item.ValidationStatus == "rejected" {
 			t := item.UpdatedAt
 			validatedAt = &t
+		}
+		if item.ValidationNotes != nil && strings.TrimSpace(*item.ValidationNotes) != "" {
+			remark = item.ValidationNotes
+		} else if item.ValidationStatus == "approved" || item.ValidationStatus == "verified" {
+			defaultRemark := "Disetujui oleh admin"
+			remark = &defaultRemark
 		}
 
 		response = append(response, myMaintenanceActivityResponse{
 			ID:               item.ID,
 			ScheduleID:       item.ScheduleID,
 			ScheduleCode:     fmt.Sprintf("MA-%03d", item.ScheduleID),
+			BatchCode:        item.PlantBatch.BatchCode,
 			ActivityType:     item.ActivityType,
+			Description:      item.Description,
 			ActivityDate:     item.ActivityDate,
 			PhotoURL:         item.PhotoURL,
 			ValidationStatus: item.ValidationStatus,
 			ValidationNotes:  item.ValidationNotes,
+			Remark:           remark,
 			ValidatedAt:      validatedAt,
 		})
 	}
