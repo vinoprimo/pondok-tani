@@ -7,6 +7,7 @@ import (
 	"pondok-tani-backend/config"
 	authmodels "pondok-tani-backend/models/auth"
 	coremodels "pondok-tani-backend/models/core"
+	financemodels "pondok-tani-backend/models/finance"
 	harvestmodels "pondok-tani-backend/models/harvest"
 	maintenancemodels "pondok-tani-backend/models/maintenance"
 	notificationmodels "pondok-tani-backend/models/notification"
@@ -106,6 +107,8 @@ func migrateDB() {
 		&salesmodels.SalesOrder{},
 		&salesmodels.SalesDetail{},
 		&notificationmodels.Notification{},
+		&financemodels.OperationalCost{},
+		&financemodels.RevenueSimulation{},
 		&pricemodels.NationalPrice{},
 	)
 	if err != nil {
@@ -159,6 +162,8 @@ func main() {
 		&salesmodels.SalesOrder{},
 		&salesmodels.SalesDetail{},
 		&notificationmodels.Notification{},
+		&financemodels.OperationalCost{},
+		&financemodels.RevenueSimulation{},
 		&pricemodels.NationalPrice{},
 	)
 	if err != nil {
@@ -202,6 +207,7 @@ func main() {
 	routes.UserRoutes(r)
 	routes.AdminRoutes(r)
 	routes.HarvestRoutes(r)
+	routes.FinancialRoutes(r)
 	routes.PlantMonitoringRoutes(r)
 	routes.InvestmentPackageRoutes(r)
 	r.Run(":8000")
