@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { ArrowRight, Sprout, TrendingUp, Shield, BarChart3, Users, Handshake, BookOpenText } from 'lucide-vue-next';
+import { ArrowRight, Sprout, TrendingUp, Shield, BarChart3, Users, Handshake, BookOpenText, CalendarDays, Network, Globe } from 'lucide-vue-next';
 import { useRouter } from "vue-router";
 import LandingLayout from '../../layouts/LandingLayout.vue';
 import heroImage from '../../assets/pondok-tani-hero.jpg';
-import heroImageCard from '../../assets/pondok-tani-hero-card.png';
 import berita1 from '../../assets/berita-1.jpg';
 import berita2 from '../../assets/berita-2.jpg';
 import berita3 from '../../assets/berita-3.jpg';
@@ -21,8 +20,8 @@ const router = useRouter();
     >
       <div class="absolute inset-0 bg-black/70"></div>
       <div class="relative max-w-7xl mx-auto px-6">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div class="rounded-[2rem] p-10 shadow-2xl">
+        <div class="flex flex-col items-center justify-center text-center">
+          <div class="rounded-[2rem] p-10 shadow-2xl max-w-4xl">
             <h2 class="text-5xl font-bold mb-6 leading-tight text-white">
               Mulai Investasi Vanili sebagai
               <span class="text-green-600">  Aset Emas Hijau</span> Anda di Masa Depan
@@ -30,10 +29,10 @@ const router = useRouter();
             <p class="text-xl mb-8 leading-relaxed text-white/85">
               Pondok Tani membantu Anda berinvestasi pada vanili sebagai aset emas hijau melalui pengelolaan yang profesional dan terstruktur, sehingga memberikan potensi return jangka panjang yang stabil dan berkelanjutan.
             </p>
-            <div class="flex flex-col gap-4 sm:flex-row">
+            <div class="flex flex-col gap-4 sm:flex-row justify-center">
               <button
                 type="button"
-                class="px-8 py-4 bg-green-600 text-white rounded-xl hover:bg-green-600 transition-colors font-semibold flex items-center gap-2 text-lg"
+                class="px-8 py-4 bg-green-600 text-white rounded-xl hover:bg-green-600 transition-colors font-semibold flex items-center justify-center gap-2 text-lg"
                 @click="router.push('/login')"
               >
                 Mulai Investasi
@@ -48,12 +47,221 @@ const router = useRouter();
               </button>
             </div>
           </div>
-          <div class="relative rounded-3xl overflow-hidden h-96 w-full ring-5 ring-white/90 bg-white/10 backdrop-blur-sm">
-            <div
-              class="absolute inset-0 bg-cover bg-center opacity-90"
-              :style="{ backgroundImage: `url(${heroImageCard})` }"
-            ></div>
-            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="bg-green-50/40 py-16 border-b border-green-100">
+      <div class="max-w-7xl mx-auto px-6 overflow-hidden relative">
+        <div class="w-full relative z-10 flex items-center">
+          <!-- Marquee Track -->
+          <div class="flex animate-marquee whitespace-nowrap">
+            <!-- Marquee Content -->
+            <div class="flex shrink-0 gap-20 px-10 items-center justify-around min-w-max">
+              
+              <div class="flex flex-col items-center min-w-[200px]">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-5 shadow-lg shadow-green-600/30 text-white transition-transform hover:scale-110 duration-300">
+                  <Handshake class="w-8 h-8" />
+                </div>
+                <h4 class="text-4xl font-extrabold text-slate-900 mb-2">200+</h4>
+                <p class="text-green-600 font-semibold text-sm uppercase tracking-wide">Petani Terkoneksi</p>
+              </div>
+
+              <div class="flex flex-col items-center min-w-[200px]">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-5 shadow-lg shadow-green-600/30 text-white transition-transform hover:scale-110 duration-300">
+                  <CalendarDays class="w-8 h-8" />
+                </div>
+                <h4 class="text-4xl font-extrabold text-slate-900 mb-2">10+</h4>
+                <p class="text-green-600 font-semibold text-sm uppercase tracking-wide">Negara Tujuan Ekspor</p>
+              </div>
+
+              <div class="flex flex-col items-center min-w-[200px]">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-5 shadow-lg shadow-green-600/30 text-white transition-transform hover:scale-110 duration-300">
+                  <Network class="w-8 h-8" />
+                </div>
+                <h4 class="text-4xl font-extrabold text-slate-900 mb-2">20+</h4>
+                <p class="text-green-600 font-semibold text-sm uppercase tracking-wide">Tonase Produksi Tahunan</p>
+              </div>
+
+              <div class="flex flex-col items-center min-w-[200px]">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-5 shadow-lg shadow-green-600/30 text-white transition-transform hover:scale-110 duration-300">
+                  <Users class="w-8 h-8" />
+                </div>
+                <h4 class="text-4xl font-extrabold text-slate-900 mb-2">50+</h4>
+                <p class="text-green-600 font-semibold text-sm uppercase tracking-wide">Anggota Komunitas Aktif</p>
+              </div>
+
+              <div class="flex flex-col items-center min-w-[200px]">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-5 shadow-lg shadow-green-600/30 text-white transition-transform hover:scale-110 duration-300">
+                  <Globe class="w-8 h-8" />
+                </div>
+                <h4 class="text-4xl font-extrabold text-slate-900 mb-2">6+</h4>
+                <p class="text-green-600 font-semibold text-sm uppercase tracking-wide">Tahun Pengalaman Kolektif</p>
+              </div>
+
+            </div>
+
+            <!-- Duplicate Marquee Content for seamless loop -->
+            <div class="flex shrink-0 gap-20 px-10 items-center justify-around min-w-max" aria-hidden="true">
+              
+              <div class="flex flex-col items-center min-w-[200px]">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-5 shadow-lg shadow-green-600/30 text-white transition-transform hover:scale-110 duration-300">
+                  <Handshake class="w-8 h-8" />
+                </div>
+                <h4 class="text-4xl font-extrabold text-slate-900 mb-2">200+</h4>
+                <p class="text-green-600 font-semibold text-sm uppercase tracking-wide">Petani Terkoneksi</p>
+              </div>
+
+              <div class="flex flex-col items-center min-w-[200px]">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-5 shadow-lg shadow-green-600/30 text-white transition-transform hover:scale-110 duration-300">
+                  <CalendarDays class="w-8 h-8" />
+                </div>
+                <h4 class="text-4xl font-extrabold text-slate-900 mb-2">10+</h4>
+                <p class="text-green-600 font-semibold text-sm uppercase tracking-wide">Negara Tujuan Ekspor</p>
+              </div>
+
+              <div class="flex flex-col items-center min-w-[200px]">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-5 shadow-lg shadow-green-600/30 text-white transition-transform hover:scale-110 duration-300">
+                  <Network class="w-8 h-8" />
+                </div>
+                <h4 class="text-4xl font-extrabold text-slate-900 mb-2">20+</h4>
+                <p class="text-green-600 font-semibold text-sm uppercase tracking-wide">Tonase Produksi Tahunan</p>
+              </div>
+
+              <div class="flex flex-col items-center min-w-[200px]">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-5 shadow-lg shadow-green-600/30 text-white transition-transform hover:scale-110 duration-300">
+                  <Users class="w-8 h-8" />
+                </div>
+                <h4 class="text-4xl font-extrabold text-slate-900 mb-2">50+</h4>
+                <p class="text-green-600 font-semibold text-sm uppercase tracking-wide">Anggota Komunitas Aktif</p>
+              </div>
+
+              <div class="flex flex-col items-center min-w-[200px]">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-5 shadow-lg shadow-green-600/30 text-white transition-transform hover:scale-110 duration-300">
+                  <Globe class="w-8 h-8" />
+                </div>
+                <h4 class="text-4xl font-extrabold text-slate-900 mb-2">6+</h4>
+                <p class="text-green-600 font-semibold text-sm uppercase tracking-wide">Tahun Pengalaman Kolektif</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Coverage Section -->
+    <section class="bg-white py-24 border-b border-slate-100">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center max-w-4xl mx-auto mb-16">
+          <h3 class="text-4xl font-bold text-green-800 mb-6">Wilayah Cakupan Pondok Tani</h3>
+          <p class="text-lg text-slate-600 leading-relaxed">
+            Dengan pendekatan inovatif dan komitmen Pondok Tani terhadap pertanian berkelanjutan, Pondok Tani siap memimpin menuju masa depan yang lebih cerah bagi petani di seluruh Indonesia.
+          </p>
+        </div>
+
+        <div class="flex flex-col lg:flex-row items-center gap-12">
+          <!-- Map Area -->
+          <div class="w-full lg:w-2/3 relative bg-slate-50/50 rounded-3xl p-4 lg:p-8 border border-slate-100 shadow-inner">
+            <div class="relative w-full flex items-center justify-center">
+              <img src="../../assets/Map.webp" alt="Peta Indonesia" class="w-full h-auto opacity-50 filter grayscale" />
+              
+              <!-- Map Markers -->
+              <!-- Map Markers -->
+              <!-- KEPRI -->
+              <div class="absolute w-3 h-3 bg-yellow-400 rounded-full border-2 border-white shadow-md" style="top: 35%; left: 21%; transform: translate(-50%, -50%);">
+              </div>
+
+              <!-- RIAU -->
+              <div class="absolute w-3 h-3 bg-yellow-400 rounded-full border-2 border-white shadow-md" style="top: 32%; left: 15%; transform: translate(-50%, -50%);">
+              </div>
+
+              <!-- SUMSEL -->
+              <div class="absolute w-3 h-3 bg-yellow-400 rounded-full border-2 border-white shadow-md" style="top: 52%; left: 20%; transform: translate(-50%, -50%);">
+              </div>
+
+              <!-- BANTEN -->
+              <div class="absolute w-3 h-3 bg-yellow-400 rounded-full border-2 border-white shadow-md" style="top: 71%; left: 24%; transform: translate(-50%, -50%);">
+              </div>
+
+              <!-- KALBAR -->
+              <div class="absolute w-3 h-3 bg-yellow-400 rounded-full border-2 border-white shadow-md" style="top: 37%; left: 35%; transform: translate(-50%, -50%);">
+              </div>
+
+              <!-- KALTIM -->
+              <div class="absolute w-3 h-3 bg-yellow-400 rounded-full border-2 border-white shadow-md" style="top: 35%; left: 47%; transform: translate(-50%, -50%);">
+              </div>
+
+              <!-- SULUT -->
+              <div class="absolute w-3 h-3 bg-yellow-400 rounded-full border-2 border-white shadow-md" style="top: 30%; left: 63%; transform: translate(-50%, -50%);">
+              </div>
+
+              <!-- SORONG -->
+              <div class="absolute w-3 h-3 bg-yellow-400 rounded-full border-2 border-white shadow-md" style="top: 41%; left: 82%; transform: translate(-50%, -50%);">
+              </div>
+
+              <div class="absolute w-3 h-3 bg-yellow-400 rounded-full border-2 border-white shadow-md" style="top: 74%; left: 28%; transform: translate(-50%, -50%);">
+              </div>
+
+              <div class="absolute w-3 h-3 bg-yellow-400 rounded-full border-2 border-white shadow-md" style="top: 79%; left: 33.6%; transform: translate(-50%, -50%);">
+              </div>
+
+              <div class="absolute w-3 h-3 bg-yellow-400 rounded-full border-2 border-white shadow-md" style="top: 76%; left: 32%; transform: translate(-50%, -50%);">
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Stats Right -->
+          <div class="w-full lg:w-1/3 flex flex-col justify-center">
+            
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Jawa Barat</span>
+                <span class="text-2xl font-bold text-green-700">208 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+              </div>
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Kalimantan Timur</span>
+                <span class="text-2xl font-bold text-green-700">100 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+              </div>
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Kepulauan Riau</span>
+                <span class="text-2xl font-bold text-green-700">50 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+              </div>
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Banten</span>
+                <span class="text-2xl font-bold text-green-700">35 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+              </div>
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Jawa Tengah</span>
+                <span class="text-2xl font-bold text-green-700">33 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+              </div>  
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Sorong</span>
+                <span class="text-2xl font-bold text-green-700">25 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+              </div>
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Sumatra Selatan</span>
+                <span class="text-2xl font-bold text-green-700">20 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+              </div>
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Riau</span>
+                <span class="text-2xl font-bold text-green-700">11 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+              </div>
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Kalimantan Barat</span>
+                <span class="text-2xl font-bold text-green-700">10 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+              </div>
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Sulawesi Utara</span>
+                <span class="text-2xl font-bold text-green-700">3 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Jogja</span>
+                <span class="text-2xl font-bold text-green-700">0.5 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+              </div>              
+            </div>
           </div>
         </div>
       </div>
@@ -213,3 +421,20 @@ const router = useRouter();
 
   </LandingLayout>
 </template>
+
+<style scoped>
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+</style>
