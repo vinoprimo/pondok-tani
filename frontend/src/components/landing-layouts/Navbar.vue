@@ -114,8 +114,7 @@ watch(
       <button type="button" class="flex items-center gap-3" @click="router.push('/')">
         <img src="../../assets/logo-pondok-tani.png" alt="Pondok Tani Land" class="w-10 h-10 object-contain rounded-lg" />
         <div class="text-left">
-          <h1 class="font-semibold text-gray-900">Pondok Tani Land</h1>
-          <p class="text-xs text-gray-500">Sistem Investasi Vanili</p>
+          <h1 class="font-bold text-green-700">Pondok Tani Land</h1>
         </div>
       </button>
 

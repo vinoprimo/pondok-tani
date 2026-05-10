@@ -8,9 +8,9 @@ import { Sprout } from 'lucide-vue-next';
       <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
         <div>
           <div class="flex items-center gap-3 mb-4">
-            <img src="../../assets/logo-pondok-tani.png" alt="Pondok Tani Land" class="w-10 h-10 object-contain rounded-lg bg-white/10" />
+            <img src="../../assets/logo-pondok-tani.png" alt="Pondok Tani Land" class="w-10 h-10 object-contain rounded-lg bg-white p-1" />
             <div>
-              <h4 class="font-semibold text-white">Pondok Tani Land</h4>
+              <h4 class="font-bold text-green-500">Pondok Tani Land</h4>
             </div>
           </div>
           <p class="text-sm text-gray-400">Platform investasi pertanian vanili terpercaya di Indonesia</p>

@@ -262,10 +262,9 @@ watch(
       <div class="hidden lg:block">
         <div class="space-y-6">
           <div class="flex items-center gap-3">
-            <img src="../../assets/logo-pondok-tani.png" alt="Pondok Tani Land" class="w-16 h-16 object-contain rounded-2xl shadow-sm" />
+            <img src="../../assets/logo-pondok-tani.png" alt="Pondok Tani Land" class="w-16 h-16 object-contain rounded-2xl shadow-sm bg-white p-1.5" />
             <div>
-              <h1 class="text-3xl font-bold text-gray-900">Pondok Tani Land</h1>
-              <p class="text-gray-600">Sistem Investasi Vanili</p>
+              <h1 class="text-3xl font-bold text-green-700">Pondok Tani Land</h1>
             </div>
           </div>
 
