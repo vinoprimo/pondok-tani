@@ -2,6 +2,7 @@ package routes
 
 import (
 	investmenthandler "pondok-tani-backend/handlers/investment"
+	maintenancehandler "pondok-tani-backend/handlers/maintenance"
 	userhandler "pondok-tani-backend/handlers/user"
 	"pondok-tani-backend/middleware"
 
@@ -13,5 +14,8 @@ func UserRoutes(r *gin.Engine) {
 	{
 		user.GET("/me", userhandler.GetCurrentUser)
 		user.PUT("/me/package", middleware.RequireRoles("investor", "mitra"), investmenthandler.SelectPackage)
+		user.GET("/me/maintenance-schedules", middleware.RequireRoles("investor", "mitra"), maintenancehandler.ListMyMaintenanceSchedules)
+		user.GET("/me/maintenance-activities", middleware.RequireRoles("investor", "mitra"), maintenancehandler.ListMyMaintenanceActivities)
+		user.POST("/me/maintenance-activities", middleware.RequireRoles("investor", "mitra"), maintenancehandler.SubmitMyMaintenanceActivity)
 	}
 }

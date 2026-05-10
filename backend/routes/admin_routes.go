@@ -24,6 +24,9 @@ func AdminRoutes(r *gin.Engine) {
 		admin.GET("/maintenance-schedules/summary", maintenancehandler.GetMaintenanceScheduleSummary)
 		admin.GET("/maintenance-schedules", maintenancehandler.ListMaintenanceSchedules)
 		admin.POST("/maintenance-schedules", maintenancehandler.CreateMaintenanceSchedule)
+		admin.GET("/maintenance-activities/summary", maintenancehandler.GetAdminMaintenanceActivitySummary)
+		admin.GET("/maintenance-activities", maintenancehandler.ListAdminMaintenanceActivities)
+		admin.PUT("/maintenance-activities/:id/review", maintenancehandler.ReviewMaintenanceActivity)
 
 		admin.GET("/vanili/grades", pricehandler.ListGrades)
 		admin.POST("/vanili/grades", pricehandler.CreateGrade)

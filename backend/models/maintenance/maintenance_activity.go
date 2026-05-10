@@ -12,6 +12,7 @@ type MaintenanceActivity struct {
 	PlantBatchID     uint      `gorm:"not null;index" json:"plant_batch_id"`
 	ActivityType     string    `gorm:"type:varchar(60);not null;index" json:"activity_type"`
 	Description      *string   `gorm:"type:text" json:"description,omitempty"`
+	PhotoURL         *string   `gorm:"type:text" json:"photo_url,omitempty"`
 	ActivityDate     time.Time `gorm:"not null;index" json:"activity_date"`
 	ValidationStatus string    `gorm:"type:varchar(20);not null;default:pending;index" json:"validation_status"`
 	ValidationNotes  *string   `gorm:"type:text" json:"validation_notes,omitempty"`

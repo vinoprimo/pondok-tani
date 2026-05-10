@@ -162,19 +162,28 @@ function formatDate(dateStr?: string | null) {
 
 function statusLabel(status: string) {
   if (status === "overdue") return "Overdue";
-  if (status === "pending") return "Pending";
+  if (status === "mendatang") return "Mendatang";
+  if (status === "menunggu_verifikasi") return "Menunggu verifikasi";
+  if (status === "terverifikasi") return "Terverifikasi";
+  if (status === "ditolak") return "Ditolak";
   return "Aman";
 }
 
 function statusClass(status: string) {
   if (status === "overdue") return "bg-red-50 text-red-700";
-  if (status === "pending") return "bg-yellow-50 text-yellow-700";
+  if (status === "mendatang") return "bg-blue-50 text-blue-700";
+  if (status === "menunggu_verifikasi") return "bg-yellow-50 text-yellow-700";
+  if (status === "terverifikasi") return "bg-green-50 text-green-700";
+  if (status === "ditolak") return "bg-red-50 text-red-700";
   return "bg-green-50 text-green-700";
 }
 
 function activityColorClass(status: string) {
   if (status === "overdue") return "bg-red-500";
-  if (status === "pending") return "bg-yellow-500";
+  if (status === "mendatang") return "bg-blue-500";
+  if (status === "menunggu_verifikasi") return "bg-yellow-500";
+  if (status === "terverifikasi") return "bg-green-500";
+  if (status === "ditolak") return "bg-red-500";
   return "bg-green-500";
 }
 
@@ -183,7 +192,7 @@ function dayHasDanger(items: ScheduleItem[]) {
 }
 
 function dayHasWarning(items: ScheduleItem[]) {
-  return !dayHasDanger(items) && items.some((item) => item.status === "pending");
+  return !dayHasDanger(items) && items.some((item) => item.status === "mendatang" || item.status === "menunggu_verifikasi");
 }
 
 function selectDay(key: string) {

@@ -34,7 +34,7 @@ type UserScheduleSummary = {
   total: number;
   nearestActivity: string | null;
   nearestDueDate: string | null;
-  status: "pending" | "overdue" | "aman";
+  status: string;
 };
 
 const router = useRouter();
@@ -75,17 +75,12 @@ const userSummaries = computed<UserScheduleSummary[]>(() => {
       nearestDueDate = nearestSchedule.next_due_date;
     }
 
-    const hasOverdue = userSchedules.some((s) => {
-      const due = new Date(s.next_due_date);
-      due.setHours(0, 0, 0, 0);
-      return s.status === "overdue" || (s.status === "pending" && due.getTime() < todayDateOnly.value.getTime());
-    });
-
-    const hasPending = userSchedules.some((s) => s.status === "pending");
-
-    let status: "pending" | "overdue" | "aman" = "aman";
-    if (hasOverdue) status = "overdue";
-    else if (hasPending) status = "pending";
+    let status = "aman";
+    if (total > 0) {
+      status = ([...userSchedules].sort(
+        (a, b) => new Date(a.next_due_date).getTime() - new Date(b.next_due_date).getTime()
+      )[0]?.status || "aman").toLowerCase();
+    }
 
     return {
       id: user.id,
@@ -140,14 +135,21 @@ function formatDate(dateStr?: string | null) {
 }
 
 function statusLabel(status: string) {
-  if (status === "overdue") return "Overdue";
-  if (status === "pending") return "Pending";
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "overdue") return "Overdue";
+  if (normalized === "mendatang") return "Mendatang";
+  if (normalized === "menunggu_verifikasi") return "Menunggu verifikasi";
+  if (normalized === "terverifikasi") return "Terverifikasi";
+  if (normalized === "ditolak") return "Ditolak";
   return "Aman";
 }
 
 function statusClass(status: string) {
-  if (status === "overdue") return "bg-red-50 text-red-700";
-  if (status === "pending") return "bg-yellow-50 text-yellow-700";
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "overdue" || normalized === "ditolak") return "bg-red-50 text-red-700";
+  if (normalized === "mendatang") return "bg-blue-50 text-blue-700";
+  if (normalized === "menunggu_verifikasi") return "bg-yellow-50 text-yellow-700";
+  if (normalized === "terverifikasi") return "bg-green-50 text-green-700";
   return "bg-green-50 text-green-700";
 }
 

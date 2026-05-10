@@ -8,11 +8,9 @@ import { Sprout } from 'lucide-vue-next';
       <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
         <div>
           <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-              <Sprout class="w-6 h-6 text-white" />
-            </div>
+            <img src="../../assets/logo-pondok-tani.png" alt="Pondok Tani Land" class="w-10 h-10 object-contain rounded-lg bg-white p-1" />
             <div>
-              <h4 class="font-semibold text-white">Omah Vanili</h4>
+              <h4 class="font-bold text-green-500">Pondok Tani Land</h4>
             </div>
           </div>
           <p class="text-sm text-gray-400">Platform investasi pertanian vanili terpercaya di Indonesia</p>
@@ -39,7 +37,7 @@ import { Sprout } from 'lucide-vue-next';
         <div>
           <h5 class="font-semibold text-white mb-4">Kontak</h5>
           <ul class="space-y-2 text-sm">
-            <li class="text-gray-400">Email: info@omahvanili.com</li>
+            <li class="text-gray-400">Email: info@pondoktaniland.com</li>
             <li class="text-gray-400">Telp: +62 812-3456-7890</li>
             <li class="text-gray-400">Alamat: Yogyakarta, Indonesia</li>
           </ul>
@@ -47,7 +45,7 @@ import { Sprout } from 'lucide-vue-next';
       </div>
 
       <div class="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
-        <p>&copy; 2024 Sistem Investasi Omah Vanili. Semua hak dilindungi.</p>
+        <p>&copy; 2024 Sistem Investasi Pondok Tani Land. Semua hak dilindungi.</p>
       </div>
     </div>
   </footer>
