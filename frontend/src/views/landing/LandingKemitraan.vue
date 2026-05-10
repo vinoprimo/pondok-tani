@@ -25,7 +25,7 @@ const benefits = [
 
 const steps = [
   'Isi formulir ketertarikan dan unggah profil kebun singkat untuk proses screening awal.',
-  'Ikuti sesi wawancara dan asesmen lapangan bersama tim Omah Vanili.',
+  'Ikuti sesi wawancara dan asesmen lapangan bersama tim Pondok Tani Land.',
   'Aktifkan kemitraan, dapatkan onboarding operasional, lalu mulai fase eksekusi.',
 ];
 </script>

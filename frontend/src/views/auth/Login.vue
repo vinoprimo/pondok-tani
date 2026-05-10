@@ -262,11 +262,9 @@ watch(
       <div class="hidden lg:block">
         <div class="space-y-6">
           <div class="flex items-center gap-3">
-            <div class="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center">
-              <Sprout class="w-10 h-10 text-white" />
-            </div>
+            <img src="../../assets/logo-pondok-tani.png" alt="Pondok Tani Land" class="w-16 h-16 object-contain rounded-2xl shadow-sm" />
             <div>
-              <h1 class="text-3xl font-bold text-gray-900">Omah Vanili</h1>
+              <h1 class="text-3xl font-bold text-gray-900">Pondok Tani Land</h1>
               <p class="text-gray-600">Sistem Investasi Vanili</p>
             </div>
           </div>

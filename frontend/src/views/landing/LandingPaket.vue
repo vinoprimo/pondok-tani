@@ -129,7 +129,7 @@ onMounted(() => {
 
     <PaketHero
       title="Temukan Paket Investasi Sesuai Target Anda"
-      description="Berikut simulasi paket investasi placeholder untuk memudahkan eksplorasi skema pendanaan di Omah Vanili. Konten ini nantinya akan diganti dengan data resmi."
+      description="Berikut simulasi paket investasi placeholder untuk memudahkan eksplorasi skema pendanaan di Pondok Tani Land. Konten ini nantinya akan diganti dengan data resmi."
     />
 
     <section class="max-w-7xl mx-auto px-6 pb-10 lg:pb-14">

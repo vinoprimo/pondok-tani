@@ -112,11 +112,9 @@ watch(
   <header class="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
       <button type="button" class="flex items-center gap-3" @click="router.push('/')">
-        <div class="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-          <Sprout class="w-6 h-6 text-white" />
-        </div>
+        <img src="../../assets/logo-pondok-tani.png" alt="Pondok Tani Land" class="w-10 h-10 object-contain rounded-lg" />
         <div class="text-left">
-          <h1 class="font-semibold text-gray-900">Omah Vanili</h1>
+          <h1 class="font-semibold text-gray-900">Pondok Tani Land</h1>
           <p class="text-xs text-gray-500">Sistem Investasi Vanili</p>
         </div>
       </button>
