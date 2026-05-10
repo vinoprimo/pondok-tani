@@ -12,6 +12,12 @@ import (
 )
 
 func AdminRoutes(r *gin.Engine) {
+	publicVanili := r.Group("/admin/vanili")
+	{
+		publicVanili.GET("/grades", pricehandler.ListGrades)
+		publicVanili.GET("/prices", pricehandler.ListNationalPrices)
+	}
+
 	admin := r.Group("/admin", middleware.AuthMiddleware(), middleware.RequireRoles("admin"))
 	{
 		admin.GET("/users", userhandler.ListUsers)
@@ -28,11 +34,9 @@ func AdminRoutes(r *gin.Engine) {
 		admin.GET("/maintenance-activities", maintenancehandler.ListAdminMaintenanceActivities)
 		admin.PUT("/maintenance-activities/:id/review", maintenancehandler.ReviewMaintenanceActivity)
 
-		admin.GET("/vanili/grades", pricehandler.ListGrades)
 		admin.POST("/vanili/grades", pricehandler.CreateGrade)
 		admin.PUT("/vanili/grades/:id", pricehandler.UpdateGrade)
 		admin.DELETE("/vanili/grades/:id", pricehandler.DeleteGrade)
-		admin.GET("/vanili/prices", pricehandler.ListNationalPrices)
 		admin.POST("/vanili/prices", pricehandler.CreateNationalPrice)
 		admin.PUT("/vanili/prices/:id", pricehandler.UpdateNationalPrice)
 		admin.DELETE("/vanili/prices/:id", pricehandler.DeleteNationalPrice)

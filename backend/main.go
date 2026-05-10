@@ -7,6 +7,7 @@ import (
 	"pondok-tani-backend/config"
 	authmodels "pondok-tani-backend/models/auth"
 	coremodels "pondok-tani-backend/models/core"
+	financemodels "pondok-tani-backend/models/finance"
 	harvestmodels "pondok-tani-backend/models/harvest"
 	maintenancemodels "pondok-tani-backend/models/maintenance"
 	notificationmodels "pondok-tani-backend/models/notification"
@@ -32,6 +33,24 @@ func applyNationalPriceMigrations() error {
 		if err := config.DB.Exec(`ALTER TABLE national_prices ADD COLUMN IF NOT EXISTS harvest_type varchar(20) NOT NULL DEFAULT 'basah'`).Error; err != nil {
 			return fmt.Errorf("failed to ensure national_prices.harvest_type column: %w", err)
 		}
+	}
+
+	if !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "price_min_per_kg") {
+		if err := config.DB.Exec(`ALTER TABLE national_prices ADD COLUMN IF NOT EXISTS price_min_per_kg numeric(14,2) NOT NULL DEFAULT 0`).Error; err != nil {
+			return fmt.Errorf("failed to ensure national_prices.price_min_per_kg column: %w", err)
+		}
+	}
+	if !config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "price_max_per_kg") {
+		if err := config.DB.Exec(`ALTER TABLE national_prices ADD COLUMN IF NOT EXISTS price_max_per_kg numeric(14,2) NOT NULL DEFAULT 0`).Error; err != nil {
+			return fmt.Errorf("failed to ensure national_prices.price_max_per_kg column: %w", err)
+		}
+	}
+
+	if err := config.DB.Exec(`UPDATE national_prices SET price_min_per_kg = price_per_kg WHERE price_min_per_kg IS NULL OR price_min_per_kg <= 0`).Error; err != nil {
+		return fmt.Errorf("failed to backfill national_prices.price_min_per_kg values: %w", err)
+	}
+	if err := config.DB.Exec(`UPDATE national_prices SET price_max_per_kg = price_per_kg WHERE price_max_per_kg IS NULL OR price_max_per_kg <= 0`).Error; err != nil {
+		return fmt.Errorf("failed to backfill national_prices.price_max_per_kg values: %w", err)
 	}
 
 	if config.DB.Migrator().HasColumn(&pricemodels.NationalPrice{}, "source") {
@@ -88,6 +107,8 @@ func migrateDB() {
 		&salesmodels.SalesOrder{},
 		&salesmodels.SalesDetail{},
 		&notificationmodels.Notification{},
+		&financemodels.OperationalCost{},
+		&financemodels.RevenueSimulation{},
 		&pricemodels.NationalPrice{},
 	)
 	if err != nil {
@@ -166,6 +187,8 @@ func main() {
 		&salesmodels.SalesOrder{},
 		&salesmodels.SalesDetail{},
 		&notificationmodels.Notification{},
+		&financemodels.OperationalCost{},
+		&financemodels.RevenueSimulation{},
 		&pricemodels.NationalPrice{},
 	)
 	if err != nil {
@@ -234,6 +257,7 @@ func main() {
 	routes.UserRoutes(r)
 	routes.AdminRoutes(r)
 	routes.HarvestRoutes(r)
+	routes.FinancialRoutes(r)
 	routes.PlantMonitoringRoutes(r)
 	routes.InvestmentPackageRoutes(r)
 	r.Run(":8000")

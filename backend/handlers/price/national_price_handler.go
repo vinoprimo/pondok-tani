@@ -15,9 +15,28 @@ import (
 type createOrUpdateNationalPriceRequest struct {
 	GradeID       *uint   `json:"grade_id"`
 	Province      string  `json:"province" binding:"required"`
-	PricePerKg    float64 `json:"price_per_kg" binding:"required"`
+	PriceMinPerKg float64 `json:"price_min_per_kg"`
+	PriceMaxPerKg float64 `json:"price_max_per_kg"`
+	PricePerKg    float64 `json:"price_per_kg"`
 	EffectiveDate string  `json:"effective_date" binding:"required"`
 	HarvestType   string  `json:"harvest_type" binding:"required"`
+}
+
+func normalizePriceRange(req createOrUpdateNationalPriceRequest) (float64, float64, float64, bool) {
+	priceMin := req.PriceMinPerKg
+	priceMax := req.PriceMaxPerKg
+
+	if priceMin <= 0 && priceMax <= 0 && req.PricePerKg > 0 {
+		priceMin = req.PricePerKg
+		priceMax = req.PricePerKg
+	}
+
+	if priceMin <= 0 || priceMax <= 0 || priceMin > priceMax {
+		return 0, 0, 0, false
+	}
+
+	legacyPrice := (priceMin + priceMax) / 2
+	return priceMin, priceMax, legacyPrice, true
 }
 
 func normalizeHarvestType(value string) (string, bool) {
@@ -58,8 +77,9 @@ func CreateNationalPrice(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "harvest_type must be either basah or kering"})
 		return
 	}
-	if req.PricePerKg <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "price_per_kg must be greater than 0"})
+	priceMinPerKg, priceMaxPerKg, legacyPricePerKg, validPrice := normalizePriceRange(req)
+	if !validPrice {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "price_min_per_kg and price_max_per_kg must be greater than 0, and min cannot be greater than max"})
 		return
 	}
 
@@ -85,7 +105,9 @@ func CreateNationalPrice(c *gin.Context) {
 	item := pricemodels.NationalPrice{
 		GradeID:       gradeID,
 		Province:      province,
-		PricePerKg:    req.PricePerKg,
+		PriceMinPerKg: priceMinPerKg,
+		PriceMaxPerKg: priceMaxPerKg,
+		PricePerKg:    legacyPricePerKg,
 		EffectiveDate: effectiveDate,
 		HarvestType:   harvestType,
 	}
@@ -126,8 +148,9 @@ func UpdateNationalPrice(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "harvest_type must be either basah or kering"})
 		return
 	}
-	if req.PricePerKg <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "price_per_kg must be greater than 0"})
+	priceMinPerKg, priceMaxPerKg, legacyPricePerKg, validPrice := normalizePriceRange(req)
+	if !validPrice {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "price_min_per_kg and price_max_per_kg must be greater than 0, and min cannot be greater than max"})
 		return
 	}
 
@@ -152,7 +175,9 @@ func UpdateNationalPrice(c *gin.Context) {
 
 	item.GradeID = gradeID
 	item.Province = province
-	item.PricePerKg = req.PricePerKg
+	item.PriceMinPerKg = priceMinPerKg
+	item.PriceMaxPerKg = priceMaxPerKg
+	item.PricePerKg = legacyPricePerKg
 	item.EffectiveDate = effectiveDate
 	item.HarvestType = harvestType
 
