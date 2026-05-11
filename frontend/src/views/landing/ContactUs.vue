@@ -29,8 +29,8 @@ function sendConsultationEmail() {
       </div>
 
       <div class="grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-        <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-          <div class="space-y-6">
+        <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm flex flex-col">
+          <div class="space-y-6 flex flex-col justify-between min-h-[740px]">
             <div>
               <h2 class="text-2xl font-semibold text-slate-900 mb-2">Form Email Konsultasi</h2>
               <p class="text-sm text-slate-600">Masukkan data Anda dan pertanyaan investasi. Kami akan membalas melalui email.</p>
@@ -68,9 +68,9 @@ function sendConsultationEmail() {
                 Pesan
                 <textarea
                   v-model="message"
-                  rows="6"
+                  rows="12"
                   placeholder="Tuliskan pertanyaan, kebutuhan investasi, atau informasi yang ingin Anda dapatkan."
-                  class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100 resize-none"
+                  class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-100 resize-none min-h-[260px]"
                 ></textarea>
               </label>
             </div>
