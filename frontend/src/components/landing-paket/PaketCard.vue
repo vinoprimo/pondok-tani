@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircle2, Clock, TrendingUp, BarChart3 } from 'lucide-vue-next';
+import { CheckCircle, Clock, TrendingUp, BarChart3 } from 'lucide-vue-next';
 
 const props = defineProps<{
   name: string;
@@ -45,7 +45,7 @@ function handleChoose() {
     <div class="flex items-center justify-between mb-6" :class="{ 'mt-2': popular }">
       <h3 class="text-2xl font-bold" :class="selected ? 'text-white' : 'text-gray-900'">{{ name }}</h3>
       <div class="w-12 h-12 rounded-full flex items-center justify-center bg-green-100">
-        <CheckCircle2 class="w-6 h-6 text-green-600" />
+        <CheckCircle class="w-6 h-6 text-green-600" />
       </div>
     </div>
 
@@ -79,7 +79,7 @@ function handleChoose() {
             :key="benefit"
             class="flex items-start gap-3"
           >
-            <CheckCircle2
+            <CheckCircle
               class="mt-0.5 h-5 w-5 flex-shrink-0"
               :class="selected ? 'text-white' : 'text-green-600'"
             />

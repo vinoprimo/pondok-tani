@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ArrowLeft, CheckCircle2, MessageCircle } from 'lucide-vue-next';
+import { ArrowLeft, CheckCircle, MessageCircle } from 'lucide-vue-next';
 import LandingLayout from '../../layouts/LandingLayout.vue';
 import PaketCard from '../../components/landing-paket/PaketCard.vue';
 import { getInvestmentPackages } from '../../services/investment/package';
@@ -130,7 +130,7 @@ onMounted(() => {
       <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div class="max-w-2xl space-y-4">
           <span class="inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-green-700">
-            <CheckCircle2 class="h-3.5 w-3.5" />
+            <CheckCircle class="h-3.5 w-3.5" />
             Konfirmasi pesanan
           </span>
           <div class="space-y-3">
@@ -148,23 +148,35 @@ onMounted(() => {
 
       <p v-if="loadingPackages" class="mb-4 text-sm text-gray-500">Memuat detail paket...</p>
 
-      <div v-if="selectedPackages.length" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <PaketCard
+      <div
+        v-if="selectedPackages.length"
+        :class="[
+          'grid gap-6',
+          selectedPackages.length === 1
+            ? 'grid-cols-1 justify-items-center'
+            : 'grid-cols-1 lg:grid-cols-3'
+        ]"
+      >
+        <div
           v-for="item in selectedPackages"
           :key="item.id"
-          :name="item.name"
-          :range="item.range"
-          :description="''"
-          :roi="item.roi"
-          :duration="item.duration"
-          :benefits="item.benefits"
-          :min-quantity="item.min_quantity"
-          :highlight="false"
-          :popular="item.is_popular"
-          :selected="true"
-          :disabled="true"
-          button-label="Paket Dipilih"
-        />
+          class="w-full max-w-sm"
+        >
+          <PaketCard
+            :name="item.name"
+            :range="item.range"
+            :description="''"
+            :roi="item.roi"
+            :duration="item.duration"
+            :benefits="item.benefits"
+            :min-quantity="item.min_quantity"
+            :highlight="false"
+            :popular="item.is_popular"
+            :selected="true"
+            :disabled="true"
+            button-label="Paket Dipilih"
+          />
+        </div>
       </div>
 
       <div v-else class="rounded-3xl border border-dashed border-gray-300 bg-white p-8 text-center text-gray-600">
