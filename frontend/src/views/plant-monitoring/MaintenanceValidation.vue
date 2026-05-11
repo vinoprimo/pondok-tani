@@ -201,7 +201,6 @@ onMounted(() => {
         <table class="w-full">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">ID aktivitas</th>
               <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Pengguna</th>
               <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Batch</th>
               <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Jenis aktivitas</th>
@@ -214,7 +213,6 @@ onMounted(() => {
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr v-for="activity in submittedActivities" :key="activity.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4 font-medium text-gray-900">{{ activity.activity_code }}</td>
               <td class="px-6 py-4">
                 <div class="flex items-center gap-2">
                   <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
@@ -222,7 +220,6 @@ onMounted(() => {
                   </div>
                   <div>
                     <p class="font-medium text-gray-900">{{ activity.user_name }}</p>
-                    <p class="text-xs text-gray-500">{{ activity.user_id }}</p>
                   </div>
                 </div>
               </td>
@@ -263,7 +260,7 @@ onMounted(() => {
               </td>
             </tr>
             <tr v-if="!submittedActivities.length">
-              <td colspan="9" class="px-6 py-10 text-center text-sm text-gray-500">Belum ada aktivitas menunggu validasi.</td>
+              <td colspan="8" class="px-6 py-10 text-center text-sm text-gray-500">Belum ada aktivitas menunggu validasi.</td>
             </tr>
           </tbody>
         </table>
