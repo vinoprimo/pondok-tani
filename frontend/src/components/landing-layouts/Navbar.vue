@@ -114,17 +114,16 @@ watch(
       <button type="button" class="flex items-center gap-3" @click="router.push('/')">
         <img src="../../assets/logo-pondok-tani.png" alt="Pondok Tani Land" class="w-10 h-10 object-contain rounded-lg" />
         <div class="text-left">
-          <h1 class="font-bold text-green-700">Pondok Tani Land</h1>
+          <h1 class="font-bold text-green-600">Pondok Tani Land</h1>
         </div>
       </button>
-
       <nav class="hidden md:flex items-center gap-1">
         <button
           v-for="item in navItems"
           :key="item.path"
           type="button"
           class="px-4 py-2 rounded-lg font-medium transition-colors"
-          :class="isActive(item.path) ? 'bg-green-100 text-green-700' : 'text-gray-700 hover:bg-gray-100'"
+          :class="isActive(item.path) ? 'bg-green-100 text-green-600' : 'text-gray-700 hover:bg-gray-100'"
           @click="router.push(item.path)"
         >
           {{ item.label }}
@@ -153,7 +152,7 @@ watch(
         <template v-else>
           <button
             type="button"
-            class="px-4 py-2 text-green-700 hover:bg-green-50 rounded-lg transition-colors font-medium"
+            class="px-4 py-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors font-medium"
             @click="router.push('/login')"
           >
             Masuk
@@ -183,7 +182,7 @@ watch(
           <p class="text-xs uppercase tracking-wide text-gray-500 mb-2">Profil</p>
           <p class="text-sm font-semibold text-gray-900">{{ isLoadingProfile ? 'Memuat...' : profile.name }}</p>
           <p class="text-sm text-gray-600 mt-1">{{ isLoadingProfile ? '-' : profile.email }}</p>
-          <p class="mt-2 inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+          <p class="mt-2 inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">
             {{ isLoadingProfile ? 'loading' : profile.role }}
           </p>
           <button
@@ -205,7 +204,7 @@ watch(
         <button
           v-if="!isLoggedIn"
           type="button"
-          class="text-sm text-green-700 font-medium"
+          class="text-sm text-green-600 font-medium"
           @click="router.push({ path: '/login', query: { mode: 'register' } })"
         >
           Daftar
@@ -213,7 +212,7 @@ watch(
         <button
           v-else-if="canEnterDashboard"
           type="button"
-          class="text-sm text-green-700 font-medium"
+          class="text-sm text-green-600 font-medium"
           @click="router.push('/dashboard')"
         >
           Dashboard
@@ -221,7 +220,7 @@ watch(
         <button
           v-else
           type="button"
-          class="text-sm text-green-700 font-medium"
+          class="text-sm text-green-600 font-medium"
           @click="router.push('/pilih-paket')"
         >
           Pilih Paket
@@ -245,7 +244,7 @@ watch(
       <p class="text-xs uppercase tracking-wide text-gray-500 mb-2">Profil</p>
       <p class="text-sm font-semibold text-gray-900">{{ isLoadingProfile ? 'Memuat...' : profile.name }}</p>
       <p class="text-sm text-gray-600 mt-1">{{ isLoadingProfile ? '-' : profile.email }}</p>
-      <p class="mt-2 inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+      <p class="mt-2 inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600">
         {{ isLoadingProfile ? 'loading' : profile.role }}
       </p>
       <button

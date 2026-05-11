@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ArrowLeft, CheckCircle2, MessageCircle, Package } from 'lucide-vue-next';
+import { ArrowLeft, CheckCircle2, MessageCircle } from 'lucide-vue-next';
 import LandingLayout from '../../layouts/LandingLayout.vue';
+import PaketCard from '../../components/landing-paket/PaketCard.vue';
 import { getInvestmentPackages } from '../../services/investment/package';
 import { getCurrentUser } from '../../services/user/user';
 
@@ -10,8 +11,11 @@ type PaketItem = {
   id: number;
   name: string;
   range: string;
+  min_quantity: number;
   roi: string;
   duration: string;
+  benefits: string[];
+  is_popular: boolean;
 };
 
 const router = useRouter();
@@ -46,9 +50,14 @@ async function loadPackages() {
     paketItems.value = list.map((item: any) => ({
       id: item.id,
       name: item.package_name,
-      range: `${formatRupiah(item.price)} (min ${item.min_quantity} unit)`,
-      roi: 'Estimasi placeholder 15% - 25% / tahun',
-      duration: 'Placeholder 12 - 24 bulan',
+      range: formatRupiah(item.price),
+      min_quantity: item.min_quantity ?? 1,
+      roi: item.roi || 'Estimasi 15% - 25% / tahun',
+      duration: item.duration || '12 - 24 bulan',
+      benefits: Array.isArray(item.benefits)
+        ? item.benefits
+        : item.benefits?.split('\n').filter(Boolean) || [],
+      is_popular: item.is_popular ?? item.isPopular ?? false,
     }));
 
     const selectedIds = parseSelectedIds();
@@ -139,26 +148,23 @@ onMounted(() => {
 
       <p v-if="loadingPackages" class="mb-4 text-sm text-gray-500">Memuat detail paket...</p>
 
-      <div v-if="selectedPackages.length" class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <article
+      <div v-if="selectedPackages.length" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <PaketCard
           v-for="item in selectedPackages"
           :key="item.id"
-          class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-green-300 hover:bg-green-50"
-        >
-          <div class="mb-4 flex items-center justify-between gap-4">
-            <div>
-              <p class="text-sm font-semibold uppercase tracking-[0.2em] text-green-700">Paket dipilih</p>
-              <h2 class="mt-1 text-xl font-bold text-gray-900">{{ item.name }}</h2>
-            </div>
-            <Package class="h-6 w-6 text-green-600" />
-          </div>
-
-          <ul class="space-y-2 text-sm text-gray-700">
-            <li><span class="font-medium">Modal:</span> {{ item.range }}</li>
-            <li><span class="font-medium">Estimasi ROI:</span> {{ item.roi }}</li>
-            <li><span class="font-medium">Durasi:</span> {{ item.duration }}</li>
-          </ul>
-        </article>
+          :name="item.name"
+          :range="item.range"
+          :description="''"
+          :roi="item.roi"
+          :duration="item.duration"
+          :benefits="item.benefits"
+          :min-quantity="item.min_quantity"
+          :highlight="false"
+          :popular="item.is_popular"
+          :selected="true"
+          :disabled="true"
+          button-label="Paket Dipilih"
+        />
       </div>
 
       <div v-else class="rounded-3xl border border-dashed border-gray-300 bg-white p-8 text-center text-gray-600">
