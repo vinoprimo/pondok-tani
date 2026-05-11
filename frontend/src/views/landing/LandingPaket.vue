@@ -2,10 +2,11 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { 
-  CalendarDays, Clock, Wallet, CheckCircle, TrendingUp, DollarSign, 
+  CalendarDays, Clock, Wallet, TrendingUp, DollarSign, 
   Shield, BarChart3, Award, ChevronRight, FileText, Users 
 } from 'lucide-vue-next';
 import LandingLayout from '../../layouts/LandingLayout.vue';
+import PaketCard from '../../components/landing-paket/PaketCard.vue';
 import { getInvestmentPackages } from '../../services/investment/package';
 import { getCurrentUser } from '../../services/user/user';
 
@@ -60,7 +61,7 @@ async function loadPackages() {
       roi: item.roi || 'Estimasi 15% - 25%',
       duration: item.duration || '12 - 24 bulan',
       benefits: Array.isArray(item.benefits) ? item.benefits : [],
-      is_popular: item.is_popular ?? item.isPopular ?? false,
+      is_popular: Boolean(item.is_popular ?? item.isPopular ?? false),
     }));
   } catch (err) {
     console.error('Failed to load investment packages:', err);
@@ -119,6 +120,17 @@ const onProcessPackages = computed(() =>
 );
 
 const hasOnProcessInvestment = computed(() => onProcessPackages.value.length > 0);
+
+function isPackagePopular(item: any) {
+  return (
+    item?.is_popular === true ||
+    item?.isPopular === true ||
+    item?.is_popular === 'true' ||
+    item?.isPopular === 'true' ||
+    item?.is_popular === 1 ||
+    item?.isPopular === 1
+  );
+}
 
 onMounted(() => {
   loadPackages();
@@ -196,75 +208,22 @@ onMounted(() => {
         </div>
 
         <div v-else class="grid md:grid-cols-3 gap-8 mb-16 items-stretch">
-          <div 
-            v-for="item in paketItems" 
+          <PaketCard
+            v-for="item in paketItems"
             :key="item.id"
-            @click="selectPackage(item.id)"
-            :class="[
-              'rounded-2xl p-8 flex flex-col h-full transform transition-all duration-300 cursor-pointer',
-              selectedPackageId === item.id
-                ? 'bg-gradient-to-br from-green-600 to-green-600 text-white relative overflow-hidden md:scale-105 shadow-2xl z-10 border-4 border-green-400/50 hover:scale-[1.07] hover:shadow-2xl' 
-                : 'bg-white border-2 border-gray-200 hover:border-green-500 hover:shadow-xl hover:-translate-y-2'
-            ]"
-          >
-            <!-- Badge for popular -->
-            <div v-if="item.is_popular" class="absolute top-0 right-0 bg-yellow-400 text-gray-900 px-4 py-1.5 text-sm font-bold rounded-bl-lg shadow-sm">
-              PALING POPULER
-            </div>
-
-            <div class="flex items-center justify-between mb-6" :class="{ 'mt-2': item.is_popular }">
-              <h3 class="text-2xl font-bold" :class="selectedPackageId === item.id ? 'text-white' : 'text-gray-900'">{{ item.name }}</h3>
-              <div class="w-12 h-12 rounded-full flex items-center justify-center bg-green-100">
-                <CheckCircle class="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-
-            <div class="mb-6">
-              <div class="text-sm mb-2" :class="selectedPackageId === item.id ? 'text-white' : 'text-gray-600'">Mulai dari</div>
-              <div class="text-4xl font-bold mb-1" :class="selectedPackageId === item.id ? 'text-white' : 'text-gray-900'">{{ item.range }}</div>
-              <div class="text-sm" :class="selectedPackageId === item.id ? 'text-white' : 'text-gray-600'">per {{ item.min_quantity }} unit</div>
-            </div>
-
-            <div :class="[
-              'p-4 rounded-lg mb-6 space-y-3',
-              selectedPackageId === item.id ? 'bg-white/10 backdrop-blur-sm border border-white/20' : 'bg-green-50'
-            ]">
-              <div class="flex items-center gap-2" :class="selectedPackageId === item.id ? 'text-white' : 'text-green-600'">
-                <Clock class="w-5 h-5" :class="selectedPackageId === item.id ? 'text-white' : 'text-green-600'" />
-                <span class="font-semibold">Durasi: {{ item.duration }}</span>
-              </div>
-              <div class="flex items-center gap-2" :class="selectedPackageId === item.id ? 'text-white' : 'text-green-600'">
-                <TrendingUp class="w-5 h-5" :class="selectedPackageId === item.id ? 'text-white' : 'text-green-600'" />
-                <span class="font-semibold">Estimasi ROI: {{ item.roi }}</span>
-              </div>
-              <div class="flex items-center gap-2" :class="selectedPackageId === item.id ? 'text-white' : 'text-green-600'">
-                <BarChart3 class="w-5 h-5" :class="selectedPackageId === item.id ? 'text-white' : 'text-green-600'" />
-                <span class="font-semibold">Min. Investasi: {{ item.min_quantity }} unit</span>
-              </div>
-            </div>
-
-            <div class="border-t pt-6 mb-6 flex-grow" :class="selectedPackageId === item.id ? 'border-white/20' : 'border-gray-200'">
-              <h4 class="font-bold mb-4" :class="selectedPackageId === item.id ? 'text-white' : 'text-gray-900'">Benefit yang Didapatkan:</h4>
-              <ul class="space-y-3">
-                <li v-for="(benefit, i) in item.benefits" :key="i" class="flex items-start gap-3">
-                  <CheckCircle class="w-5 h-5 flex-shrink-0 mt-0.5" :class="selectedPackageId === item.id ? 'text-white' : 'text-green-600'" />
-                  <span :class="selectedPackageId === item.id ? 'text-white' : 'text-gray-700'">{{ benefit }}</span>
-                </li>
-              </ul>
-            </div>
-
-            <button 
-              @click.stop="choosePackage(item.id)"
-              :class="[
-                'w-full py-3.5 rounded-lg font-bold transition-colors mt-auto',
-                selectedPackageId === item.id
-                  ? 'bg-white text-green-600 hover:bg-green-50 shadow-lg' 
-                  : 'bg-green-600 text-white hover:bg-green-700'
-              ]"
-            >
-              Pilih Paket Ini
-            </button>
-          </div>
+            :name="item.name"
+            :range="item.range"
+            :description="item.description"
+            :roi="item.roi"
+            :duration="item.duration"
+            :benefits="item.benefits"
+            :min-quantity="item.min_quantity"
+            :highlight="item.is_popular"
+            :popular="item.is_popular"
+            :selected="selectedPackageId === item.id"
+            button-label="Pilih Paket Ini"
+            @choose="choosePackage(item.id)"
+          />
         </div>
       </div>
     </section>
@@ -319,7 +278,7 @@ onMounted(() => {
           </div>
           <div class="bg-white p-8 rounded-xl shadow-sm text-center border border-slate-100 hover:-translate-y-1 transition-transform">
             <div class="w-16 h-16 bg-green-600/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <BarChart3 class="w-8 h-8 text-white" />
+              <BarChart3 class="w-8 h-8 text-green-600" />
             </div>
             <div class="w-10 h-10 bg-green-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 font-bold text-lg shadow-md">
               4

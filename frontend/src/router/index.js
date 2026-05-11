@@ -34,6 +34,11 @@ const routes = [
     component: () => import("../views/landing/LandingKemitraan.vue"),
   },
   {
+    path: "/kontak-kami",
+    name: "landing-contact",
+    component: () => import("../views/landing/ContactUs.vue"),
+  },
+  {
     path: "/login",
     name: "login",
     component: () => import("../views/auth/Login.vue"),

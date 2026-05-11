@@ -80,7 +80,7 @@ async function loadPackages() {
         : item.benefits?.split('\n').filter(Boolean) || [],
       min_quantity: item.min_quantity ?? 1,
       highlight: index === 0,
-      is_popular: item.is_popular ?? item.isPopular ?? false,
+      is_popular: Boolean(item.is_popular ?? item.isPopular ?? false),
     }));
 
     const fromPackageIds = String(route.query.package_ids || '')

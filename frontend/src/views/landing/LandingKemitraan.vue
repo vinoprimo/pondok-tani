@@ -26,14 +26,6 @@ const router = useRouter();
             Bergabunglah dengan program kemitraan Pondok Tani Land dan dapatkan dukungan penuh dari
             pelatihan, pendampingan teknis, akses pasar, hingga jaminan pembelian hasil panen.
           </p>
-          <button 
-            type="button"
-            @click="router.push('/login?mode=register')"
-            class="bg-white text-green-600 px-8 py-3 rounded-lg font-bold text-lg hover:bg-green-50 transition-colors flex items-center gap-2 shadow-lg hover:-translate-y-0.5"
-          >
-            Daftar Jadi Mitra
-            <ChevronRight class="w-5 h-5" />
-          </button>
         </div>
       </div>
     </section>

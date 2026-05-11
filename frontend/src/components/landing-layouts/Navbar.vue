@@ -30,6 +30,7 @@ const navItems = [
   { label: 'Beranda', path: '/' },
   { label: 'Paket Investasi', path: '/paket-investasi' },
   { label: 'Kemitraan', path: '/kemitraan' },
+  { label: 'Kontak Kami', path: '/kontak-kami' },
 ];
 
 const isActive = (path: string) => {
@@ -40,6 +41,7 @@ const isActive = (path: string) => {
 const mobileTitle = computed(() => {
   if (route.path === '/paket-investasi') return 'Paket Investasi';
   if (route.path === '/kemitraan') return 'Kemitraan';
+  if (route.path === '/kontak-kami') return 'Kontak Kami';
   return 'Beranda';
 });
 
