@@ -29,7 +29,7 @@ const emit = defineEmits<{
   setActiveView: [view: string];
   logout: [];
 }>();
-
+// Menu untuk investor
 const investorMenuItems = [
   { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
   { id: 'portfolio', label: 'Portofolio Saya', icon: TrendingUp },
@@ -40,7 +40,7 @@ const investorMenuItems = [
   { id: 'reports', label: 'Laporan', icon: FileText },
   { id: 'notifications', label: 'Notifikasi', icon: Bell },
 ];
-
+// Admin memiliki akses ke semua menu investor plus menu tambahan untuk manajemen
 const adminMenuItems = [
   { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
   { id: 'investors', label: 'Investor', icon: Users },
