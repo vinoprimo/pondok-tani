@@ -242,6 +242,7 @@ func main() {
 	allowedOrigins := []string{
 		"http://localhost:5173",
 		"https://spontaneous-smakager-5deed2.netlify.app",
+		"https://pondok-tani.gahzyokta.workers.dev/",
 	}
 
 	r.Use(cors.New(cors.Config{
