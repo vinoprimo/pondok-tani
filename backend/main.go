@@ -239,8 +239,13 @@ func main() {
 
 	r := gin.Default()
 
+	allowedOrigins := []string{
+		"http://localhost:5173",
+		"https://spontaneous-smakager-5deed2.netlify.app",
+	}
+
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
