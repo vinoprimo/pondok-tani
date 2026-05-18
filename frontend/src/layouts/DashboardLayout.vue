@@ -16,8 +16,10 @@ const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
   investor: [
     "dashboard",
     "portfolio",
-    "plants",
-    "maintenance",
+    "plants-input",
+    "plants-history",
+    "maintenance-schedule",
+    "maintenance-history",
     "reminder-settings",
     "financials",
     "reports",
@@ -26,8 +28,10 @@ const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
   mitra: [
     "dashboard",
     "portfolio",
-    "plants",
-    "maintenance",
+    "plants-input",
+    "plants-history",
+    "maintenance-schedule",
+    "maintenance-history",
     "reminder-settings",
     "financials",
     "reports",
@@ -50,19 +54,20 @@ const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
 const activeView = computed(() => {
   if (route.path === "/dashboard") return "dashboard";
   if (route.path.startsWith("/dashboard/monitoring-schedule")) return "monitoring-schedule";
+  if (route.path.startsWith("/dashboard/plants/history")) return "plants-history";
+  if (route.path.startsWith("/dashboard/plants")) return "plants-input";
+  if (route.path.startsWith("/dashboard/maintenance-validation")) return "maintenance-validation";
+  if (route.path.startsWith("/dashboard/maintenance/history")) return "maintenance-history";
+  if (route.path.startsWith("/dashboard/maintenance")) return "maintenance-schedule";
 
   const matchMap: Record<string, string> = {
     "/dashboard/portfolio": "portfolio",
-    "/dashboard/plants": "plants",
     "/dashboard/vanili-management": "vanili-management",
-    "/dashboard/maintenance": "maintenance",
     "/dashboard/reminder-settings": "reminder-settings",
     "/dashboard/financials": "financials",
     "/dashboard/reports": "reports",
     "/dashboard/notifications": "notifications",
     "/dashboard/investors": "investors",
-    "/dashboard/maintenance-validation": "maintenance-validation",
-    "/dashboard/monitoring-schedule": "monitoring-schedule",
     "/dashboard/harvest-sales": "harvest-sales",
     "/dashboard/warehouse": "warehouse",
   };
@@ -82,9 +87,12 @@ function handleSetActiveView(view: string) {
   const routeMap: Record<string, string> = {
     dashboard: "/dashboard",
     portfolio: "/dashboard/portfolio",
-    plants: "/dashboard/plants",
+    "plants-input": "/dashboard/plants/input",
+    "plants-history": "/dashboard/plants/history",
     "vanili-management": "/dashboard/vanili-management",
-    maintenance: "/dashboard/maintenance",
+    maintenance: "/dashboard/maintenance/schedule",
+    "maintenance-schedule": "/dashboard/maintenance/schedule",
+    "maintenance-history": "/dashboard/maintenance/history",
     "reminder-settings": "/dashboard/reminder-settings",
     financials: "/dashboard/financials",
     reports: "/dashboard/reports",

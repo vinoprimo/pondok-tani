@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
+import { useRoute } from "vue-router";
 import {
   AlertCircle,
   Calendar,
@@ -51,6 +52,12 @@ const showSubmitForm = ref(false);
 const selectedFile = ref<string | null>(null);
 const selectedPhotoFile = ref<File | null>(null);
 const selectedSchedule = ref<ScheduleItem | null>(null);
+
+const route = useRoute();
+const activeSection = computed(() => {
+  if (route.name === "dashboard-maintenance-history") return "history";
+  return "schedule";
+});
 
 const formData = reactive({
   activityDate: "",
@@ -217,12 +224,18 @@ onMounted(() => {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-2xl font-semibold text-gray-900">Aktivitas Perawatan</h2>
-        <p class="text-gray-600 mt-1">Pantau dan kirimkan laporan aktivitas perawatan perkebunan Anda</p>
+        <h2 class="text-2xl font-semibold text-gray-900">
+          {{ activeSection === "schedule" ? "Jadwal Perawatan" : "Riwayat Aktivitas" }}
+        </h2>
+        <p class="text-gray-600 mt-1">
+          {{ activeSection === "schedule"
+            ? "Lihat jadwal perawatan Anda dan kirim laporan aktivitas."
+            : "Riwayat aktivitas perawatan yang telah dikirim dan diverifikasi." }}
+        </p>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div v-if="activeSection === 'schedule'" class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-2">
           <p class="text-sm text-gray-600">Tugas Mendatang</p>
@@ -260,7 +273,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div v-if="activeSection === 'schedule'" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div class="px-6 py-4 border-b border-gray-200">
         <h3 class="text-lg font-semibold text-gray-900">Jadwal perawatan</h3>
         <p class="text-sm text-gray-600 mt-1">Tugas mendatang dan aktivitas terkini Anda</p>
@@ -274,7 +287,6 @@ onMounted(() => {
               <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Batch</th>
               <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Jatuh tempo</th>
               <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Status</th>
-              <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Sisa hari</th>
               <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Remark</th>
               <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Aksi</th>
             </tr>
@@ -292,11 +304,6 @@ onMounted(() => {
               <td class="px-6 py-4 text-center">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="scheduleStatusClass(item.status)">
                   {{ scheduleStatusLabel(item.status) }}
-                </span>
-              </td>
-              <td class="px-6 py-4 text-center">
-                <span class="font-semibold" :class="computeDaysLeft(item.next_due_date) < 0 ? 'text-red-600' : computeDaysLeft(item.next_due_date) <= 2 ? 'text-orange-600' : 'text-gray-900'">
-                  {{ computeDaysLeft(item.next_due_date) < 0 ? `Terlambat ${Math.abs(computeDaysLeft(item.next_due_date))} hari` : `${computeDaysLeft(item.next_due_date)} hari` }}
                 </span>
               </td>
               <td class="px-6 py-4 text-sm text-gray-700">{{ item.remark || '-' }}</td>
@@ -321,7 +328,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 p-6">
+    <div v-if="activeSection === 'history'" class="bg-white rounded-xl border border-gray-200 p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Riwayat aktivitas</h3>
       <div class="space-y-4">
         <div v-for="(activity, index) in activityHistory" :key="activity.id" class="flex gap-4">

@@ -27,6 +27,10 @@ type InvestmentPackageItem = {
   min_quantity: number;
   price: number;
   status: string;
+  roi?: string;
+  duration?: string;
+  benefits?: string[];
+  is_popular?: boolean;
 };
 
 const userRole = ref<UserRole>(
@@ -48,6 +52,10 @@ const packageForm = reactive({
   min_quantity: 1,
   price: 0,
   status: "active",
+  roi: "",
+  duration: "",
+  benefits: "",
+  is_popular: false,
 });
 
 const isAdmin = computed(() => userRole.value === "admin");
@@ -65,6 +73,10 @@ function resetPackageForm() {
   packageForm.min_quantity = 1;
   packageForm.price = 0;
   packageForm.status = "active";
+  packageForm.roi = "";
+  packageForm.duration = "";
+  packageForm.benefits = "";
+  packageForm.is_popular = false;
   editingPackageId.value = null;
 }
 
@@ -91,6 +103,10 @@ function startEditPackage(item: InvestmentPackageItem) {
   packageForm.min_quantity = item.min_quantity;
   packageForm.price = item.price;
   packageForm.status = item.status || "active";
+  packageForm.roi = item.roi || "";
+  packageForm.duration = item.duration || "";
+  packageForm.benefits = Array.isArray(item.benefits) ? item.benefits.join("\n") : "";
+  packageForm.is_popular = item.is_popular || false;
 }
 
 async function submitPackageForm() {
@@ -116,6 +132,10 @@ async function submitPackageForm() {
     min_quantity: Number(packageForm.min_quantity),
     price: Number(packageForm.price),
     status: packageForm.status,
+    roi: packageForm.roi.trim(),
+    duration: packageForm.duration.trim(),
+    benefits: packageForm.benefits.split("\n").map(b => b.trim()).filter(b => b !== ""),
+    is_popular: packageForm.is_popular,
   };
 
   packageSaving.value = true;
@@ -476,6 +496,36 @@ function closeModal() {
             </select>
           </div>
 
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Estimasi ROI</label>
+            <input
+              v-model="packageForm.roi"
+              type="text"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Contoh: 30-40%"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Durasi</label>
+            <input
+              v-model="packageForm.duration"
+              type="text"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Contoh: 24-36 bulan"
+            />
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Benefit (Pisahkan dengan baris baru)</label>
+            <textarea
+              v-model="packageForm.benefits"
+              rows="4"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Cocok untuk pemula&#10;Laporan bulanan terperinci"
+            />
+          </div>
+
           <div class="md:col-span-2">
             <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
             <textarea
@@ -484,6 +534,18 @@ function closeModal() {
               class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="Deskripsi singkat paket investasi"
             />
+          </div>
+
+          <div class="md:col-span-2 flex items-center mb-4">
+            <input
+              v-model="packageForm.is_popular"
+              type="checkbox"
+              id="is_popular"
+              class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+            />
+            <label for="is_popular" class="ml-2 block text-sm text-gray-900">
+              Tandai sebagai Paket Paling Populer
+            </label>
           </div>
 
           <div class="md:col-span-2 flex items-center gap-3">
