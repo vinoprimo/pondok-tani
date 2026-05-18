@@ -14,7 +14,10 @@ type PaketItem = {
   description: string;
   roi: string;
   duration: string;
+  benefits: string[];
+  min_quantity: number;
   highlight?: boolean;
+  is_popular?: boolean;
 };
 
 const router = useRouter();
@@ -68,11 +71,16 @@ async function loadPackages() {
     paketItems.value = list.map((item: any, index: number) => ({
       id: item.id,
       name: item.package_name,
-      range: `${formatRupiah(item.price)} (min ${item.min_quantity} unit)`,
+      range: formatRupiah(item.price),
       description: item.description || 'Deskripsi paket belum tersedia.',
-      roi: 'Estimasi placeholder 15% - 25% / tahun',
-      duration: 'Placeholder 12 - 24 bulan',
+      roi: item.roi || 'Estimasi 15% - 25% / tahun',
+      duration: item.duration || '12 - 24 bulan',
+      benefits: Array.isArray(item.benefits)
+        ? item.benefits
+        : item.benefits?.split('\n').filter(Boolean) || [],
+      min_quantity: item.min_quantity ?? 1,
       highlight: index === 0,
+      is_popular: Boolean(item.is_popular ?? item.isPopular ?? false),
     }));
 
     const fromPackageIds = String(route.query.package_ids || '')
@@ -251,8 +259,11 @@ onMounted(() => {
           :description="item.description"
           :roi="item.roi"
           :duration="item.duration"
+          :benefits="item.benefits"
+          :min-quantity="item.min_quantity"
           info-mode="modal-description"
           :highlight="item.highlight"
+          :popular="item.is_popular"
           :selected="selectedPackageIds.includes(item.id)"
           button-label="Pilih / Batalkan"
           @choose="choosePackage(item)"

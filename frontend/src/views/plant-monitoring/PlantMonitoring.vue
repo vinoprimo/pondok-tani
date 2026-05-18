@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { Camera, Loader2, NotebookText, PlusCircle, Sprout } from 'lucide-vue-next'
 import { createPlantMonitoring, listPlantMonitorings } from '../../services/plant-monitoring/monitoring'
 
@@ -73,6 +74,12 @@ const selectedBatchMonitorings = computed(() => {
 })
 
 const latestMonitoring = computed(() => selectedBatchMonitorings.value[0] ?? null)
+
+const route = useRoute()
+const activeSection = computed(() => {
+  if (route.name === 'dashboard-plants-history') return 'history'
+  return 'input'
+})
 
 function formatDate(value: string) {
   const date = new Date(value)
@@ -219,8 +226,14 @@ onMounted(() => {
 <template>
   <div class="space-y-6">
     <div>
-      <h2 class="text-2xl font-semibold text-gray-900">Monitoring tanaman</h2>
-      <p class="mt-1 text-gray-600">Monitoring per batch tanaman dan paket investasi</p>
+      <h2 class="text-2xl font-semibold text-gray-900">
+        {{ activeSection === 'input' ? 'Input Monitoring' : 'Riwayat Monitoring' }}
+      </h2>
+      <p class="mt-1 text-gray-600">
+        {{ activeSection === 'input'
+          ? 'Isi data monitoring tanaman untuk batch yang dipilih.'
+          : 'Lihat riwayat monitoring yang telah tercatat setiap batch.' }}
+      </p>
     </div>
 
     <div v-if="errorMessage" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -256,8 +269,11 @@ onMounted(() => {
       </div>
     </div>
 
-    <div v-if="selectedBatch" class="grid grid-cols-1 gap-6 xl:grid-cols-5">
-      <section class="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-2">
+    <div v-if="selectedBatch" class="grid grid-cols-1 gap-6">
+      <section
+        v-if="activeSection === 'input'"
+        class="rounded-xl border border-gray-200 bg-white p-5"
+      >
         <div class="mb-4 flex items-center gap-2">
           <PlusCircle class="h-4 w-4 text-green-600" />
           <h3 class="text-lg font-semibold text-gray-900">Input monitoring</h3>
@@ -363,7 +379,10 @@ onMounted(() => {
         </div>
       </section>
 
-      <section class="rounded-xl border border-gray-200 bg-white p-5 xl:col-span-3">
+      <section
+        v-if="activeSection === 'history'"
+        class="rounded-xl border border-gray-200 bg-white p-5"
+      >
         <div class="mb-4 flex items-center justify-between gap-4">
           <div>
             <h3 class="text-lg font-semibold text-gray-900">Riwayat monitoring</h3>

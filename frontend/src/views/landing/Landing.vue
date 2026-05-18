@@ -155,7 +155,7 @@ const router = useRouter();
     <section class="bg-white py-24 border-b border-slate-100">
       <div class="max-w-7xl mx-auto px-6">
         <div class="text-center max-w-4xl mx-auto mb-16">
-          <h3 class="text-4xl font-bold text-green-800 mb-6">Wilayah Cakupan Pondok Tani</h3>
+          <h3 class="text-4xl font-bold text-green-600 mb-6">Wilayah Cakupan Pondok Tani</h3>
           <p class="text-lg text-slate-600 leading-relaxed">
             Dengan pendekatan inovatif dan komitmen Pondok Tani terhadap pertanian berkelanjutan, Pondok Tani siap memimpin menuju masa depan yang lebih cerah bagi petani di seluruh Indonesia.
           </p>
@@ -219,47 +219,47 @@ const router = useRouter();
             <div class="flex flex-col gap-3">
               <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                 <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Jawa Barat</span>
-                <span class="text-2xl font-bold text-green-700">208 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+                <span class="text-2xl font-bold text-green-600">208 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
               </div>
               <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                 <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Kalimantan Timur</span>
-                <span class="text-2xl font-bold text-green-700">100 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+                <span class="text-2xl font-bold text-green-600">100 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
               </div>
               <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                 <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Kepulauan Riau</span>
-                <span class="text-2xl font-bold text-green-700">50 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+                <span class="text-2xl font-bold text-green-600">50 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
               </div>
               <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                 <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Banten</span>
-                <span class="text-2xl font-bold text-green-700">35 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+                <span class="text-2xl font-bold text-green-600">35 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
               </div>
               <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                 <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Jawa Tengah</span>
-                <span class="text-2xl font-bold text-green-700">33 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+                <span class="text-2xl font-bold text-green-600">33 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
               </div>  
               <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                 <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Sorong</span>
-                <span class="text-2xl font-bold text-green-700">25 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+                <span class="text-2xl font-bold text-green-600">25 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
               </div>
               <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                 <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Sumatra Selatan</span>
-                <span class="text-2xl font-bold text-green-700">20 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+                <span class="text-2xl font-bold text-green-600">20 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
               </div>
               <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                 <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Riau</span>
-                <span class="text-2xl font-bold text-green-700">11 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+                <span class="text-2xl font-bold text-green-600">11 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
               </div>
               <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                 <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Kalimantan Barat</span>
-                <span class="text-2xl font-bold text-green-700">10 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+                <span class="text-2xl font-bold text-green-600">10 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
               </div>
               <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                 <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Sulawesi Utara</span>
-                <span class="text-2xl font-bold text-green-700">3 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+                <span class="text-2xl font-bold text-green-600">3 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-slate-600 font-semibold text-lg uppercase tracking-wider">Jogja</span>
-                <span class="text-2xl font-bold text-green-700">0.5 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
+                <span class="text-2xl font-bold text-green-600">0.5 <span class="text-sm text-slate-400 font-medium lowercase">ha</span></span>
               </div>              
             </div>
           </div>
@@ -361,7 +361,7 @@ const router = useRouter();
           <div>
             <h3 class="mt-4 text-4xl font-bold text-slate-900">Berita Vanili Terbaru</h3>
           </div>
-          <a class="rounded-xl border border-green-200 px-5 py-3 font-semibold text-green-700 hover:bg-green-50" href="https://news.google.com/search?q=vanili&hl=id&gl=ID&ceid=ID:id" target="_blank" rel="noopener noreferrer">Lihat Semua Berita</a>
+          <a class="rounded-xl border border-green-200 px-5 py-3 font-semibold text-green-600 hover:bg-green-50" href="https://news.google.com/search?q=vanili&hl=id&gl=ID&ceid=ID:id" target="_blank" rel="noopener noreferrer">Lihat Semua Berita</a>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <a class="rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition" href="https://news.google.com/search?q=vanili+indonesia+terbaru&hl=id&gl=ID&ceid=ID:id" target="_blank" rel="noopener noreferrer">
@@ -393,27 +393,32 @@ const router = useRouter();
     </section>
 
     <!-- CTA Section -->
-    <section class="bg-gradient-to-r from-green-700 to-green-800 py-20">
-      <div class="max-w-4xl mx-auto px-6 text-center">
-        <h3 class="text-4xl font-bold text-white mb-6">Siap Memulai Investasi Vanili?</h3>
-        <p class="text-xl text-green-50 mb-8">
-          Bergabunglah dengan ribuan investor sukses dan raih keuntungan hingga 30% per tahun
+    <section class="bg-green-600 py-24 relative overflow-hidden">
+      <!-- Decorative background elements -->
+      <div class="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+      <div class="absolute -top-32 -right-32 w-96 h-96 bg-green-500 rounded-full mix-blend-overlay filter blur-[100px] opacity-40"></div>
+      <div class="absolute -bottom-32 -left-32 w-96 h-96 bg-green-300 rounded-full mix-blend-overlay filter blur-[100px] opacity-20"></div>
+
+      <div class="max-w-4xl mx-auto px-6 text-center relative z-10">
+        <h3 class="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight drop-shadow-sm">Siap Memulai Perjalanan<br/>Bersama Pondok Tani Land?</h3>
+        <p class="text-xl text-green-100 mb-12 leading-relaxed max-w-2xl mx-auto font-medium">
+          Bergabunglah dengan ekosistem pertanian modern kami. Pantau lahan Anda dengan transparan dan raih hasil maksimal secara berkelanjutan.
         </p>
-        <div class="flex gap-4 justify-center">
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <button
             type="button"
-            class="px-8 py-4 bg-white text-green-700 rounded-xl hover:bg-green-50 transition-colors font-semibold text-lg flex items-center gap-2"
+            class="px-8 py-4 bg-white text-green-600 rounded-xl hover:bg-green-50 transition-all font-bold text-lg shadow-xl shadow-green-600/20 hover:shadow-green-600/40 hover:-translate-y-1 flex items-center justify-center gap-2"
             @click="router.push({ path: '/login', query: { mode: 'register' } })"
           >
-            Mulai Sekarang
+            Daftar Sekarang
             <ArrowRight class="w-5 h-5" />
           </button>
           <button
             type="button"
-            class="px-8 py-4 border-2 border-white text-white rounded-xl hover:bg-white/10 transition-colors font-semibold text-lg"
+            class="px-8 py-4 border-2 border-green-400/50 text-white rounded-xl hover:bg-white/10 hover:border-white transition-all font-semibold text-lg flex items-center justify-center gap-2"
             @click="router.push('/login')"
           >
-            Masuk sebagai admin
+            Masuk ke Akun
           </button>
         </div>
       </div>

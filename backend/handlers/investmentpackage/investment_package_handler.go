@@ -11,11 +11,15 @@ import (
 )
 
 type createOrUpdateInvestmentPackageRequest struct {
-	PackageName string  `json:"package_name" binding:"required"`
-	Description *string `json:"description"`
-	MinQuantity uint    `json:"min_quantity" binding:"required"`
-	Price       float64 `json:"price" binding:"required"`
-	Status      string  `json:"status"`
+	PackageName string   `json:"package_name" binding:"required"`
+	Description *string  `json:"description"`
+	MinQuantity uint     `json:"min_quantity" binding:"required"`
+	Price       float64  `json:"price" binding:"required"`
+	Status      string   `json:"status"`
+	Roi         string   `json:"roi"`
+	Duration    string   `json:"duration"`
+	Benefits    []string `json:"benefits"`
+	IsPopular   bool     `json:"is_popular"`
 }
 
 func normalizePackageStatus(status string) string {
@@ -45,7 +49,7 @@ func ensureAdmin(c *gin.Context) bool {
 func ListInvestmentPackages(c *gin.Context) {
 	var items []coremodels.InvestmentPackage
 
-	query := config.DB.Order("id DESC")
+	query := config.DB.Order("id ASC")
 	if status := strings.ToLower(strings.TrimSpace(c.Query("status"))); status != "" {
 		query = query.Where("status = ?", status)
 	}
@@ -93,6 +97,10 @@ func CreateInvestmentPackage(c *gin.Context) {
 		MinQuantity: req.MinQuantity,
 		Price:       req.Price,
 		Status:      normalizePackageStatus(req.Status),
+		Roi:         req.Roi,
+		Duration:    req.Duration,
+		Benefits:    req.Benefits,
+		IsPopular:   req.IsPopular,
 	}
 
 	if err := config.DB.Create(&item).Error; err != nil {
@@ -133,6 +141,10 @@ func UpdateInvestmentPackage(c *gin.Context) {
 	item.MinQuantity = req.MinQuantity
 	item.Price = req.Price
 	item.Status = normalizePackageStatus(req.Status)
+	item.Roi = req.Roi
+	item.Duration = req.Duration
+	item.Benefits = req.Benefits
+	item.IsPopular = req.IsPopular
 
 	if err := config.DB.Save(&item).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update investment package"})

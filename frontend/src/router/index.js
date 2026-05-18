@@ -34,6 +34,11 @@ const routes = [
     component: () => import("../views/landing/LandingKemitraan.vue"),
   },
   {
+    path: "/kontak-kami",
+    name: "landing-contact",
+    component: () => import("../views/landing/ContactUs.vue"),
+  },
+  {
     path: "/login",
     name: "login",
     component: () => import("../views/auth/Login.vue"),
@@ -74,6 +79,18 @@ const routes = [
         meta: { roles: ["investor", "mitra"] },
       },
       {
+        path: "plants/input",
+        name: "dashboard-plants-input",
+        component: () => import("../views/plant-monitoring/PlantMonitoring.vue"),
+        meta: { roles: ["investor", "mitra"] },
+      },
+      {
+        path: "plants/history",
+        name: "dashboard-plants-history",
+        component: () => import("../views/plant-monitoring/PlantMonitoring.vue"),
+        meta: { roles: ["investor", "mitra"] },
+      },
+      {
         path: "vanili-management",
         name: "dashboard-vanili-management",
         component: () => import("../views/admin/VaniliManagement.vue"),
@@ -82,6 +99,18 @@ const routes = [
       {
         path: "maintenance",
         name: "dashboard-maintenance",
+        component: () => import("../views/plant-monitoring/MaintenanceActivities.vue"),
+        meta: { roles: ["investor", "mitra"] },
+      },
+      {
+        path: "maintenance/schedule",
+        name: "dashboard-maintenance-schedule",
+        component: () => import("../views/plant-monitoring/MaintenanceActivities.vue"),
+        meta: { roles: ["investor", "mitra"] },
+      },
+      {
+        path: "maintenance/history",
+        name: "dashboard-maintenance-history",
         component: () => import("../views/plant-monitoring/MaintenanceActivities.vue"),
         meta: { roles: ["investor", "mitra"] },
       },
