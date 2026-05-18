@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { Bell, CheckCircle2, AlertCircle, Info, TrendingUp, X } from 'lucide-vue-next';
+import { fetchSystemNotifications, subscribeSystemNotifications } from '../../services/firebase/systemNotification';
 
 const filter = ref('all');
 
-const notifications = [
+const notifications = ref([
   {
     id: 1,
     type: 'success',
@@ -77,7 +78,7 @@ const notifications = [
     read: true,
     category: 'alert',
   },
-];
+]);
 
 const filterItems = [
   { id: 'all', label: 'Semua' },
@@ -123,12 +124,55 @@ const preferenceRows = [
 ];
 
 const filteredNotifications = computed(() => {
-  if (filter.value === 'all') return notifications;
-  if (filter.value === 'unread') return notifications.filter((n) => !n.read);
-  return notifications.filter((n) => n.category === filter.value);
+  if (filter.value === 'all') return notifications.value;
+  if (filter.value === 'unread') return notifications.value.filter((n) => !n.read);
+  return notifications.value.filter((n) => n.category === filter.value);
 });
 
-const unreadCount = computed(() => notifications.filter((n) => !n.read).length);
+const unreadCount = computed(() => notifications.value.filter((n) => !n.read).length);
+
+let unsubscribeNotifications = null;
+
+function normalizeNotification(doc) {
+  const createdAt = doc.createdAt && typeof doc.createdAt.toDate === 'function'
+    ? doc.createdAt.toDate().toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+    : doc.time || 'Baru saja';
+
+  return {
+    ...doc,
+    time: createdAt,
+  };
+}
+
+async function loadNotifications() {
+  const userId = localStorage.getItem('userId');
+  if (!userId) return;
+
+  try {
+    const items = await fetchSystemNotifications(userId);
+    notifications.value = items.map(normalizeNotification);
+  } catch (error) {
+    console.error('Failed to load system notifications:', error);
+  }
+}
+
+function startNotificationListener() {
+  const userId = localStorage.getItem('userId');
+  if (!userId) return;
+
+  unsubscribeNotifications = subscribeSystemNotifications(userId, (items) => {
+    notifications.value = items.map(normalizeNotification);
+  });
+}
+
+onMounted(() => {
+  loadNotifications();
+  startNotificationListener();
+});
+
+onUnmounted(() => {
+  if (unsubscribeNotifications) unsubscribeNotifications();
+});
 
 function getIconBg(type: string) {
   switch (type) {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
 import { Bell, Mail, Smartphone, Clock, CheckCircle } from 'lucide-vue-next';
+import { sendEmailNotification } from '../../services/firebase/emailNotification';
 
 type ReminderTiming = '3days' | '1day' | 'sameday';
 
@@ -14,9 +15,29 @@ const saved = ref(false);
 
 let savedTimer: ReturnType<typeof setTimeout> | undefined;
 
-function handleSave() {
+async function handleSave() {
   saved.value = true;
   if (savedTimer) clearTimeout(savedTimer);
+
+  const userEmail = localStorage.getItem('userEmail') || 'user@pondoktani.com';
+  const userId = localStorage.getItem('userId') || 'anonymous';
+
+  if (settings.emailReminders) {
+    try {
+      await sendEmailNotification({
+        to: userEmail,
+        subject: 'Pengaturan pengingat berhasil disimpan',
+        body: `Pengaturan notifikasi Anda telah diperbarui. Email reminder: ${settings.emailReminders ? 'Aktif' : 'Mati'}. Push notifikasi: ${settings.pushNotifications ? 'Aktif' : 'Mati'}.`,
+        metadata: {
+          userId,
+          reminderTiming: settings.reminderTiming,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to queue email notification:', error);
+    }
+  }
+
   savedTimer = setTimeout(() => {
     saved.value = false;
   }, 3000);

@@ -3,6 +3,7 @@ import './style.css'
 import App from './App.vue'
 import router from "./router";
 import { startSessionTimeout } from "./utils/session";
+import "./firebase";
 
 createApp(App).use(router).mount("#app");
 
