@@ -1,54 +1,36 @@
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-  getDocs,
-  addDoc,
-  updateDoc,
-  doc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { firestore } from "../../firebase";
-
-const notificationsCollection = collection(firestore, "notifications");
+import { api } from '../api';
 
 export const fetchSystemNotifications = async (userId) => {
-  const q = userId
-    ? query(notificationsCollection, where("recipientId", "==", userId), orderBy("createdAt", "desc"))
-    : query(notificationsCollection, orderBy("createdAt", "desc"));
-
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  try {
+    const response = await api.get('/users/me/notifications');
+    return response.data || [];
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    return [];
+  }
 };
 
 export const subscribeSystemNotifications = (userId, callback) => {
-  const q = userId
-    ? query(notificationsCollection, where("recipientId", "==", userId), orderBy("createdAt", "desc"))
-    : query(notificationsCollection, orderBy("createdAt", "desc"));
+  // Fallback to polling for REST API
+  fetchSystemNotifications(userId).then(callback);
+  const intervalId = setInterval(() => {
+    fetchSystemNotifications(userId).then(callback);
+  }, 30000); // poll every 30 seconds
 
-  return onSnapshot(q, (snapshot) => {
-    const notifications = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    callback(notifications);
-  });
+  return () => clearInterval(intervalId);
 };
 
 export const sendSystemNotification = async ({ recipientId, title, message, category = "general", type = "info" }) => {
-  const docRef = await addDoc(notificationsCollection, {
-    recipientId: recipientId || null,
-    title,
-    message,
-    category,
-    type,
-    read: false,
-    createdAt: serverTimestamp(),
-  });
-
-  return docRef.id;
+  // Notifications are typically created by the backend automatically, 
+  // but if needed from frontend, it would go here via an API POST.
+  return null; 
 };
 
 export const markSystemNotificationRead = async (notificationId) => {
-  const notificationDoc = doc(firestore, "notifications", notificationId);
-  await updateDoc(notificationDoc, { read: true, readAt: serverTimestamp() });
+  try {
+    await api.put(`/users/me/notifications/${notificationId}/read`);
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+  }
 };
+

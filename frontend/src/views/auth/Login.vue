@@ -4,6 +4,7 @@ import { Sprout, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-vue-next';
 import { useRoute, useRouter } from "vue-router";
 import { login, register } from "../../services/auth/auth";
 import { getCurrentUser } from '../../services/user/user';
+import { registerFCMToken } from '../../services/firebase/fcm';
 import { touchSession } from '../../utils/session';
 import vaniliIllustration from '../../assets/vanili-ilustration.png';
 
@@ -150,6 +151,7 @@ async function handleLogin() {
   localStorage.setItem("userRole", detectedRole);
   touchSession();
   role.value = detectedRole;
+  await registerFCMToken();
 
   const selectedPackageId = String(route.query.package_id || '').trim();
   if (selectedPackageId) {
@@ -205,6 +207,7 @@ async function handleRegister() {
   localStorage.setItem("userRole", detectedRole);
   touchSession();
   role.value = detectedRole;
+  await registerFCMToken();
 
   const selectedPackageId = String(route.query.package_id || '').trim();
   if (selectedPackageId) {

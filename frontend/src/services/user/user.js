@@ -50,3 +50,7 @@ export const activateUserPackage = (userId, payload) => {
 export const updateInvestmentStatus = (userId, status) => {
   return api.put(`/admin/users/${userId}/investment-status`, { status });
 };
+
+export const updateMyFCMToken = (payload) => {
+  return api.put('/users/me/fcm-token', payload);
+};
