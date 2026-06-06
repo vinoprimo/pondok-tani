@@ -16,6 +16,7 @@ import (
 	salesmodels "pondok-tani-backend/models/sales"
 	warehousemodels "pondok-tani-backend/models/warehouse"
 	"pondok-tani-backend/routes"
+	"pondok-tani-backend/services/jobs"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -107,12 +108,22 @@ func migrateDB() {
 		&salesmodels.SalesOrder{},
 		&salesmodels.SalesDetail{},
 		&notificationmodels.Notification{},
+		&notificationmodels.EmailTemplate{},
+		&notificationmodels.EmailLog{},
+		&notificationmodels.EmailMonitoring{},
 		&financemodels.OperationalCost{},
 		&financemodels.RevenueSimulation{},
 		&pricemodels.NationalPrice{},
 	)
 	if err != nil {
 		panic(fmt.Sprintf("failed to migrate database: %v", err))
+	}
+
+	if err := config.DB.Exec(`ALTER TABLE email_templates DROP COLUMN IF EXISTS category`).Error; err != nil {
+		panic(fmt.Sprintf("failed to drop email_templates.category column: %v", err))
+	}
+	if err := config.DB.Exec(`ALTER TABLE email_templates DROP COLUMN IF EXISTS variables`).Error; err != nil {
+		panic(fmt.Sprintf("failed to drop email_templates.variables column: %v", err))
 	}
 
 	if err := applyNationalPriceMigrations(); err != nil {
@@ -161,6 +172,7 @@ func migrateDB() {
 
 func main() {
 	godotenv.Load()
+	config.LoadSMTPConfig()
 
 	if len(os.Args) > 1 && os.Args[1] == "migrate" {
 		migrateDB()
@@ -187,12 +199,22 @@ func main() {
 		&salesmodels.SalesOrder{},
 		&salesmodels.SalesDetail{},
 		&notificationmodels.Notification{},
+		&notificationmodels.EmailTemplate{},
+		&notificationmodels.EmailLog{},
+		&notificationmodels.EmailMonitoring{},
 		&financemodels.OperationalCost{},
 		&financemodels.RevenueSimulation{},
 		&pricemodels.NationalPrice{},
 	)
 	if err != nil {
 		panic(fmt.Sprintf("failed to migrate database: %v", err))
+	}
+
+	if err := config.DB.Exec(`ALTER TABLE email_templates DROP COLUMN IF EXISTS category`).Error; err != nil {
+		panic(fmt.Sprintf("failed to drop email_templates.category column: %v", err))
+	}
+	if err := config.DB.Exec(`ALTER TABLE email_templates DROP COLUMN IF EXISTS variables`).Error; err != nil {
+		panic(fmt.Sprintf("failed to drop email_templates.variables column: %v", err))
 	}
 
 	if err := applyNationalPriceMigrations(); err != nil {
@@ -260,5 +282,9 @@ func main() {
 	routes.FinancialRoutes(r)
 	routes.PlantMonitoringRoutes(r)
 	routes.InvestmentPackageRoutes(r)
+
+	// Mulai Cron Jobs
+	jobs.StartCronJobs()
+
 	r.Run(":8000")
 }

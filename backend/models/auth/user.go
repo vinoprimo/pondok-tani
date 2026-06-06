@@ -13,6 +13,7 @@ type User struct {
 	Role               string                        `gorm:"type:varchar(20);not null;default:investor;index" json:"role"`
 	PhoneNumber        *string                       `gorm:"type:varchar(30)" json:"phone_number,omitempty"`
 	Address            *string                       `gorm:"type:text" json:"address,omitempty"`
+	FCMToken           *string                       `gorm:"type:text" json:"fcm_token,omitempty"`
 	SelectedPackageID  *uint                         `gorm:"index" json:"selected_package_id,omitempty"`
 	SelectedPackage    *coremodels.InvestmentPackage `gorm:"foreignKey:SelectedPackageID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"selected_package,omitempty"`
 	Investments        []coremodels.Investment       `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"investments,omitempty"`

@@ -3,6 +3,7 @@ package routes
 import (
 	investmenthandler "pondok-tani-backend/handlers/investment"
 	maintenancehandler "pondok-tani-backend/handlers/maintenance"
+	notificationhandler "pondok-tani-backend/handlers/notification"
 	plantbatchhandler "pondok-tani-backend/handlers/plantbatch"
 	pricehandler "pondok-tani-backend/handlers/price"
 	userhandler "pondok-tani-backend/handlers/user"
@@ -27,6 +28,15 @@ func AdminRoutes(r *gin.Engine) {
 		admin.GET("/users/:id/plant-batches", plantbatchhandler.ListUserPlantBatches)
 		admin.PUT("/users/:id/activate-package", plantbatchhandler.ActivateUserPackage)
 		admin.PUT("/users/:id/investment-status", investmenthandler.UpdateInvestmentStatus)
+		admin.POST("/notifications/push", notificationhandler.SendPushNotification)
+		admin.GET("/emails/templates", notificationhandler.ListEmailTemplates)
+		admin.POST("/emails/templates", notificationhandler.CreateEmailTemplate)
+		admin.PUT("/emails/templates/:id", notificationhandler.UpdateEmailTemplate)
+		admin.DELETE("/emails/templates/:id", notificationhandler.DeleteEmailTemplate)
+		admin.GET("/emails/logs", notificationhandler.ListEmailLogs)
+		admin.GET("/emails/monitoring", notificationhandler.ListEmailMonitoring)
+		admin.POST("/emails/check-duplicate", notificationhandler.CheckEmailDuplicate)
+		admin.POST("/emails/send", notificationhandler.SendEmailLog)
 		admin.GET("/maintenance-schedules/summary", maintenancehandler.GetMaintenanceScheduleSummary)
 		admin.GET("/maintenance-schedules", maintenancehandler.ListMaintenanceSchedules)
 		admin.POST("/maintenance-schedules", maintenancehandler.CreateMaintenanceSchedule)
