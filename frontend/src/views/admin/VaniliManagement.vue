@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import {
   BadgeDollarSign,
@@ -20,6 +20,8 @@ import {
   updateGrade,
   updateNationalPrice,
 } from "../../services/price/vanili";
+import SearchBar from "../../components/common/SearchBar.vue";
+import Pagination from "../../components/common/Pagination.vue";
 
 type GradeItem = {
   id: number;
@@ -532,12 +534,9 @@ onMounted(refreshData);
       <div v-if="activeTableView === 'grades'">
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
           <h3 class="text-lg font-semibold text-gray-900">Data Grade Vanili</h3>
-          <div class="relative w-full max-w-sm">
-            <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
+          <div class="w-full max-w-sm">
+            <SearchBar
               v-model="gradeSearchQuery"
-              type="text"
-              class="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
               placeholder="Cari grade"
             />
           </div>
@@ -585,41 +584,22 @@ onMounted(refreshData);
           </table>
         </div>
 
-        <div class="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-          <p class="text-xs text-gray-500">
-            Menampilkan {{ paginatedGrades.length }} dari {{ filteredGrades.length }} data grade
-          </p>
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-              :disabled="gradePage <= 1"
-              @click="gradePage -= 1"
-            >
-              Sebelumnya
-            </button>
-            <span class="text-sm text-gray-600">Halaman {{ gradePage }} / {{ gradeTotalPages }}</span>
-            <button
-              type="button"
-              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-              :disabled="gradePage >= gradeTotalPages"
-              @click="gradePage += 1"
-            >
-              Berikutnya
-            </button>
-          </div>
-        </div>
+        <Pagination
+          v-if="filteredGrades.length > 0"
+          :current-page="gradePage"
+          :total-pages="gradeTotalPages"
+          :total-rows="filteredGrades.length"
+          :limit="gradePageSize"
+          @update:page="gradePage = $event"
+        />
       </div>
 
       <div v-else>
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
           <h3 class="text-lg font-semibold text-gray-900">Data Harga Vanili Nasional</h3>
-          <div class="relative w-full max-w-sm">
-            <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
+          <div class="w-full max-w-sm">
+            <SearchBar
               v-model="priceSearchQuery"
-              type="text"
-              class="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
               placeholder="Cari provinsi, grade, jenis panen"
             />
           </div>
@@ -675,30 +655,14 @@ onMounted(refreshData);
           </table>
         </div>
 
-        <div class="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-          <p class="text-xs text-gray-500">
-            Menampilkan {{ paginatedPrices.length }} dari {{ filteredPrices.length }} data harga
-          </p>
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-              :disabled="pricePage <= 1"
-              @click="pricePage -= 1"
-            >
-              Sebelumnya
-            </button>
-            <span class="text-sm text-gray-600">Halaman {{ pricePage }} / {{ priceTotalPages }}</span>
-            <button
-              type="button"
-              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-              :disabled="pricePage >= priceTotalPages"
-              @click="pricePage += 1"
-            >
-              Berikutnya
-            </button>
-          </div>
-        </div>
+        <Pagination
+          v-if="filteredPrices.length > 0"
+          :current-page="pricePage"
+          :total-pages="priceTotalPages"
+          :total-rows="filteredPrices.length"
+          :limit="pricePageSize"
+          @update:page="pricePage = $event"
+        />
       </div>
     </section>
 

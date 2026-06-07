@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Package, TrendingDown, TrendingUp, ArrowRight } from 'lucide-vue-next';
+import SearchBar from '../../components/common/SearchBar.vue';
+import Pagination from '../../components/common/Pagination.vue';
 
 const stockByGrade = [
   { grade: 'A', quantity: 145, value: 725000000, percentage: 85 },
@@ -81,6 +83,33 @@ const chartMax = computed(() =>
 
 function barPct(value: number) {
   return `${(value / chartMax.value) * 100}%`;
+}
+
+const searchQuery = ref('');
+const currentPage = ref(1);
+const limit = ref(5);
+
+const filteredMovements = computed(() => {
+  if (!searchQuery.value) return stockMovements;
+  const q = searchQuery.value.toLowerCase();
+  return stockMovements.filter(m => 
+    m.id.toLowerCase().includes(q) || 
+    m.source.toLowerCase().includes(q) || 
+    m.grade.toLowerCase().includes(q) ||
+    m.batchRef.toLowerCase().includes(q)
+  );
+});
+
+const totalPages = computed(() => Math.ceil(filteredMovements.value.length / limit.value));
+
+const paginatedMovements = computed(() => {
+  const start = (currentPage.value - 1) * limit.value;
+  return filteredMovements.value.slice(start, start + limit.value);
+});
+
+function handleSearch(val: string) {
+  searchQuery.value = val;
+  currentPage.value = 1;
 }
 </script>
 
@@ -197,9 +226,18 @@ function barPct(value: number) {
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">Riwayat pergerakan stok</h3>
-        <p class="text-sm text-gray-600 mt-1">Transaksi masuk dan keluar gudang terbaru</p>
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Riwayat pergerakan stok</h3>
+          <p class="text-sm text-gray-600 mt-1">Transaksi masuk dan keluar gudang terbaru</p>
+        </div>
+        <div class="w-full max-w-sm">
+          <SearchBar
+            v-model="searchQuery"
+            placeholder="Cari ID, sumber, batch..."
+            @search="handleSearch"
+          />
+        </div>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full">
@@ -215,7 +253,7 @@ function barPct(value: number) {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-for="movement in stockMovements" :key="movement.id" class="hover:bg-gray-50">
+            <tr v-for="movement in paginatedMovements" :key="movement.id" class="hover:bg-gray-50">
               <td class="px-6 py-4">
                 <div class="flex items-center gap-2">
                   <TrendingUp v-if="movement.type === 'In'" class="w-4 h-4 text-green-600" />
@@ -257,6 +295,14 @@ function barPct(value: number) {
           </tbody>
         </table>
       </div>
+      <Pagination
+        v-if="filteredMovements.length > 0"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :total-rows="filteredMovements.length"
+        :limit="limit"
+        @update:page="currentPage = $event"
+      />
     </div>
   </div>
 </template>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { ShoppingCart, Package, Check, X } from 'lucide-vue-next';
+import SearchBar from '../../components/common/SearchBar.vue';
+import Pagination from '../../components/common/Pagination.vue';
 
 type Grade = { grade: string; quantity: number; price: number };
 
@@ -105,6 +107,33 @@ function typeBadgeClass(type: string) {
     ? 'bg-orange-100 text-orange-800'
     : 'bg-blue-100 text-blue-800';
 }
+
+const searchQuery = ref('');
+const currentPage = ref(1);
+const limit = ref(5);
+
+const filteredHarvests = computed(() => {
+  if (!searchQuery.value) return harvestsReadyForSale;
+  const q = searchQuery.value.toLowerCase();
+  return harvestsReadyForSale.filter(h => 
+    h.id.toLowerCase().includes(q) || 
+    h.batchId.toLowerCase().includes(q) || 
+    h.investor.toLowerCase().includes(q) ||
+    h.province.toLowerCase().includes(q)
+  );
+});
+
+const totalPages = computed(() => Math.ceil(filteredHarvests.value.length / limit.value));
+
+const paginatedHarvests = computed(() => {
+  const start = (currentPage.value - 1) * limit.value;
+  return filteredHarvests.value.slice(start, start + limit.value);
+});
+
+function handleSearch(val: string) {
+  searchQuery.value = val;
+  currentPage.value = 1;
+}
 </script>
 
 <template>
@@ -149,6 +178,19 @@ function typeBadgeClass(type: string) {
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Daftar penjualan</h3>
+          <p class="text-sm text-gray-600 mt-1">Kelola data penjualan panen terbaru</p>
+        </div>
+        <div class="w-full max-w-sm">
+          <SearchBar
+            v-model="searchQuery"
+            placeholder="Cari ID, batch, investor..."
+            @search="handleSearch"
+          />
+        </div>
+      </div>
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead class="bg-gray-50 border-b border-gray-200">
@@ -163,7 +205,7 @@ function typeBadgeClass(type: string) {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-for="harvest in harvestsReadyForSale" :key="harvest.id" class="hover:bg-gray-50">
+            <tr v-for="harvest in paginatedHarvests" :key="harvest.id" class="hover:bg-gray-50">
               <td class="px-6 py-4">
                 <div>
                   <p class="font-medium text-gray-900">{{ harvest.id }}</p>
@@ -209,6 +251,14 @@ function typeBadgeClass(type: string) {
           </tbody>
         </table>
       </div>
+      <Pagination
+        v-if="filteredHarvests.length > 0"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :total-rows="filteredHarvests.length"
+        :limit="limit"
+        @update:page="currentPage = $event"
+      />
     </div>
 
     <div

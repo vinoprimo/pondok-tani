@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Download, FileText, Calendar, Filter, TrendingUp } from 'lucide-vue-next';
+import SearchBar from '../../components/common/SearchBar.vue';
+import Pagination from '../../components/common/Pagination.vue';
 
 type ReportCategory = 'financial' | 'plant' | 'investment';
 
@@ -77,11 +79,37 @@ const categoryLabels: Record<ReportCategory, string> = {
   investment: 'Investasi',
 };
 
-const filteredReports = computed(() =>
-  reports.filter(
-    (report) => selectedReport.value === 'all' || report.category === selectedReport.value
-  )
-);
+const searchQuery = ref('');
+const currentPage = ref(1);
+const limit = ref(5);
+
+const filteredReports = computed(() => {
+  let res = reports;
+  if (selectedReport.value !== 'all') {
+    res = res.filter((report) => report.category === selectedReport.value);
+  }
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    res = res.filter((report) => 
+      report.name.toLowerCase().includes(q) || 
+      report.period.toLowerCase().includes(q) || 
+      report.date.toLowerCase().includes(q)
+    );
+  }
+  return res;
+});
+
+const totalPages = computed(() => Math.ceil(filteredReports.value.length / limit.value));
+
+const paginatedReports = computed(() => {
+  const start = (currentPage.value - 1) * limit.value;
+  return filteredReports.value.slice(start, start + limit.value);
+});
+
+function handleSearch(val: string) {
+  searchQuery.value = val;
+  currentPage.value = 1;
+}
 
 function reportTypeBadgeClass(category: ReportCategory) {
   if (category === 'financial') return 'bg-blue-100 text-blue-700';
@@ -191,6 +219,18 @@ function reportTypeBadgeClass(category: ReportCategory) {
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Daftar laporan</h3>
+        </div>
+        <div class="w-full max-w-sm">
+          <SearchBar
+            v-model="searchQuery"
+            placeholder="Cari nama, periode..."
+            @search="handleSearch"
+          />
+        </div>
+      </div>
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead class="bg-gray-50 border-b border-gray-200">
@@ -216,7 +256,7 @@ function reportTypeBadgeClass(category: ReportCategory) {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-for="report in filteredReports" :key="report.id" class="hover:bg-gray-50">
+            <tr v-for="report in paginatedReports" :key="report.id" class="hover:bg-gray-50">
               <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -252,6 +292,14 @@ function reportTypeBadgeClass(category: ReportCategory) {
           </tbody>
         </table>
       </div>
+      <Pagination
+        v-if="filteredReports.length > 0"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :total-rows="filteredReports.length"
+        :limit="limit"
+        @update:page="currentPage = $event"
+      />
     </div>
 
     <div class="bg-gray-50 border border-gray-200 rounded-xl p-6">

@@ -11,7 +11,7 @@ import {
   Clock,
   Plus,
 } from "lucide-vue-next";
-import { getAdminUsers, getAdminUserPlantBatches } from "../../services/user/user";
+import { getAdminUsers, getAdminUser, getAdminUserPlantBatches } from "../../services/user/user";
 import {
   createAdminMaintenanceSchedule,
   getAdminMaintenanceSchedules,
@@ -217,21 +217,23 @@ function goToToday() {
 }
 
 async function loadUserData() {
-  const usersRes = await getAdminUsers();
-  const list = Array.isArray(usersRes.data) ? usersRes.data : [];
-  const found = list.find((item: any) => item.id === userId.value);
+  try {
+    const userRes = await getAdminUser(userId.value);
+    const found = userRes.data;
 
-  if (!found) {
+    if (!found) {
+      throw new Error("User not found");
+    }
+
+    user.value = {
+      id: found.id,
+      name: found.name,
+      email: found.email,
+    };
+  } catch (error: any) {
     alert("User tidak ditemukan");
     router.push("/dashboard/monitoring-schedule");
-    return;
   }
-
-  user.value = {
-    id: found.id,
-    name: found.name,
-    email: found.email,
-  };
 }
 
 async function loadSchedules() {

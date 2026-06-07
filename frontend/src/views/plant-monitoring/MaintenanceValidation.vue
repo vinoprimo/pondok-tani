@@ -6,6 +6,8 @@ import {
   getAdminMaintenanceActivitiesSummary,
   reviewAdminMaintenanceActivity,
 } from "../../services/maintenance/schedule";
+import SearchBar from "../../components/common/SearchBar.vue";
+import Pagination from "../../components/common/Pagination.vue";
 
 type Summary = {
   waiting_count: number;
@@ -37,6 +39,22 @@ const summary = ref<Summary>({
   reviewed_month: 0,
 });
 const submittedActivities = ref<ActivityItem[]>([]);
+const currentPage = ref(1);
+const totalPages = ref(1);
+const totalRows = ref(0);
+const limit = ref(10);
+const searchTerm = ref("");
+
+function handleSearch(val: string) {
+  searchTerm.value = val;
+  currentPage.value = 1;
+  loadActivities();
+}
+
+function handlePageChange(val: number) {
+  currentPage.value = val;
+  loadActivities();
+}
 
 const selectedActivityId = ref<number | null>(null);
 const showReviewModal = ref(false);
@@ -64,18 +82,44 @@ function photoUrl(url?: string) {
   return `http://localhost:8000${url}`;
 }
 
-async function loadData() {
+async function loadSummary() {
+  try {
+    const summaryRes = await getAdminMaintenanceActivitiesSummary();
+    summary.value = summaryRes.data || summary.value;
+  } catch (err) {
+    console.error("Failed to load summary", err);
+  }
+}
+
+async function loadActivities() {
   isLoading.value = true;
   try {
-    const [summaryRes, activitiesRes] = await Promise.all([
-      getAdminMaintenanceActivitiesSummary(),
-      getAdminMaintenanceActivities({ status: "pending" }),
-    ]);
-    summary.value = summaryRes.data || summary.value;
-    submittedActivities.value = Array.isArray(activitiesRes.data) ? activitiesRes.data : [];
+    const activitiesRes = await getAdminMaintenanceActivities({
+      status: "pending",
+      page: currentPage.value,
+      limit: limit.value,
+      search: searchTerm.value,
+    });
+    
+    if (activitiesRes.data && activitiesRes.data.meta) {
+      submittedActivities.value = Array.isArray(activitiesRes.data.data) ? activitiesRes.data.data : [];
+      totalPages.value = activitiesRes.data.meta.total_pages;
+      totalRows.value = activitiesRes.data.meta.total_rows;
+      currentPage.value = activitiesRes.data.meta.page;
+    } else {
+      submittedActivities.value = Array.isArray(activitiesRes.data) ? activitiesRes.data : [];
+      totalPages.value = 1;
+      totalRows.value = submittedActivities.value.length;
+    }
+  } catch (err) {
+    console.error("Failed to load activities", err);
   } finally {
     isLoading.value = false;
   }
+}
+
+async function loadData() {
+  await Promise.all([loadSummary(), loadActivities()]);
 }
 
 function handleReview(activityId: number) {
@@ -192,9 +236,18 @@ onMounted(() => {
     </div>
 
     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-900">Aktivitas menunggu</h3>
-        <p class="text-sm text-gray-600 mt-1">Tinjau laporan perawatan yang dikirim</p>
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Aktivitas menunggu</h3>
+          <p class="text-sm text-gray-600 mt-1">Tinjau laporan perawatan yang dikirim</p>
+        </div>
+        <div class="w-full max-w-sm">
+          <SearchBar
+            v-model="searchTerm"
+            placeholder="Cari pengguna, batch, aktivitas..."
+            @search="handleSearch"
+          />
+        </div>
       </div>
       <div v-if="isLoading" class="px-6 py-8 text-sm text-gray-600">Memuat data...</div>
       <div v-else class="overflow-x-auto">
@@ -265,6 +318,14 @@ onMounted(() => {
           </tbody>
         </table>
       </div>
+      <Pagination
+        v-if="submittedActivities.length > 0"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :total-rows="totalRows"
+        :limit="limit"
+        @update:page="handlePageChange"
+      />
     </div>
 
     <div

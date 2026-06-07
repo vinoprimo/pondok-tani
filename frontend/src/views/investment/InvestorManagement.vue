@@ -28,6 +28,8 @@ import {
   updateAdminUser,
   deleteAdminUser,
 } from '../../services/user/user';
+import SearchBar from '../../components/common/SearchBar.vue';
+import Pagination from '../../components/common/Pagination.vue';
 
 const users = ref<any[]>([]);
 const loading = ref(false);
@@ -135,17 +137,46 @@ function formatDisplayDate(value: string) {
   return date.toLocaleDateString('id-ID');
 }
 
+const currentPage = ref(1);
+const totalPages = ref(1);
+const totalRows = ref(0);
+const limit = ref(10);
+
 async function loadUsers() {
   loading.value = true;
   try {
-    const response = await getAdminUsers();
-    users.value = Array.isArray(response.data) ? response.data : [];
+    const response = await getAdminUsers({
+      page: currentPage.value,
+      limit: limit.value,
+      search: searchTerm.value,
+    });
+    if (response.data && response.data.meta) {
+      users.value = Array.isArray(response.data.data) ? response.data.data : [];
+      totalPages.value = response.data.meta.total_pages;
+      totalRows.value = response.data.meta.total_rows;
+      currentPage.value = response.data.meta.page;
+    } else {
+      users.value = Array.isArray(response.data) ? response.data : [];
+      totalPages.value = 1;
+      totalRows.value = users.value.length;
+    }
   } catch (error) {
     console.error('Failed to load users:', error);
     users.value = [];
   } finally {
     loading.value = false;
   }
+}
+
+function handleSearch(val: string) {
+  searchTerm.value = val;
+  currentPage.value = 1;
+  loadUsers();
+}
+
+function handlePageChange(val: number) {
+  currentPage.value = val;
+  loadUsers();
 }
 
 async function handleMarkAsPaid(userId: string) {
@@ -465,15 +496,11 @@ onMounted(() => {
     <div class="bg-white rounded-xl border border-gray-200 p-4">
       <div class="flex flex-wrap items-center gap-4">
         <div class="flex-1 min-w-[300px]">
-          <div class="relative">
-            <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              v-model="searchTerm"
-              type="text"
-              placeholder="Cari nama, email, atau ID user..."
-              class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
+          <SearchBar 
+            v-model="searchTerm" 
+            @search="handleSearch" 
+            placeholder="Cari nama, email, atau ID user..." 
+          />
         </div>
         <button
           type="button"
@@ -643,6 +670,15 @@ onMounted(() => {
           </tbody>
         </table>
       </div>
+      
+      <Pagination 
+        v-if="users.length > 0"
+        :current-page="currentPage" 
+        :total-pages="totalPages" 
+        :total-rows="totalRows" 
+        :limit="limit"
+        @update:page="handlePageChange"
+      />
     </div>
 
     <div v-if="activationFormUser" class="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">

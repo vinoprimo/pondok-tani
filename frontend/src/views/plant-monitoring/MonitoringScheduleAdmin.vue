@@ -7,6 +7,8 @@ import {
   getAdminMaintenanceScheduleSummary,
   getAdminMaintenanceSchedules,
 } from "../../services/maintenance/schedule";
+import SearchBar from "../../components/common/SearchBar.vue";
+import Pagination from "../../components/common/Pagination.vue";
 
 type UserItem = {
   id: string;
@@ -48,6 +50,26 @@ const summary = ref({
 });
 
 const isLoading = ref(false);
+const currentPage = ref(1);
+const totalPages = ref(1);
+const totalRows = ref(0);
+const limit = ref(10);
+const searchTerm = ref("");
+
+function handleSearch(val: string) {
+  searchTerm.value = val;
+  currentPage.value = 1;
+  loadUsers();
+}
+
+function handlePageChange(val: number) {
+  currentPage.value = val;
+  loadUsers();
+}
+
+async function refreshData() {
+  await Promise.all([loadUsers(), loadSchedules()]);
+}
 
 const todayDateOnly = computed(() => {
   const now = new Date();
@@ -95,14 +117,33 @@ const userSummaries = computed<UserScheduleSummary[]>(() => {
 });
 
 async function loadUsers() {
-  const res = await getAdminUsers();
-  users.value = Array.isArray(res.data)
-    ? res.data.map((item: any) => ({
-        id: item.id,
-        name: item.name,
-        email: item.email,
-      }))
-    : [];
+  try {
+    const res = await getAdminUsers({
+      page: currentPage.value,
+      limit: limit.value,
+      search: searchTerm.value,
+    });
+    
+    const extractUsers = (data: any[]) => data.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      email: item.email,
+    }));
+
+    if (res.data && res.data.meta) {
+      users.value = Array.isArray(res.data.data) ? extractUsers(res.data.data) : [];
+      totalPages.value = res.data.meta.total_pages;
+      totalRows.value = res.data.meta.total_rows;
+      currentPage.value = res.data.meta.page;
+    } else {
+      users.value = Array.isArray(res.data) ? extractUsers(res.data) : [];
+      totalPages.value = 1;
+      totalRows.value = users.value.length;
+    }
+  } catch (error) {
+    console.error("Failed to load users:", error);
+    users.value = [];
+  }
 }
 
 async function loadSchedules() {
@@ -169,7 +210,7 @@ onMounted(async () => {
       <button
         type="button"
         class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        @click="loadSchedules"
+        @click="refreshData"
       >
         <RefreshCcw class="h-4 w-4" />
         Muat Ulang
@@ -215,8 +256,15 @@ onMounted(async () => {
     </div>
 
     <div class="rounded-xl border border-gray-200 bg-white overflow-hidden">
-      <div class="border-b border-gray-200 px-6 py-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
         <h3 class="text-lg font-semibold text-gray-900">Daftar Maintenance Schedule</h3>
+        <div class="w-full max-w-sm">
+          <SearchBar
+            v-model="searchTerm"
+            placeholder="Cari user..."
+            @search="handleSearch"
+          />
+        </div>
       </div>
 
       <div v-if="isLoading" class="px-6 py-8 text-sm text-gray-600">Memuat data...</div>
@@ -263,6 +311,14 @@ onMounted(async () => {
           </tbody>
         </table>
       </div>
+      <Pagination
+        v-if="users.length > 0"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :total-rows="totalRows"
+        :limit="limit"
+        @update:page="handlePageChange"
+      />
     </div>
   </div>
 </template>

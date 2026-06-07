@@ -22,6 +22,7 @@ func AdminRoutes(r *gin.Engine) {
 	admin := r.Group("/admin", middleware.AuthMiddleware(), middleware.RequireRoles("admin"))
 	{
 		admin.GET("/users", userhandler.ListUsers)
+		admin.GET("/users/:id", userhandler.GetUser)
 		admin.POST("/users", userhandler.CreateUser)
 		admin.PUT("/users/:id", userhandler.UpdateUser)
 		admin.DELETE("/users/:id", userhandler.DeleteUser)

@@ -9,6 +9,7 @@ import (
 	"pondok-tani-backend/config"
 	authmodels "pondok-tani-backend/models/auth"
 	coremodels "pondok-tani-backend/models/core"
+	"pondok-tani-backend/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -68,16 +69,42 @@ func GetCurrentUser(c *gin.Context) {
 
 func ListUsers(c *gin.Context) {
 	var users []authmodels.User
-	if err := config.DB.
+
+	query := config.DB.Model(&authmodels.User{}).
 		Preload("SelectedPackage").
 		Preload("Investments").
-		Preload("Investments.Package").
-		Order("created_at DESC").Find(&users).Error; err != nil {
+		Preload("Investments.Package")
+
+	searchQuery := c.Query("search")
+	if searchQuery != "" {
+		query = query.Scopes(utils.Search([]string{"name", "email"}, searchQuery))
+	}
+
+	pagination := utils.GeneratePaginationFromRequest(c)
+	utils.Paginate(query, &pagination, &users)
+
+	if query.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 		return
 	}
 
-	c.JSON(http.StatusOK, users)
+	c.JSON(http.StatusOK, utils.FormatPaginationResponse(&pagination))
+}
+
+func GetUser(c *gin.Context) {
+	userID := c.Param("id")
+
+	var user authmodels.User
+	if err := config.DB.
+		Preload("SelectedPackage").
+		Preload("Investments").
+		Preload("Investments.Package").
+		First(&user, "id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
 }
 
 func CreateUser(c *gin.Context) {
