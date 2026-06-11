@@ -7,6 +7,7 @@ import { clearAuthSession, isSessionExpired, touchSession } from "../utils/sessi
  *   views/auth/Login.vue
  *   views/landing/Landing.vue
  *   views/dashboard/Dashboard.vue
+ *   views/harvest/HarvestRequests.vue
  *   views/harvest/HarvestSales.vue
  *   views/admin/VaniliManagement.vue
  *   views/investment/{FinancialProjections,InvestmentPortfolio,InvestorManagement}.vue
@@ -167,6 +168,12 @@ const routes = [
         name: "dashboard-harvest-sales",
         component: () => import("../views/harvest/HarvestSales.vue"),
         meta: { roles: ["admin"] },
+      },
+      {
+        path: "harvest",
+        name: "dashboard-harvest",
+        component: () => import("../views/harvest/HarvestRequests.vue"),
+        meta: { roles: ["investor", "mitra", "admin"] },
       },
       {
         path: "warehouse",

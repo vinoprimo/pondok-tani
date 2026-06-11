@@ -505,7 +505,7 @@ onMounted(() => {
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User
+                User / ID
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Kontak
@@ -533,6 +533,7 @@ onMounted(() => {
                   </div>
                   <div>
                     <p class="font-medium text-gray-900">{{ user.name }}</p>
+                    <p class="text-xs text-gray-500 font-mono mt-0.5">ID: {{ user.id }}</p>
                   </div>
                 </div>
               </td>

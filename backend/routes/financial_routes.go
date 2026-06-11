@@ -19,5 +19,6 @@ func FinancialRoutes(r *gin.Engine) {
 		group.POST("/revenue-simulations", financehandler.CreateRevenueSimulation)
 		group.PUT("/revenue-simulations/:id", financehandler.UpdateRevenueSimulation)
 		group.DELETE("/revenue-simulations/:id", financehandler.DeleteRevenueSimulation)
+		group.GET("/revenues", financehandler.ListActualRevenues)
 	}
 }

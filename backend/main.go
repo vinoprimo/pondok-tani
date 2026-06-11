@@ -97,6 +97,7 @@ func migrateDB() {
 		&maintenancemodels.MaintenanceActivity{},
 		&maintenancemodels.PlantMonitoring{},
 		&harvestmodels.Harvest{},
+		&harvestmodels.HarvestRequest{},
 		&harvestmodels.HarvestOutput{},
 		&postharvestmodels.DryingProcess{},
 		&postharvestmodels.GradingBatch{},
@@ -177,6 +178,7 @@ func main() {
 		&maintenancemodels.MaintenanceActivity{},
 		&maintenancemodels.PlantMonitoring{},
 		&harvestmodels.Harvest{},
+		&harvestmodels.HarvestRequest{},
 		&harvestmodels.HarvestOutput{},
 		&postharvestmodels.DryingProcess{},
 		&postharvestmodels.GradingBatch{},
@@ -247,7 +249,7 @@ func main() {
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     allowedOrigins,
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
@@ -263,8 +265,12 @@ func main() {
 	routes.UserRoutes(r)
 	routes.AdminRoutes(r)
 	routes.HarvestRoutes(r)
+	routes.HarvestRequestRoutes(r)
+	routes.PostHarvestRoutes(r)
 	routes.FinancialRoutes(r)
 	routes.PlantMonitoringRoutes(r)
 	routes.InvestmentPackageRoutes(r)
+	routes.WarehouseRoutes(r)
+	routes.SalesRoutes(r)
 	r.Run(":8000")
 }
