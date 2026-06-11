@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { Bell } from "lucide-vue-next";
 import Sidebar from "../components/dashboard-layouts/Sidebar.vue";
 import { clearAuthSession } from "../utils/session";
+import {
+  fetchSystemNotifications,
+  subscribeSystemNotifications,
+} from "../services/firebase/systemNotification";
 
 const router = useRouter();
 const route = useRoute();
@@ -11,6 +15,60 @@ const route = useRoute();
 const userRole = ref<"investor" | "mitra" | "admin">(
   (localStorage.getItem("userRole") as "investor" | "mitra" | "admin") || "investor"
 );
+const unreadNotificationCount = ref(0);
+const recentNotifications = ref<any[]>([]);
+const showNotifications = ref(false);
+let unsubscribeNotifications: (() => void) | null = null;
+
+function getCurrentUserId() {
+  const storedUserId = localStorage.getItem('userId');
+  if (storedUserId) return storedUserId;
+
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return String(payload?.id || payload?.user_id || payload?.sub || '');
+  } catch {
+    return null;
+  }
+}
+
+async function loadUnreadNotificationCount() {
+  const userId = getCurrentUserId();
+  if (!userId) {
+    unreadNotificationCount.value = 0;
+    return;
+  }
+
+  try {
+    const items = await fetchSystemNotifications(userId);
+    unreadNotificationCount.value = items.filter((item) => !item.read).length;
+  } catch (error) {
+    console.error('Failed to load unread notifications:', error);
+    unreadNotificationCount.value = 0;
+  }
+}
+
+function startUnreadNotificationListener() {
+  const userId = getCurrentUserId();
+  if (!userId) return;
+
+  unsubscribeNotifications = subscribeSystemNotifications(userId, (items) => {
+    unreadNotificationCount.value = items.filter((item) => !item.read).length;
+    recentNotifications.value = items.slice(0, 5); // Tampilkan 5 notifikasi terbaru
+  });
+}
+
+function toggleNotifications() {
+  showNotifications.value = !showNotifications.value;
+}
+
+function goToNotifications() {
+  showNotifications.value = false;
+  router.push('/dashboard/notifications');
+}
 
 const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
   investor: [
@@ -137,6 +195,14 @@ onMounted(() => {
     userRole.value = storedRole;
   }
   ensureAllowedCurrentRoute();
+  loadUnreadNotificationCount();
+  startUnreadNotificationListener();
+});
+
+onUnmounted(() => {
+  if (unsubscribeNotifications) {
+    unsubscribeNotifications();
+  }
 });
 
 watch(
@@ -165,10 +231,48 @@ watch(
               Selamat datang kembali! Berikut perkembangan terkini perkebunan vanili Anda.
             </p>
           </div>
-          <button type="button" class="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <Bell class="w-6 h-6 text-gray-600" />
-            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-          </button>
+          <div class="relative">
+            <button
+              type="button"
+              class="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              @click="toggleNotifications"
+            >
+              <Bell class="w-6 h-6 text-gray-600" />
+              <span
+                v-if="unreadNotificationCount > 0"
+                class="absolute top-1 right-1 min-w-[10px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-semibold rounded-full flex items-center justify-center"
+              >
+                {{ unreadNotificationCount }}
+              </span>
+            </button>
+
+            <!-- Dropdown Notifikasi -->
+            <div
+              v-if="showNotifications"
+              class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden"
+            >
+              <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="font-semibold text-gray-900">Notifikasi</h3>
+                <button @click="goToNotifications" class="text-xs text-green-600 hover:text-green-700 font-medium">Lihat Semua</button>
+              </div>
+              <div class="max-h-96 overflow-y-auto">
+                <div v-if="recentNotifications.length === 0" class="p-6 text-center text-gray-500 text-sm">
+                  Tidak ada notifikasi baru
+                </div>
+                <div
+                  v-for="notif in recentNotifications"
+                  :key="notif.id"
+                  class="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                  :class="!notif.read ? 'bg-green-50/30' : ''"
+                  @click="goToNotifications"
+                >
+                  <h4 class="text-sm font-medium text-gray-900 mb-1">{{ notif.title || 'Pemberitahuan' }}</h4>
+                  <p class="text-xs text-gray-600 line-clamp-2">{{ notif.message }}</p>
+                  <p class="text-[10px] text-gray-400 mt-2">{{ notif.createdAt?.toDate ? notif.createdAt.toDate().toLocaleString('id-ID') : 'Baru saja' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 

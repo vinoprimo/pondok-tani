@@ -1,6 +1,7 @@
 package user
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -30,6 +31,10 @@ type adminUpdateUserRequest struct {
 	Role        string  `json:"role"`
 	PhoneNumber *string `json:"phone_number"`
 	Address     *string `json:"address"`
+}
+
+type updateUserFCMTokenRequest struct {
+	FCMToken string `json:"fcm_token" binding:"required"`
 }
 
 func normalizeRole(role string) string {
@@ -161,6 +166,29 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
+}
+
+func UpdateFCMToken(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	var req updateUserFCMTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	trimmedToken := strings.TrimSpace(req.FCMToken)
+	userIDStr := fmt.Sprintf("%v", userID)
+	result := config.DB.Model(&authmodels.User{}).Where("id = ?", userIDStr).Update("fcm_token", trimmedToken)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update FCM token"})
+		return
+	}
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "FCM token updated"})
 }
 
 func DeleteUser(c *gin.Context) {

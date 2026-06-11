@@ -14,6 +14,8 @@ import (
 	authmodels "pondok-tani-backend/models/auth"
 	coremodels "pondok-tani-backend/models/core"
 	maintenancemodels "pondok-tani-backend/models/maintenance"
+	notificationmodels "pondok-tani-backend/models/notification"
+	notificationhandler "pondok-tani-backend/handlers/notification"
 
 	"github.com/gin-gonic/gin"
 )
@@ -601,6 +603,105 @@ func CreateMaintenanceSchedule(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create maintenance schedule"})
 		return
 	}
+
+	// === TRIGGER NOTIFIKASI LANGSUNG ===
+	go func(sch maintenancemodels.MaintenanceSchedule, u authmodels.User) {
+		var template notificationmodels.EmailTemplate
+		hasTemplate := true
+		if err := config.DB.Where("name = ?", "maintenance_reminder").First(&template).Error; err != nil {
+			hasTemplate = false
+		}
+
+		var emailSubject, emailBody string
+
+		if hasTemplate && template.IsActive {
+			emailSubject = template.Subject
+			emailSubject = strings.ReplaceAll(emailSubject, "{{user_name}}", u.Name)
+			emailSubject = strings.ReplaceAll(emailSubject, "{{activity_name}}", sch.ActivityType)
+			emailSubject = strings.ReplaceAll(emailSubject, "{{due_date}}", sch.NextDueDate.Format("02 Jan 2006"))
+
+			emailBody = template.Body
+			emailBody = strings.ReplaceAll(emailBody, "{{user_name}}", u.Name)
+			emailBody = strings.ReplaceAll(emailBody, "{{activity_name}}", sch.ActivityType)
+			emailBody = strings.ReplaceAll(emailBody, "{{due_date}}", sch.NextDueDate.Format("02 Jan 2006"))
+		} else {
+			emailSubject = "Jadwal Pemeliharaan Baru - Pondok Tani"
+			emailBody = fmt.Sprintf(`
+				<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+					<h3 style="color: #2e7d32;">Halo %s,</h3>
+					<p>Jadwal pemeliharaan tanaman baru telah ditambahkan untuk Anda.</p>
+					<table style="border-collapse: collapse; width: 100%%; max-width: 600px; margin-top: 15px; margin-bottom: 15px;">
+						<tr>
+							<td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 35%%;">Aktivitas</td>
+							<td style="padding: 8px; border: 1px solid #ddd;">%s</td>
+						</tr>
+						<tr>
+							<td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Tanggal Jatuh Tempo</td>
+							<td style="padding: 8px; border: 1px solid #ddd;">%s</td>
+						</tr>
+					</table>
+					<p>Silakan periksa dashboard Pondok Tani Anda.</p>
+					<br>
+					<p>Terima kasih,<br><strong>Tim Pondok Tani</strong></p>
+				</div>
+			`, u.Name, sch.ActivityType, sch.NextDueDate.Format("02 Jan 2006"))
+		}
+
+		// Buat versi plain text untuk bell notification
+		plainTextMessage := strings.ReplaceAll(emailBody, "\n", " ")
+		plainTextMessage = strings.ReplaceAll(plainTextMessage, "\r", "")
+		// Sederhanakan strip HTML
+		for strings.Contains(plainTextMessage, "<") && strings.Contains(plainTextMessage, ">") {
+			start := strings.Index(plainTextMessage, "<")
+			end := strings.Index(plainTextMessage, ">")
+			if start < end {
+				plainTextMessage = plainTextMessage[:start] + " " + plainTextMessage[end+1:]
+			} else {
+				break
+			}
+		}
+		// Bersihkan spasi ganda
+		plainTextMessage = strings.Join(strings.Fields(plainTextMessage), " ")
+
+		notif := notificationmodels.Notification{
+			UserID:   u.ID,
+			UserName: u.Name,
+			Type:     "maintenance_reminder",
+			Subject:  emailSubject,
+			Message:  plainTextMessage,
+		}
+		config.DB.Create(&notif)
+
+		if u.Email != "" {
+			sendStatus := "sent"
+			var errorMessage *string
+
+			err := notificationhandler.SendSMTPEmail(u.Email, emailSubject, emailBody)
+			if err != nil {
+				errMsg := err.Error()
+				errorMessage = &errMsg
+				sendStatus = "failed"
+				fmt.Printf("Gagal mengirim email notifikasi ke %s: %v\n", u.Email, err)
+			} else {
+				fmt.Printf("Email notifikasi berhasil dikirim ke %s\n", u.Email)
+			}
+
+			now := time.Now().UTC()
+			logEntry := notificationmodels.EmailLog{
+				UserID:         &u.ID,
+				RecipientEmail: u.Email,
+				Subject:        emailSubject,
+				Body:           emailBody,
+				Status:         sendStatus,
+				ErrorMessage:   errorMessage,
+				SentAt:         &now,
+			}
+			config.DB.Create(&logEntry)
+		} else {
+			fmt.Println("User tidak memiliki email, skip pengiriman email")
+		}
+	}(schedule, user)
+	// ===================================
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Maintenance schedule created", "id": schedule.ID})
 }
