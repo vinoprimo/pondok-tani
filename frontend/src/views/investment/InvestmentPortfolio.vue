@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { TrendingUp, DollarSign, Calendar, Download, Eye } from 'lucide-vue-next'
 import { getCurrentUser } from '../../services/user/user'
 import { listOperationalCosts } from '../../services/financial/operational-cost'
-import { listRevenueSimulations } from '../../services/financial/revenue-simulation'
+import { listActualRevenues } from '../../services/financial/revenue'
 import { listPlantMonitorings } from '../../services/plant-monitoring/monitoring'
 
 type ApiInvestment = {
@@ -39,7 +39,7 @@ type OperationalCostApiRow = {
   cost_date: string
 }
 
-type RevenueSimulationApiRow = {
+type RevenueApiRow = {
   plant_batch_id: number
   batch_code: string
   package_name: string
@@ -225,13 +225,13 @@ async function loadPortfolio() {
     const [userRes, costsRes, revenuesRes, monitoringRes] = await Promise.all([
       getCurrentUser(),
       listOperationalCosts(),
-      listRevenueSimulations(),
+      listActualRevenues(),
       listPlantMonitorings(),
     ])
 
     const rows = Array.isArray(userRes?.data?.investments) ? (userRes.data.investments as ApiInvestment[]) : []
     const costs = Array.isArray(costsRes?.data) ? (costsRes.data as OperationalCostApiRow[]) : []
-    const revenues = Array.isArray(revenuesRes?.data) ? (revenuesRes.data as RevenueSimulationApiRow[]) : []
+    const revenues = Array.isArray(revenuesRes?.data) ? (revenuesRes.data as RevenueApiRow[]) : []
     const monitorings = Array.isArray(monitoringRes?.data) ? (monitoringRes.data as MonitoringRow[]) : []
 
     investments.value = rows

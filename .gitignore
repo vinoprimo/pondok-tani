@@ -1,0 +1,10 @@
+*.png
+*.puml
+*.mmd
+*.bpmn
+*.docx
+*.txt
+*.md
+/backend/uploads
+*.pyc
+*.py

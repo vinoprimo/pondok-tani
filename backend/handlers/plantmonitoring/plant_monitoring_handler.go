@@ -251,7 +251,7 @@ func CreatePlantMonitoring(c *gin.Context) {
 	}
 
 	var plantBatch coremodels.PlantBatch
-	query := config.DB.Preload("Investment").Preload("Investment.Package").Where("id = ?", input.PlantBatchID)
+	query := config.DB.Preload("Investment").Preload("Investment.Package").Where("plant_batches.id = ?", input.PlantBatchID)
 	if roleValue, ok := c.Get("role"); ok {
 		role, _ := roleValue.(string)
 		if role == "investor" || role == "mitra" {

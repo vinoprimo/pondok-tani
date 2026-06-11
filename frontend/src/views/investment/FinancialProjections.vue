@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import {
   BarChart3,
   BadgeDollarSign,
+  Pencil,
   Plus,
   RefreshCcw,
   Search,
@@ -14,14 +15,11 @@ import {
 import { listPlantMonitorings } from "../../services/plant-monitoring/monitoring";
 import {
   createOperationalCost,
+  updateOperationalCost,
   deleteOperationalCost,
   listOperationalCosts,
 } from "../../services/financial/operational-cost";
-import {
-  createRevenueSimulation,
-  deleteRevenueSimulation,
-  listRevenueSimulations,
-} from "../../services/financial/revenue-simulation";
+import { listActualRevenues } from "../../services/financial/revenue";
 import { getCurrentUser } from "../../services/user/user";
 import { getGrades, getNationalPrices } from "../../services/price/vanili";
 import { calculateRevenueProjection, getProjectionStats } from "../../services/financial/projection";
@@ -62,7 +60,7 @@ type OperationalCostApiRow = {
   created_at: string;
 };
 
-type RevenueSimulationEntry = {
+type RevenueEntry = {
   id: number;
   plantBatchId: number;
   batchCode: string;
@@ -75,7 +73,7 @@ type RevenueSimulationEntry = {
   createdAt: string;
 };
 
-type RevenueSimulationApiRow = {
+type RevenueApiRow = {
   id: number;
   plant_batch_id: number;
   batch_code: string;
@@ -90,7 +88,7 @@ type RevenueSimulationApiRow = {
 
 type DeleteTarget = {
   id: number | string;
-  type: "expense" | "revenue";
+  type: "expense";
   label: string;
 };
 
@@ -148,7 +146,7 @@ const batchError = ref("");
 const userInvestmentError = ref("");
 
 const expenses = ref<OperationalCostEntry[]>([]);
-const revenues = ref<RevenueSimulationEntry[]>([]);
+const revenues = ref<RevenueEntry[]>([]);
 const userInvestmentTotal = ref(0);
 const userInvestmentCount = ref(0);
 
@@ -156,9 +154,19 @@ const infoMessage = ref("");
 const errorMessage = ref("");
 
 const expenseModalOpen = ref(false);
-const revenueModalOpen = ref(false);
 const savingExpense = ref(false);
-const savingRevenue = ref(false);
+
+const editExpenseModalOpen = ref(false);
+const editingExpense = ref<OperationalCostEntry | null>(null);
+const savingEditExpense = ref(false);
+
+const editExpenseForm = reactive({
+  plantBatchId: "",
+  category: "Pupuk",
+  amount: 0,
+  date: today,
+  note: "",
+});
 
 const deleteModalOpen = ref(false);
 const deleteSubmitting = ref(false);
@@ -222,13 +230,6 @@ const expenseForm = reactive({
   note: "",
 });
 
-const revenueForm = reactive({
-  plantBatchId: "",
-  source: "Penjualan panen (simulasi)",
-  amount: 0,
-  date: today,
-  note: "",
-});
 
 const costCategoryOptions = [
   "Pupuk",
@@ -237,13 +238,6 @@ const costCategoryOptions = [
   "Transportasi",
   "Peralatan",
   "Lainnya",
-];
-
-const revenueSourceOptions = [
-  "Penjualan panen (simulasi)",
-  "Penjualan bibit (simulasi)",
-  "Kontrak buyer (simulasi)",
-  "Lainnya (simulasi)",
 ];
 
 // Projection modal state
@@ -740,9 +734,6 @@ function ensureDefaultBatchInForm() {
   if (!expenseForm.plantBatchId) {
     expenseForm.plantBatchId = String(firstBatch.id);
   }
-  if (!revenueForm.plantBatchId) {
-    revenueForm.plantBatchId = String(firstBatch.id);
-  }
 }
 
 async function fetchBatches() {
@@ -796,10 +787,10 @@ async function fetchOperationalCosts() {
   }
 }
 
-async function fetchRevenueSimulations() {
+async function fetchRevenues() {
   try {
-    const response = await listRevenueSimulations();
-    const rows = Array.isArray(response.data) ? (response.data as RevenueSimulationApiRow[]) : [];
+    const response = await listActualRevenues();
+    const rows = Array.isArray(response.data) ? (response.data as RevenueApiRow[]) : [];
 
     revenues.value = rows.map((item) => ({
       id: item.id,
@@ -810,12 +801,12 @@ async function fetchRevenueSimulations() {
       amount: Number(item.amount) || 0,
       date: item.revenue_date,
       note: item.note || "",
-      status: item.status || "simulasi",
+      status: item.status || "realisasi",
       createdAt: item.created_at,
     }));
   } catch (error) {
-    console.error("Failed to load revenue simulations", error);
-    errorMessage.value = "Gagal memuat data pendapatan simulasi dari server.";
+    console.error("Failed to load revenues", error);
+    errorMessage.value = "Gagal memuat data pendapatan dari server.";
   }
 }
 
@@ -848,16 +839,6 @@ function resetExpenseForm() {
   }
 }
 
-function resetRevenueForm() {
-  revenueForm.source = "Penjualan panen (simulasi)";
-  revenueForm.amount = 0;
-  revenueForm.date = today;
-  revenueForm.note = "";
-  if (batches.value.length > 0) {
-    revenueForm.plantBatchId = String(batches.value[0].id);
-  }
-}
-
 function openExpenseModal() {
   errorMessage.value = "";
   infoMessage.value = "";
@@ -865,19 +846,8 @@ function openExpenseModal() {
   expenseModalOpen.value = true;
 }
 
-function openRevenueModal() {
-  errorMessage.value = "";
-  infoMessage.value = "";
-  resetRevenueForm();
-  revenueModalOpen.value = true;
-}
-
 function closeExpenseModal() {
   expenseModalOpen.value = false;
-}
-
-function closeRevenueModal() {
-  revenueModalOpen.value = false;
 }
 
 async function submitExpense() {
@@ -933,11 +903,28 @@ async function submitExpense() {
   }
 }
 
-async function submitRevenueSimulation() {
+function openEditExpenseModal(item: OperationalCostEntry) {
+  editingExpense.value = item;
+  editExpenseForm.plantBatchId = String(item.plantBatchId);
+  editExpenseForm.category = item.category;
+  editExpenseForm.amount = item.amount;
+  editExpenseForm.date = item.date ? item.date.slice(0, 10) : today;
+  editExpenseForm.note = item.note || "";
+  errorMessage.value = "";
+  editExpenseModalOpen.value = true;
+}
+
+function closeEditExpenseModal() {
+  editExpenseModalOpen.value = false;
+  editingExpense.value = null;
+}
+
+async function submitEditExpense() {
+  if (!editingExpense.value) return;
   errorMessage.value = "";
   infoMessage.value = "";
 
-  const batchId = Number(revenueForm.plantBatchId);
+  const batchId = Number(editExpenseForm.plantBatchId);
   if (!batchId) {
     errorMessage.value = "Batch tanaman wajib dipilih.";
     return;
@@ -949,41 +936,39 @@ async function submitRevenueSimulation() {
     return;
   }
 
-  if (!revenueForm.source.trim()) {
-    errorMessage.value = "Sumber pendapatan simulasi wajib diisi.";
+  if (!editExpenseForm.category.trim()) {
+    errorMessage.value = "Kategori biaya wajib diisi.";
     return;
   }
 
-  if (!Number.isFinite(revenueForm.amount) || revenueForm.amount <= 0) {
-    errorMessage.value = "Nominal pendapatan harus lebih dari 0.";
+  if (!Number.isFinite(editExpenseForm.amount) || editExpenseForm.amount <= 0) {
+    errorMessage.value = "Nominal biaya harus lebih dari 0.";
     return;
   }
 
-  if (!revenueForm.date) {
-    errorMessage.value = "Tanggal pendapatan wajib diisi.";
+  if (!editExpenseForm.date) {
+    errorMessage.value = "Tanggal biaya wajib diisi.";
     return;
   }
 
-  savingRevenue.value = true;
+  savingEditExpense.value = true;
   try {
-    await createRevenueSimulation({
+    await updateOperationalCost(editingExpense.value.id, {
       plant_batch_id: batch.id,
-      source: revenueForm.source.trim(),
-      amount: Number(revenueForm.amount),
-      revenue_date: revenueForm.date,
-      note: revenueForm.note.trim(),
-      status: "simulasi",
+      category: editExpenseForm.category.trim(),
+      amount: Number(editExpenseForm.amount),
+      cost_date: editExpenseForm.date,
+      note: editExpenseForm.note.trim(),
     });
 
-    await fetchRevenueSimulations();
-
-    infoMessage.value = "Pendapatan simulasi berhasil ditambahkan.";
-    closeRevenueModal();
+    await fetchOperationalCosts();
+    infoMessage.value = "Biaya operasional berhasil diperbarui.";
+    closeEditExpenseModal();
   } catch (error) {
-    console.error("Failed to save revenue simulation", error);
-    errorMessage.value = "Gagal menyimpan pendapatan simulasi.";
+    console.error("Failed to update operational cost", error);
+    errorMessage.value = "Gagal memperbarui biaya operasional.";
   } finally {
-    savingRevenue.value = false;
+    savingEditExpense.value = false;
   }
 }
 
@@ -992,15 +977,6 @@ function askDeleteExpense(item: OperationalCostEntry) {
     id: item.id,
     type: "expense",
     label: `${item.category} - ${item.batchCode}`,
-  };
-  deleteModalOpen.value = true;
-}
-
-function askDeleteRevenue(item: RevenueSimulationEntry) {
-  deleteTarget.value = {
-    id: item.id,
-    type: "revenue",
-    label: `${item.source} - ${item.batchCode}`,
   };
   deleteModalOpen.value = true;
 }
@@ -1016,15 +992,9 @@ async function confirmDelete() {
 
   deleteSubmitting.value = true;
   try {
-    if (deleteTarget.value.type === "expense") {
-      await deleteOperationalCost(deleteTarget.value.id);
-      await fetchOperationalCosts();
-      infoMessage.value = "Data biaya operasional berhasil dihapus.";
-    } else {
-      await deleteRevenueSimulation(deleteTarget.value.id);
-      await fetchRevenueSimulations();
-      infoMessage.value = "Data pendapatan simulasi berhasil dihapus.";
-    }
+    await deleteOperationalCost(deleteTarget.value.id);
+    await fetchOperationalCosts();
+    infoMessage.value = "Data biaya operasional berhasil dihapus.";
 
     closeDeleteModal();
   } catch (error) {
@@ -1036,7 +1006,7 @@ async function confirmDelete() {
 }
 
 async function refreshTrackerData() {
-  await Promise.all([fetchBatches(), fetchOperationalCosts(), fetchRevenueSimulations(), fetchCurrentUserInvestment()]);
+  await Promise.all([fetchBatches(), fetchOperationalCosts(), fetchRevenues(), fetchCurrentUserInvestment()]);
   errorMessage.value = "";
   infoMessage.value = "Data tracker diperbarui.";
 }
@@ -1160,7 +1130,7 @@ function submitProjection() {
 }
 
 onMounted(async () => {
-  await Promise.all([fetchBatches(), fetchOperationalCosts(), fetchRevenueSimulations(), fetchCurrentUserInvestment(), fetchGradesAndNationalPrices()]);
+  await Promise.all([fetchBatches(), fetchOperationalCosts(), fetchRevenues(), fetchCurrentUserInvestment(), fetchGradesAndNationalPrices()]);
 });
 </script>
 
@@ -1171,10 +1141,10 @@ onMounted(async () => {
         <div>
           <h2 class="text-2xl font-semibold text-gray-900">Financial Tracker</h2>
           <p class="mt-1 text-gray-600">
-            Catat biaya operasional per batch dan simulasi pendapatan agar pengelolaan keuangan lebih rapi.
+            Catat biaya operasional per batch dan pantau pendapatan agar pengelolaan keuangan lebih rapi.
           </p>
-          <p class="mt-2 text-xs text-amber-700">
-            Pendapatan saat ini masih mode simulasi. Integrasi otomatis dari sales akan menyusul.
+          <p class="mt-2 text-xs text-emerald-700">
+            Pendapatan otomatis diambil dari transaksi penjualan panen.
           </p>
         </div>
 
@@ -1205,15 +1175,6 @@ onMounted(async () => {
             <Plus class="h-4 w-4" />
             Input biaya operasional
           </button>
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
-            :disabled="!batches.length || loadingBatches"
-            @click="openRevenueModal"
-          >
-            <Plus class="h-4 w-4" />
-            Simulasi pendapatan
-          </button>
         </div>
       </div>
     </div>
@@ -1224,7 +1185,7 @@ onMounted(async () => {
           <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
             <BadgeDollarSign class="h-5 w-5" />
           </span>
-          <p class="text-base font-medium text-gray-700">Total Pendapatan Simulasi</p>
+          <p class="text-base font-medium text-gray-700">Total Pendapatan</p>
         </div>
         <p class="mt-5 text-4xl font-semibold tracking-tight text-gray-900">{{ formatRupiah(totalRevenue) }}</p>
         <p class="mt-2 text-sm text-emerald-600">
@@ -1440,9 +1401,9 @@ onMounted(async () => {
       </section>
 
       <section class="rounded-xl border border-gray-200 bg-white p-5">
-        <h3 class="mb-4 text-lg font-semibold text-gray-900">Pendapatan Simulasi per Batch</h3>
+        <h3 class="mb-4 text-lg font-semibold text-gray-900">Pendapatan per Batch</h3>
         <div v-if="!revenueBatchSeries.length" class="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-          Belum ada pendapatan simulasi untuk divisualisasikan.
+          Belum ada pendapatan untuk divisualisasikan.
         </div>
         <div v-else class="space-y-3">
           <div v-for="item in revenueBatchSeries" :key="item.batchCode" class="space-y-1">
@@ -1491,7 +1452,7 @@ onMounted(async () => {
             :class="tableView === 'revenues' ? 'bg-white text-amber-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'"
             @click="tableView = 'revenues'"
           >
-            Tabel Pendapatan Simulasi
+            Tabel Pendapatan
           </button>
         </div>
       </div>
@@ -1511,7 +1472,7 @@ onMounted(async () => {
         </div>
 
         <div class="max-h-[460px] overflow-auto">
-          <table class="w-full min-w-[920px]">
+          <table class="w-full min-w-[980px]">
             <thead class="bg-gray-50 text-left">
               <tr>
                 <th class="sticky top-0 z-10 bg-gray-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Tanggal</th>
@@ -1538,10 +1499,19 @@ onMounted(async () => {
                 <td class="px-4 py-3 text-sm text-gray-600">{{ item.note || '-' }}</td>
                 <td class="px-4 py-3 text-right text-sm font-semibold text-red-600">{{ formatRupiah(item.amount) }}</td>
                 <td class="px-4 py-3">
-                  <div class="flex justify-end">
+                  <div class="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      class="rounded-lg border border-amber-200 p-2 text-amber-600 transition hover:bg-amber-50"
+                      title="Edit biaya"
+                      @click="openEditExpenseModal(item)"
+                    >
+                      <Pencil class="h-4 w-4" />
+                    </button>
                     <button
                       type="button"
                       class="rounded-lg border border-red-200 p-2 text-red-600 transition hover:bg-red-50"
+                      title="Hapus biaya"
                       @click="askDeleteExpense(item)"
                     >
                       <Trash2 class="h-4 w-4" />
@@ -1581,7 +1551,7 @@ onMounted(async () => {
 
       <div v-else>
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
-          <h3 class="text-lg font-semibold text-gray-900">Pendapatan Simulasi per Batch</h3>
+          <h3 class="text-lg font-semibold text-gray-900">Pendapatan per Batch</h3>
           <div class="relative w-full max-w-sm">
             <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
@@ -1609,7 +1579,7 @@ onMounted(async () => {
             <tbody class="divide-y divide-gray-200">
               <tr v-if="!filteredRevenues.length">
                 <td colspan="7" class="px-4 py-6 text-center text-sm text-gray-500">
-                  Belum ada data pendapatan simulasi.
+                  Belum ada data pendapatan.
                 </td>
               </tr>
               <tr v-for="item in paginatedRevenues" :key="item.id" class="hover:bg-gray-50">
@@ -1620,23 +1590,12 @@ onMounted(async () => {
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-700">{{ item.source }}</td>
                 <td class="px-4 py-3 text-sm">
-                  <span class="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                  <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                     {{ item.status }}
                   </span>
                 </td>
                 <td class="px-4 py-3 text-sm text-gray-600">{{ item.note || '-' }}</td>
                 <td class="px-4 py-3 text-right text-sm font-semibold text-emerald-600">{{ formatRupiah(item.amount) }}</td>
-                <td class="px-4 py-3">
-                  <div class="flex justify-end">
-                    <button
-                      type="button"
-                      class="rounded-lg border border-red-200 p-2 text-red-600 transition hover:bg-red-50"
-                      @click="askDeleteRevenue(item)"
-                    >
-                      <Trash2 class="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
               </tr>
             </tbody>
           </table>
@@ -1644,7 +1603,7 @@ onMounted(async () => {
 
         <div class="flex items-center justify-between border-t border-gray-200 px-4 py-3">
           <p class="text-xs text-gray-500">
-            Menampilkan {{ paginatedRevenues.length }} dari {{ filteredRevenues.length }} data pendapatan simulasi
+            Menampilkan {{ paginatedRevenues.length }} dari {{ filteredRevenues.length }} data pendapatan
           </p>
           <div class="flex items-center gap-2">
             <button
@@ -1762,28 +1721,29 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div v-if="revenueModalOpen" class="fixed inset-0 z-50 bg-gray-900/45 p-4">
+    <!-- Edit Expense Modal -->
+    <div v-if="editExpenseModalOpen" class="fixed inset-0 z-50 bg-gray-900/45 p-4">
       <div class="mx-auto mt-10 w-full max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <h3 class="text-xl font-semibold text-gray-900">Input Pendapatan Simulasi</h3>
-            <p class="mt-1 text-sm text-gray-600">Gunakan sementara sebelum data sales terintegrasi otomatis.</p>
+            <h3 class="text-xl font-semibold text-gray-900">Edit Biaya Operasional</h3>
+            <p class="mt-1 text-sm text-gray-600">Perbarui data biaya operasional yang sudah dicatat.</p>
           </div>
           <button
             type="button"
             class="rounded-lg border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-100"
-            @click="closeRevenueModal"
+            @click="closeEditExpenseModal"
           >
             <X class="h-4 w-4" />
           </button>
         </div>
 
-        <form class="mt-5 grid gap-4 md:grid-cols-2" @submit.prevent="submitRevenueSimulation">
+        <form class="mt-5 grid gap-4 md:grid-cols-2" @submit.prevent="submitEditExpense">
           <label class="space-y-2">
             <span class="text-sm font-medium text-gray-700">Batch tanaman</span>
             <select
-              v-model="revenueForm.plantBatchId"
-              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+              v-model="editExpenseForm.plantBatchId"
+              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
             >
               <option v-for="batch in batches" :key="batch.id" :value="String(batch.id)">
                 {{ batch.batchCode }} - {{ batch.packageName }}
@@ -1792,63 +1752,65 @@ onMounted(async () => {
           </label>
 
           <label class="space-y-2">
-            <span class="text-sm font-medium text-gray-700">Sumber pendapatan</span>
+            <span class="text-sm font-medium text-gray-700">Kategori biaya</span>
             <select
-              v-model="revenueForm.source"
-              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+              v-model="editExpenseForm.category"
+              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
             >
-              <option v-for="item in revenueSourceOptions" :key="item" :value="item">
+              <option v-for="item in costCategoryOptions" :key="item" :value="item">
                 {{ item }}
               </option>
             </select>
           </label>
 
           <label class="space-y-2">
-            <span class="text-sm font-medium text-gray-700">Nominal pendapatan</span>
+            <span class="text-sm font-medium text-gray-700">Nominal biaya</span>
             <input
-              v-model.number="revenueForm.amount"
+              v-model.number="editExpenseForm.amount"
               type="number"
               min="0"
               step="1000"
-              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-              placeholder="Contoh: 450000"
+              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+              placeholder="Contoh: 250000"
             />
           </label>
 
           <label class="space-y-2">
-            <span class="text-sm font-medium text-gray-700">Tanggal pendapatan</span>
+            <span class="text-sm font-medium text-gray-700">Tanggal biaya</span>
             <input
-              v-model="revenueForm.date"
+              v-model="editExpenseForm.date"
               type="date"
-              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
             />
           </label>
 
           <label class="space-y-2 md:col-span-2">
             <span class="text-sm font-medium text-gray-700">Catatan (opsional)</span>
             <textarea
-              v-model="revenueForm.note"
+              v-model="editExpenseForm.note"
               rows="3"
-              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-              placeholder="Contoh: simulasi penjualan 5 kg vanili grade A"
+              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+              placeholder="Contoh: pembelian pupuk organik untuk minggu ke-2"
             />
           </label>
+
+          <p v-if="errorMessage" class="md:col-span-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ errorMessage }}</p>
 
           <div class="md:col-span-2 flex justify-end gap-2">
             <button
               type="button"
               class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              @click="closeRevenueModal"
+              @click="closeEditExpenseModal"
             >
               Batal
             </button>
             <button
               type="submit"
-              :disabled="savingRevenue"
+              :disabled="savingEditExpense"
               class="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-70"
             >
-              <BadgeDollarSign class="h-4 w-4" />
-              {{ savingRevenue ? "Menyimpan..." : "Simpan Simulasi" }}
+              <Pencil class="h-4 w-4" />
+              {{ savingEditExpense ? "Menyimpan..." : "Perbarui Biaya" }}
             </button>
           </div>
         </form>

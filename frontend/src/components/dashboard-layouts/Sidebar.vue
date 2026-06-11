@@ -51,6 +51,7 @@ watch(
 const investorMenuItems = [
   { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
   { id: 'portfolio', label: 'Portofolio Saya', icon: TrendingUp },
+  { id: 'harvest', label: 'Panen', icon: Sprout },
   {
     id: 'plants-group',
     label: 'Monitoring Tanaman',
@@ -74,12 +75,13 @@ const investorMenuItems = [
   { id: 'reports', label: 'Laporan', icon: FileText },
   { id: 'notifications', label: 'Notifikasi', icon: Bell },
 ];
-
+// Admin memiliki akses ke semua menu investor plus menu tambahan untuk manajemen
 const adminMenuItems = [
   { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
   { id: 'investors', label: 'Investor', icon: Users },
   { id: 'maintenance-validation', label: 'Validasi Perawatan', icon: ClipboardCheck },
   { id: 'monitoring-schedule', label: 'Jadwal Monitoring', icon: CalendarDays },
+  { id: 'harvest', label: 'Panen', icon: Sprout },
   { id: 'harvest-sales', label: 'Penjualan Panen', icon: ShoppingCart },
   { id: 'warehouse', label: 'Stok Gudang', icon: Package },
   { id: 'financials', label: 'Keuangan', icon: DollarSign },
@@ -100,23 +102,23 @@ const roleLabel = computed(() => {
 </script>
 
 <template>
-  <div class="w-64 bg-white border-r border-gray-200 flex flex-col h-screen">
-    <div class="p-6 border-b border-gray-200">
+  <div class="w-64 h-dvh bg-white border-r border-gray-200 flex min-h-0 flex-col overflow-hidden">
+    <div class="shrink-0 px-5 py-4 border-b border-gray-200">
       <div class="flex items-center gap-3">
-        <img src="../../assets/logo-pondok-tani.png" alt="Pondok Tani Land" class="w-10 h-10 object-contain rounded-lg bg-white p-1" />
+        <img src="../../assets/logo-pondok-tani.png" alt="Pondok Tani Land" class="w-9 h-9 object-contain rounded-lg bg-white p-1" />
         <div>
-          <h1 class="font-bold text-green-700">Pondok Tani Land</h1>
+          <h1 class="font-bold leading-tight text-green-700">Pondok Tani Land</h1>
           <p class="text-xs text-gray-500">{{ roleLabel }}</p>
         </div>
       </div>
     </div>
 
-    <nav class="flex-1 p-4 space-y-1">
+    <nav class="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-1">
       <div v-for="item in menuItems" :key="item.id">
         <button
           v-if="!item.children"
           type="button"
-          class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
+          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
           :class="
             activeView === item.id
               ? 'bg-green-50 text-green-700'
@@ -125,13 +127,13 @@ const roleLabel = computed(() => {
           @click="emit('setActiveView', item.id)"
         >
           <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
-          <span class="font-medium text-left">{{ item.label }}</span>
+          <span class="text-sm font-medium text-left">{{ item.label }}</span>
         </button>
 
         <div v-else>
           <button
             type="button"
-            class="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
             :class="
               item.id === 'maintenance-group'
                 ? (activeView === 'maintenance-schedule' || activeView === 'maintenance-history')
@@ -144,18 +146,18 @@ const roleLabel = computed(() => {
             @click="item.id === 'maintenance-group' ? maintenanceOpen = !maintenanceOpen : plantsOpen = !plantsOpen"
           >
             <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
-            <span class="font-medium text-left">{{ item.label }}</span>
+            <span class="text-sm font-medium text-left">{{ item.label }}</span>
             <ChevronDown
               class="w-4 h-4 ml-auto transition-transform"
               :class="item.id === 'maintenance-group' ? (maintenanceOpen ? 'rotate-180' : '') : (plantsOpen ? 'rotate-180' : '')"
             />
           </button>
-          <div v-show="item.id === 'maintenance-group' ? maintenanceOpen : plantsOpen" class="space-y-1 pl-10 mt-1">
+          <div v-show="item.id === 'maintenance-group' ? maintenanceOpen : plantsOpen" class="space-y-1 pl-9 mt-1">
             <button
               v-for="child in item.children"
               :key="child.id"
               type="button"
-              class="w-full flex items-center gap-2 justify-start rounded-lg px-4 py-2 text-left transition-colors"
+              class="w-full flex items-center gap-2 justify-start rounded-lg px-3 py-2 text-left transition-colors"
               :class="
                 activeView === child.id
                   ? 'bg-green-50 text-green-700'
@@ -164,14 +166,14 @@ const roleLabel = computed(() => {
               @click="emit('setActiveView', child.id)"
             >
               <component v-if="child.icon" :is="child.icon" class="w-4 h-4 flex-shrink-0" />
-              <span class="font-medium text-left">{{ child.label }}</span>
+              <span class="text-sm font-medium text-left">{{ child.label }}</span>
             </button>
           </div>
         </div>
       </div>
     </nav>
 
-    <div class="p-4 border-t border-gray-200 space-y-1">
+    <div class="shrink-0 px-3 py-3 border-t border-gray-200 space-y-1">
       <button
         type="button"
         class="w-full inline-flex items-center justify-between gap-2 px-3 py-2 rounded-md text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
@@ -182,18 +184,18 @@ const roleLabel = computed(() => {
       </button>
       <button
         type="button"
-        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
       >
         <Settings class="w-5 h-5" />
-        <span class="font-medium">Pengaturan</span>
+        <span class="text-sm font-medium">Pengaturan</span>
       </button>
       <button
         type="button"
-        class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
         @click="emit('logout')"
       >
         <LogOut class="w-5 h-5" />
-        <span class="font-medium">Keluar</span>
+        <span class="text-sm font-medium">Keluar</span>
       </button>
     </div>
   </div>

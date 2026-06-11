@@ -13,6 +13,8 @@ func HarvestRoutes(r *gin.Engine) {
 
 	harvest := r.Group("/harvest", middleware.AuthMiddleware())
 	{
+		harvest.GET("", handler.ListHarvests)
+		harvest.GET("/summary", handler.GetHarvestSummary)
 		harvest.POST("", handler.CreateHarvest)
 		harvest.POST("/:id/outputs", handler.CreateHarvestOutput)
 	}

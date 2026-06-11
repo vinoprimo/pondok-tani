@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { Camera, Loader2, NotebookText, PlusCircle, Sprout } from 'lucide-vue-next'
+import { Camera, Loader2, NotebookText, PlusCircle, Send, Sprout } from 'lucide-vue-next'
+import { createHarvestRequest } from '../../services/harvest/harvest'
 import { createPlantMonitoring, listPlantMonitorings } from '../../services/plant-monitoring/monitoring'
 
 const monitorings = ref<any[]>([])
 const loading = ref(false)
 const saving = ref(false)
+const requestingHarvest = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 
@@ -81,8 +83,8 @@ const activeSection = computed(() => {
   return 'input'
 })
 
-function formatDate(value: string) {
-  const date = new Date(value)
+function formatDate(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) return '-'
   return date.toLocaleDateString('id-ID', {
     day: '2-digit',
@@ -115,6 +117,82 @@ function resetFormDefaults() {
   form.value.affectedCount = 0
   form.value.totalPlants = Number(latestMonitoring.value?.total_plants || 0)
   form.value.note = ''
+}
+
+function buildMonitoringPayload() {
+  if (!selectedBatchId.value) {
+    errorMessage.value = 'Pilih batch terlebih dahulu.'
+    return null
+  }
+
+  const affectedCount = Number(form.value.affectedCount)
+  const totalPlants = Number(form.value.totalPlants)
+  if (!Number.isFinite(totalPlants) || totalPlants <= 0) {
+    errorMessage.value = 'Total tanaman harus lebih dari 0.'
+    return null
+  }
+  if (!Number.isFinite(affectedCount) || affectedCount < 0) {
+    errorMessage.value = 'Jumlah tanaman terdampak tidak valid.'
+    return null
+  }
+  if (affectedCount > totalPlants) {
+    errorMessage.value = 'Jumlah tanaman terdampak tidak boleh melebihi total tanaman.'
+    return null
+  }
+
+  if (!photoFile.value) {
+    errorMessage.value = 'Foto monitoring wajib diunggah.'
+    return null
+  }
+
+  const payload = new FormData()
+  payload.append('plant_batch_id', String(selectedBatchId.value))
+  payload.append('phase', form.value.phase)
+  payload.append('health_status', form.value.healthStatus)
+  payload.append('disease', form.value.disease)
+  payload.append('disease_note', form.value.disease === 'lainnya' ? form.value.diseaseNote : '')
+  payload.append('affected_count', String(Math.floor(affectedCount)))
+  payload.append('total_plants', String(Math.floor(totalPlants)))
+  payload.append('note', form.value.note.trim())
+  payload.append('photo', photoFile.value)
+
+  return payload
+}
+
+function buildHarvestMessage(monitoring: any) {
+  const batchLabel = selectedBatch.value?.batchCode || '-'
+  const packageLabel = selectedBatch.value?.packageName || '-'
+  const monitoringDate = formatDate(monitoring?.created_at || monitoring?.monitoring_date || new Date())
+  const requestDate = formatDate(new Date())
+
+  const lines = [
+    'Halo Admin Pondok Tani,',
+    '',
+    'Saya ingin mengajukan panen dengan detail monitoring berikut:',
+    `Tanggal pengajuan: ${requestDate}`,
+    `Batch: ${batchLabel}`,
+    `Paket: ${packageLabel}`,
+    `Fase: ${phaseLabelMap[monitoring?.phase] || monitoring?.phase || '-'}`,
+    `Status kesehatan: ${healthLabel(monitoring?.health_status || monitoring?.healthStatus || '-')}`,
+    `Disease: ${diseaseLabel(monitoring?.disease || '')}`,
+    `Tanaman terdampak: ${monitoring?.affected_count ?? monitoring?.affectedCount ?? 0} / ${monitoring?.total_plants ?? monitoring?.totalPlants ?? 0}`,
+  ]
+
+  if (monitoring?.disease_note || monitoring?.diseaseNote) {
+    lines.push(`Disease note: ${monitoring?.disease_note || monitoring?.diseaseNote}`)
+  }
+
+  lines.push(`Catatan: ${monitoring?.note || '-'}`)
+  lines.push(`Tanggal monitoring: ${monitoringDate}`)
+  lines.push('', 'Terima kasih.')
+
+  return lines.join('\n')
+}
+
+function openWhatsApp(message: string) {
+  const phoneNumber = '6281328164003'
+  const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
+  window.open(url, '_blank')
 }
 
 function handlePhotoChange(event: Event) {
@@ -163,41 +241,8 @@ async function submitMonitoring() {
   successMessage.value = ''
   errorMessage.value = ''
 
-  if (!selectedBatchId.value) {
-    errorMessage.value = 'Pilih batch terlebih dahulu.'
-    return
-  }
-
-  const affectedCount = Number(form.value.affectedCount)
-  const totalPlants = Number(form.value.totalPlants)
-  if (!Number.isFinite(totalPlants) || totalPlants <= 0) {
-    errorMessage.value = 'Total tanaman harus lebih dari 0.'
-    return
-  }
-  if (!Number.isFinite(affectedCount) || affectedCount < 0) {
-    errorMessage.value = 'Jumlah tanaman terdampak tidak valid.'
-    return
-  }
-  if (affectedCount > totalPlants) {
-    errorMessage.value = 'Jumlah tanaman terdampak tidak boleh melebihi total tanaman.'
-    return
-  }
-
-  if (!photoFile.value) {
-    errorMessage.value = 'Foto monitoring wajib diunggah.'
-    return
-  }
-
-  const payload = new FormData()
-  payload.append('plant_batch_id', String(selectedBatchId.value))
-  payload.append('phase', form.value.phase)
-  payload.append('health_status', form.value.healthStatus)
-  payload.append('disease', form.value.disease)
-  payload.append('disease_note', form.value.disease === 'lainnya' ? form.value.diseaseNote : '')
-  payload.append('affected_count', String(Math.floor(affectedCount)))
-  payload.append('total_plants', String(Math.floor(totalPlants)))
-  payload.append('note', form.value.note.trim())
-  payload.append('photo', photoFile.value)
+  const payload = buildMonitoringPayload()
+  if (!payload) return
 
   saving.value = true
   try {
@@ -215,6 +260,41 @@ async function submitMonitoring() {
     errorMessage.value = 'Gagal menyimpan monitoring tanaman.'
   } finally {
     saving.value = false
+  }
+}
+
+async function submitHarvestRequest() {
+  successMessage.value = ''
+  errorMessage.value = ''
+
+  const payload = buildMonitoringPayload()
+  if (!payload) return
+
+  requestingHarvest.value = true
+  try {
+    const response = await createPlantMonitoring(payload)
+    const monitoringData = response?.data?.data
+    if (!monitoringData?.id) {
+      throw new Error('Monitoring response missing')
+    }
+
+    await createHarvestRequest({ plant_monitoring_id: monitoringData.id })
+    successMessage.value = 'Ajuan panen berhasil dibuat.'
+
+    if (photoPreview.value) {
+      URL.revokeObjectURL(photoPreview.value)
+    }
+    photoFile.value = null
+    photoPreview.value = ''
+    resetFormDefaults()
+    await fetchMonitorings()
+
+    openWhatsApp(buildHarvestMessage(monitoringData))
+  } catch (error: any) {
+    console.error('Failed to create harvest request:', error)
+    errorMessage.value = error?.response?.data?.error || 'Gagal mengajukan panen.'
+  } finally {
+    requestingHarvest.value = false
   }
 }
 
@@ -366,16 +446,30 @@ onMounted(() => {
             </div>
           </div>
 
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60"
-            :disabled="saving"
-            @click="submitMonitoring"
-          >
-            <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
-            <Camera v-else class="h-4 w-4" />
-            {{ saving ? 'Menyimpan...' : 'Simpan Monitoring' }}
-          </button>
+          <div class="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60"
+              :disabled="saving || requestingHarvest"
+              @click="submitMonitoring"
+            >
+              <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
+              <Camera v-else class="h-4 w-4" />
+              {{ saving ? 'Menyimpan...' : 'Simpan Monitoring' }}
+            </button>
+
+            <button
+              v-if="form.phase === 'panen'"
+              type="button"
+              class="inline-flex items-center gap-2 rounded-lg border border-green-600 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-50 disabled:opacity-60"
+              :disabled="saving || requestingHarvest"
+              @click="submitHarvestRequest"
+            >
+              <Loader2 v-if="requestingHarvest" class="h-4 w-4 animate-spin" />
+              <Send v-else class="h-4 w-4" />
+              {{ requestingHarvest ? 'Mengajukan...' : 'Ajukan Panen' }}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -431,6 +525,12 @@ onMounted(() => {
                 </div>
 
                 <div class="grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
+                  <p class="md:col-span-2">
+                    ID Monitoring:
+                    <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs font-semibold text-gray-600">
+                      #{{ item.id }}
+                    </span>
+                  </p>
                   <p>Disease: <span class="font-medium">{{ diseaseLabel(item.disease) }}</span></p>
                   <p>Terdampak: <span class="font-medium">{{ item.affected_count }} / {{ item.total_plants }}</span></p>
                   <p class="md:col-span-2">Tanggal: <span class="font-medium">{{ formatDate(item.created_at) }}</span></p>
