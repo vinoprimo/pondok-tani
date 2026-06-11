@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   AlertCircle,
@@ -16,6 +16,8 @@ import {
   createAdminMaintenanceSchedule,
   getAdminMaintenanceSchedules,
 } from "../../services/maintenance/schedule";
+import SearchBar from "../../components/common/SearchBar.vue";
+import Pagination from "../../components/common/Pagination.vue";
 
 type UserItem = {
   id: string;
@@ -55,18 +57,53 @@ const isSaving = ref(false);
 const isAddModalOpen = ref(false);
 const currentMonth = ref(startOfMonth(new Date()));
 const selectedDateKey = ref(formatDateKey(new Date()));
+const searchTerm = ref("");
+const currentPage = ref(1);
+const limit = ref(5);
+
+const sortedSchedules = computed(() => {
+  return [...schedules.value].sort(
+    (a, b) => new Date(a.next_due_date).getTime() - new Date(b.next_due_date).getTime()
+  );
+});
+
+const filteredSchedules = computed(() => {
+  const term = searchTerm.value.trim().toLowerCase();
+  if (!term) {
+    return sortedSchedules.value;
+  }
+
+  return sortedSchedules.value.filter((item) => {
+    return [
+      item.batch_code,
+      item.activity_type,
+      item.status,
+      item.next_due_date,
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(term));
+  });
+});
+
+const totalRows = computed(() => filteredSchedules.value.length);
+const totalPages = computed(() => Math.max(Math.ceil(totalRows.value / limit.value), 1));
+
+watch([filteredSchedules, totalPages], () => {
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = totalPages.value;
+  }
+});
+
+const pagedSchedules = computed(() => {
+  const start = (currentPage.value - 1) * limit.value;
+  return filteredSchedules.value.slice(start, start + limit.value);
+});
 
 const form = ref({
   plant_batch_id: "",
   activity_type: "",
   frequency_days: 7,
   next_due_date: "",
-});
-
-const sortedSchedules = computed(() => {
-  return [...schedules.value].sort(
-    (a, b) => new Date(a.next_due_date).getTime() - new Date(b.next_due_date).getTime()
-  );
 });
 
 const scheduleMap = computed(() => {
@@ -214,6 +251,15 @@ function goToToday() {
   const today = new Date();
   currentMonth.value = startOfMonth(today);
   selectedDateKey.value = formatDateKey(today);
+}
+
+function handleSearch(val: string) {
+  searchTerm.value = val;
+  currentPage.value = 1;
+}
+
+function handlePageChange(val: number) {
+  currentPage.value = val;
 }
 
 async function loadUserData() {
@@ -514,13 +560,22 @@ onMounted(async () => {
     </div>
 
     <div class="rounded-xl border border-gray-200 bg-white overflow-hidden">
-      <div class="border-b border-gray-200 px-6 py-4">
-        <h3 class="text-lg font-semibold text-gray-900">Daftar Jadwal User</h3>
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 px-6 py-4">
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Daftar Jadwal User</h3>
+        </div>
+        <div class="w-full max-w-sm">
+          <SearchBar
+            v-model="searchTerm"
+            placeholder="Cari batch, aktivitas, status..."
+            @search="handleSearch"
+          />
+        </div>
       </div>
 
       <div v-if="isLoading" class="px-6 py-8 text-sm text-gray-600">Memuat data...</div>
-      <div v-else-if="sortedSchedules.length === 0" class="px-6 py-8 text-sm text-gray-600">
-        User ini belum memiliki jadwal.
+      <div v-else-if="filteredSchedules.length === 0" class="px-6 py-8 text-sm text-gray-600">
+        {{ searchTerm ? 'Tidak ada jadwal yang sesuai pencarian.' : 'User ini belum memiliki jadwal.' }}
       </div>
       <div v-else class="overflow-x-auto">
         <table class="w-full">
@@ -534,7 +589,7 @@ onMounted(async () => {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 text-sm">
-            <tr v-for="item in sortedSchedules" :key="item.id" class="hover:bg-gray-50">
+            <tr v-for="item in pagedSchedules" :key="item.id" class="hover:bg-gray-50">
               <td class="px-6 py-3 text-gray-800">{{ item.batch_code || `#${item.plant_batch_id}` }}</td>
               <td class="px-6 py-3 text-gray-800">{{ item.activity_type }}</td>
               <td class="px-6 py-3 text-gray-800">{{ item.frequency_days }} hari</td>
@@ -548,6 +603,14 @@ onMounted(async () => {
           </tbody>
         </table>
       </div>
+      <Pagination
+        v-if="filteredSchedules.length > limit"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :total-rows="totalRows"
+        :limit="limit"
+        @update:page="handlePageChange"
+      />
     </div>
 
     <div v-if="isAddModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
