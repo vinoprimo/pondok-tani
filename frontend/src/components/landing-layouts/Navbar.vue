@@ -20,6 +20,7 @@ const profile = ref({
 const canEnterDashboard = computed(() => {
   if (!isLoggedIn.value) return false;
   if (profile.value.role === 'admin') return true;
+  if (profile.value.role === 'mitra' && profile.value.packageStatus === 'pending_validation') return true;
   if (profile.value.role === 'investor' || profile.value.role === 'mitra') {
     return profile.value.packageStatus === 'active';
   }

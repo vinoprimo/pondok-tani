@@ -630,7 +630,7 @@ onMounted(() => {
                   </button>
 
                   <button
-                    v-if="getActionState(user) === 'mark-paid'"
+                    v-else-if="getActionState(user) === 'mark-paid'"
                     type="button"
                     class="inline-flex min-w-[210px] items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                     :disabled="updatingUserId === user.id"

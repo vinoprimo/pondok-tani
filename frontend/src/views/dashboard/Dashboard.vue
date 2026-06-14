@@ -12,6 +12,7 @@ import {
   Calculator,
 } from "lucide-vue-next";
 import { getAdminDashboard, getUserDashboard } from "../../services/dashboard/dashboard";
+import { getCurrentUser } from "../../services/user/user";
 import { Bar, Doughnut, Line } from "vue-chartjs";
 import {
   Chart as ChartJS,
@@ -103,8 +104,6 @@ onMounted(() => {
         isWaitingMitraValidation.value = false;
       });
   }
-
-  loadAdminPackages();
 });
 
 const monthlyChartData = computed(() => {

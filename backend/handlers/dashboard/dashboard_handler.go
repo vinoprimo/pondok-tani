@@ -128,7 +128,7 @@ func GetAdminDashboard(c *gin.Context) {
 
 	stats := []StatCard{
 		{Label: "Total investasi", Value: formatMoney(totalInvestment), Change: "", IsPositive: true, Icon: "Banknote"},
-		{Label: "Investor aktif", Value: formatNumber(totalUsers), Change: "", IsPositive: true, Icon: "Users"},
+		{Label: "Investor/Mitra aktif", Value: formatNumber(totalUsers), Change: "", IsPositive: true, Icon: "Users"},
 		{Label: "Total batch tanaman", Value: formatNumber(totalPlants), Change: "", IsPositive: true, Icon: "Sprout"},
 		{Label: "Permintaan panen", Value: formatNumber(totalHarvestRequests), Change: "", IsPositive: true, Icon: "Sprout"},
 		{Label: "Total pesanan", Value: formatNumber(totalSales), Change: "", IsPositive: true, Icon: "TrendingUp"},
