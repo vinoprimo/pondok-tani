@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"pondok-tani-backend/config"
+	notificationhandler "pondok-tani-backend/handlers/notification"
 	authmodels "pondok-tani-backend/models/auth"
 	coremodels "pondok-tani-backend/models/core"
 	maintenancemodels "pondok-tani-backend/models/maintenance"
 	notificationmodels "pondok-tani-backend/models/notification"
-	notificationhandler "pondok-tani-backend/handlers/notification"
 	"pondok-tani-backend/utils"
 
 	"github.com/gin-gonic/gin"
