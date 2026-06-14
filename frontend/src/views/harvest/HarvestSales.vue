@@ -1,155 +1,287 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { ShoppingCart, Package, Check, X } from 'lucide-vue-next';
-import SearchBar from '../../components/common/SearchBar.vue';
-import Pagination from '../../components/common/Pagination.vue';
+import { computed, onMounted, reactive, ref } from "vue";
+import { BadgeDollarSign, Calendar, Check, Package, RefreshCcw, ShoppingCart, X } from "lucide-vue-next";
+import { listWarehouseStocks } from "../../services/warehouse/warehouse";
+import { createSalesOrder, listSalesOrders } from "../../services/sales/sales";
 
-type Grade = { grade: string; quantity: number; price: number };
-
-type HarvestDry = {
-  id: string;
-  batchId: string;
-  investor: string;
-  type: 'Dry';
-  grades: Grade[];
-  totalQuantity: number;
-  province: string;
-  harvestDate: string;
+type WarehouseStockRow = {
+  id: number;
+  plant_batch_id: number;
+  batch_code: string;
+  package_name: string;
+  user_id: string;
+  user_name: string;
+  grade_id: number | null;
+  grade_name: string;
+  total_quantity: number;
+  unit: string;
+  updated_at: string;
 };
 
-type HarvestWet = {
-  id: string;
-  batchId: string;
-  investor: string;
-  type: 'Wet';
+type SalesDetailApiRow = {
+  id: number;
+  warehouse_stock_id: number;
+  plant_batch_id: number;
+  batch_code: string;
+  package_name: string;
+  grade_name: string;
   quantity: number;
-  price: number;
-  province: string;
-  harvestDate: string;
+  unit_price: number;
+  total_price: number;
 };
 
-type Harvest = HarvestDry | HarvestWet;
+type SalesOrderApiRow = {
+  id: number;
+  order_number: string;
+  sales_date: string;
+  buyer: string;
+  total_amount: number;
+  status: string;
+  created_by: string;
+  created_at: string;
+  details: SalesDetailApiRow[];
+};
 
-const selectedHarvest = ref<string | null>(null);
-const showConfirmModal = ref(false);
+type SalesDetailRow = {
+  id: number;
+  batchCode: string;
+  packageName: string;
+  gradeName: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+};
 
-const harvestsReadyForSale: Harvest[] = [
-  {
-    id: 'HRV-001',
-    batchId: 'BATCH-045',
-    investor: 'Sarah Johnson',
-    type: 'Dry',
-    grades: [
-      { grade: 'A', quantity: 25, price: 5000000 },
-      { grade: 'B', quantity: 15, price: 4250000 },
-    ],
-    totalQuantity: 40,
-    province: 'Jawa Barat',
-    harvestDate: '2024-01-15',
-  },
-  {
-    id: 'HRV-002',
-    batchId: 'BATCH-038',
-    investor: 'Michael Chen',
-    type: 'Wet',
-    quantity: 120,
-    price: 750000,
-    province: 'Jawa Barat',
-    harvestDate: '2024-01-18',
-  },
-  {
-    id: 'HRV-003',
-    batchId: 'BATCH-052',
-    investor: 'Emma Davis',
-    type: 'Dry',
-    grades: [
-      { grade: 'A', quantity: 30, price: 5000000 },
-      { grade: 'B', quantity: 20, price: 4250000 },
-      { grade: 'C', quantity: 10, price: 3500000 },
-    ],
-    totalQuantity: 60,
-    province: 'Jawa Barat',
-    harvestDate: '2024-01-20',
-  },
-];
+type SalesOrderRow = {
+  id: number;
+  orderNumber: string;
+  salesDate: string;
+  buyer: string;
+  totalAmount: number;
+  status: string;
+  createdAt: string;
+  details: SalesDetailRow[];
+};
 
-function harvestTypeLabel(type: 'Dry' | 'Wet') {
-  return type === 'Dry' ? 'Kering' : 'Basah';
-}
+const stocks = ref<WarehouseStockRow[]>([]);
+const orders = ref<SalesOrderRow[]>([]);
+const loading = ref(false);
+const errorMessage = ref("");
+const infoMessage = ref("");
 
-function calculateTotalValue(harvest: Harvest) {
-  if (harvest.type === 'Wet') {
-    return harvest.quantity * harvest.price;
-  }
-  return harvest.grades.reduce(
-    (sum, grade) => sum + grade.quantity * grade.price,
-    0
-  );
-}
+const saleModalOpen = ref(false);
+const submittingSale = ref(false);
+const selectedStock = ref<WarehouseStockRow | null>(null);
 
-function handleProcessSale(harvestId: string) {
-  selectedHarvest.value = harvestId;
-  showConfirmModal.value = true;
-}
+const today = new Date().toISOString().slice(0, 10);
 
-function confirmSale() {
-  window.alert('Penjualan berhasil diproses!');
-  showConfirmModal.value = false;
-  selectedHarvest.value = null;
-}
+const saleForm = reactive({
+  buyer: "",
+  salesDate: today,
+  quantity: 0,
+  unitPrice: 0,
+});
 
-const selectedHarvestData = computed(() =>
-  harvestsReadyForSale.find((h) => h.id === selectedHarvest.value)
+const availableStocks = computed(() => stocks.value.filter((item) => Number(item.total_quantity) > 0));
+
+const totalStockCount = computed(() => availableStocks.value.length);
+const totalStockQuantity = computed(() =>
+  availableStocks.value.reduce((acc, item) => acc + (Number(item.total_quantity) || 0), 0)
 );
-
-function typeBadgeClass(type: string) {
-  return type === 'Dry'
-    ? 'bg-orange-100 text-orange-800'
-    : 'bg-blue-100 text-blue-800';
-}
-
-const searchQuery = ref('');
-const currentPage = ref(1);
-const limit = ref(5);
-
-const filteredHarvests = computed(() => {
-  if (!searchQuery.value) return harvestsReadyForSale;
-  const q = searchQuery.value.toLowerCase();
-  return harvestsReadyForSale.filter(h => 
-    h.id.toLowerCase().includes(q) || 
-    h.batchId.toLowerCase().includes(q) || 
-    h.investor.toLowerCase().includes(q) ||
-    h.province.toLowerCase().includes(q)
-  );
+const totalRevenue = computed(() => orders.value.reduce((acc, item) => acc + (Number(item.totalAmount) || 0), 0));
+const salesThisMonth = computed(() => {
+  const now = new Date();
+  return orders.value.filter((item) => {
+    const date = new Date(item.salesDate);
+    if (Number.isNaN(date.getTime())) return false;
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+  }).length;
 });
 
-const totalPages = computed(() => Math.ceil(filteredHarvests.value.length / limit.value));
+const formatDate = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
-const paginatedHarvests = computed(() => {
-  const start = (currentPage.value - 1) * limit.value;
-  return filteredHarvests.value.slice(start, start + limit.value);
-});
+const formatRupiah = (value: number) =>
+  new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(value || 0);
 
-function handleSearch(val: string) {
-  searchQuery.value = val;
-  currentPage.value = 1;
+const formatQuantity = (value: number) =>
+  new Intl.NumberFormat("id-ID", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value || 0);
+
+function resetSaleForm(stock: WarehouseStockRow) {
+  saleForm.buyer = "";
+  saleForm.salesDate = today;
+  saleForm.quantity = Number(stock.total_quantity) || 0;
+  saleForm.unitPrice = 0;
 }
+
+function openSaleModal(stock: WarehouseStockRow) {
+  selectedStock.value = stock;
+  resetSaleForm(stock);
+  errorMessage.value = "";
+  infoMessage.value = "";
+  saleModalOpen.value = true;
+}
+
+function closeSaleModal() {
+  if (submittingSale.value) return;
+  saleModalOpen.value = false;
+  selectedStock.value = null;
+}
+
+async function fetchStocks() {
+  const response = await listWarehouseStocks();
+  const rows = Array.isArray(response.data) ? (response.data as WarehouseStockRow[]) : [];
+  stocks.value = rows;
+}
+
+async function fetchOrders() {
+  const response = await listSalesOrders();
+  const rows = Array.isArray(response.data) ? (response.data as SalesOrderApiRow[]) : [];
+  orders.value = rows.map((item) => ({
+    id: item.id,
+    orderNumber: item.order_number,
+    salesDate: item.sales_date,
+    buyer: item.buyer,
+    totalAmount: Number(item.total_amount) || 0,
+    status: item.status,
+    createdAt: item.created_at,
+    details: Array.isArray(item.details)
+      ? item.details.map((detail) => ({
+          id: detail.id,
+          batchCode: detail.batch_code,
+          packageName: detail.package_name,
+          gradeName: detail.grade_name,
+          quantity: Number(detail.quantity) || 0,
+          unitPrice: Number(detail.unit_price) || 0,
+          totalPrice: Number(detail.total_price) || 0,
+        }))
+      : [],
+  }));
+}
+
+async function refreshData() {
+  loading.value = true;
+  errorMessage.value = "";
+  infoMessage.value = "";
+  try {
+    await Promise.all([fetchStocks(), fetchOrders()]);
+  } catch (error) {
+    console.error("Failed to load sales data", error);
+    errorMessage.value = "Gagal memuat data penjualan dari server.";
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function submitSale() {
+  if (!selectedStock.value) return;
+
+  errorMessage.value = "";
+  infoMessage.value = "";
+
+  if (!saleForm.buyer.trim()) {
+    errorMessage.value = "Nama pembeli wajib diisi.";
+    return;
+  }
+
+  if (!saleForm.salesDate) {
+    errorMessage.value = "Tanggal penjualan wajib diisi.";
+    return;
+  }
+
+  if (!Number.isFinite(saleForm.quantity) || saleForm.quantity <= 0) {
+    errorMessage.value = "Kuantitas penjualan harus lebih dari 0.";
+    return;
+  }
+
+  if (saleForm.quantity > Number(selectedStock.value.total_quantity || 0)) {
+    errorMessage.value = "Kuantitas melebihi stok yang tersedia.";
+    return;
+  }
+
+  if (!Number.isFinite(saleForm.unitPrice) || saleForm.unitPrice <= 0) {
+    errorMessage.value = "Harga per kg harus lebih dari 0.";
+    return;
+  }
+
+  submittingSale.value = true;
+  try {
+    await createSalesOrder({
+      sales_date: saleForm.salesDate,
+      buyer: saleForm.buyer.trim(),
+      details: [
+        {
+          warehouse_stock_id: selectedStock.value.id,
+          quantity: Number(saleForm.quantity),
+          unit_price: Number(saleForm.unitPrice),
+        },
+      ],
+    });
+
+    await refreshData();
+
+    infoMessage.value = "Penjualan berhasil diproses.";
+    closeSaleModal();
+  } catch (error) {
+    console.error("Failed to create sales order", error);
+    errorMessage.value = "Gagal memproses penjualan.";
+  } finally {
+    submittingSale.value = false;
+  }
+}
+
+const orderTotalForForm = computed(() => (Number(saleForm.quantity) || 0) * (Number(saleForm.unitPrice) || 0));
+
+onMounted(async () => {
+  await refreshData();
+});
 </script>
 
 <template>
   <div class="space-y-6">
-    <div>
-      <h2 class="text-2xl font-semibold text-gray-900">Penjualan panen</h2>
-      <p class="text-gray-600 mt-1">Kelola dan proses penjualan hasil panen</p>
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h2 class="text-2xl font-semibold text-gray-900">Penjualan panen</h2>
+        <p class="text-gray-600 mt-1">Kelola penjualan stok gudang dan pantau transaksi yang sudah terjadi.</p>
+      </div>
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+        @click="refreshData"
+      >
+        <RefreshCcw class="h-4 w-4" />
+        Refresh data
+      </button>
+    </div>
+
+    <div v-if="errorMessage" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      {{ errorMessage }}
+    </div>
+    <div v-if="infoMessage" class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+      {{ infoMessage }}
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-sm text-gray-600">Siap dijual</p>
-          <Package class="w-5 h-5 text-green-600" />
+          <p class="text-sm text-gray-600">Stok siap dijual</p>
+          <Package class="w-5 h-5 text-emerald-600" />
         </div>
-        <p class="text-2xl font-semibold text-gray-900">12</p>
+        <p class="text-2xl font-semibold text-gray-900">{{ totalStockCount }}</p>
       </div>
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
@@ -157,93 +289,73 @@ function handleSearch(val: string) {
           <p class="text-sm text-gray-600">Total kuantitas</p>
           <Package class="w-5 h-5 text-blue-600" />
         </div>
-        <p class="text-2xl font-semibold text-gray-900">420 kg</p>
+        <p class="text-2xl font-semibold text-gray-900">{{ formatQuantity(totalStockQuantity) }} kg</p>
       </div>
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-sm text-gray-600">Perkiraan nilai total</p>
-          <ShoppingCart class="w-5 h-5 text-green-600" />
+          <p class="text-sm text-gray-600">Total pendapatan</p>
+          <BadgeDollarSign class="w-5 h-5 text-emerald-600" />
         </div>
-        <p class="text-2xl font-semibold text-green-600">$1.85M</p>
+        <p class="text-2xl font-semibold text-emerald-600">{{ formatRupiah(totalRevenue) }}</p>
       </div>
 
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <div class="flex items-center justify-between mb-2">
-          <p class="text-sm text-gray-600">Penjualan bulan ini</p>
-          <ShoppingCart class="w-5 h-5 text-orange-600" />
+          <p class="text-sm text-gray-600">Order bulan ini</p>
+          <Calendar class="w-5 h-5 text-orange-600" />
         </div>
-        <p class="text-2xl font-semibold text-gray-900">8</p>
+        <p class="text-2xl font-semibold text-gray-900">{{ salesThisMonth }}</p>
       </div>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <section class="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
-        <div>
-          <h3 class="text-lg font-semibold text-gray-900">Daftar penjualan</h3>
-          <p class="text-sm text-gray-600 mt-1">Kelola data penjualan panen terbaru</p>
-        </div>
-        <div class="w-full max-w-sm">
-          <SearchBar
-            v-model="searchQuery"
-            placeholder="Cari ID, batch, investor..."
-            @search="handleSearch"
-          />
-        </div>
+        <h3 class="text-lg font-semibold text-gray-900">Stok gudang siap dijual</h3>
+        <span v-if="loading" class="text-sm text-gray-500">Memuat data...</span>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="w-full min-w-[900px]">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">ID panen</th>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Investor</th>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Jenis</th>
-              <th class="text-left px-6 py-3 text-sm font-medium text-gray-900">Rincian mutu</th>
-              <th class="text-right px-6 py-3 text-sm font-medium text-gray-900">Kuantitas</th>
-              <th class="text-right px-6 py-3 text-sm font-medium text-gray-900">Perkiraan nilai</th>
-              <th class="text-center px-6 py-3 text-sm font-medium text-gray-900">Aksi</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Batch</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Investor</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Mutu</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Stok (kg)</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Update</th>
+              <th class="text-center px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Aksi</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-for="harvest in paginatedHarvests" :key="harvest.id" class="hover:bg-gray-50">
-              <td class="px-6 py-4">
-                <div>
-                  <p class="font-medium text-gray-900">{{ harvest.id }}</p>
-                  <p class="text-sm text-gray-500">{{ harvest.batchId }}</p>
-                </div>
+            <tr v-if="!availableStocks.length">
+              <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">
+                Belum ada stok gudang yang siap dijual.
               </td>
-              <td class="px-6 py-4 text-gray-900">{{ harvest.investor }}</td>
+            </tr>
+            <tr v-for="stock in availableStocks" :key="stock.id" class="hover:bg-gray-50">
               <td class="px-6 py-4">
-                <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  :class="typeBadgeClass(harvest.type)"
-                >
-                  {{ harvestTypeLabel(harvest.type) }}
-                </span>
+                <p class="font-medium text-gray-900">{{ stock.batch_code }}</p>
+                <p class="text-xs text-gray-500">{{ stock.package_name || "Paket tanpa nama" }}</p>
               </td>
-              <td class="px-6 py-4">
-                <div v-if="harvest.type === 'Dry'" class="space-y-1">
-                  <div v-for="(g, idx) in harvest.grades" :key="idx" class="text-sm">
-                    <span class="font-medium">Mutu {{ g.grade }}:</span> {{ g.quantity }} kg
-                  </div>
-                </div>
-                <span v-else class="text-sm text-gray-500">-</span>
+              <td class="px-6 py-4 text-sm text-gray-700">
+                {{ stock.user_name || "-" }}
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-700">
+                {{ stock.grade_name || "Tidak diklasifikasi" }}
               </td>
               <td class="px-6 py-4 text-right font-medium text-gray-900">
-                {{
-                  harvest.type === 'Dry' ? harvest.totalQuantity : harvest.quantity
-                }}
-                kg
+                {{ formatQuantity(stock.total_quantity) }} {{ stock.unit || "kg" }}
               </td>
-              <td class="px-6 py-4 text-right font-semibold text-green-600">
-                ${{ calculateTotalValue(harvest).toLocaleString() }}
+              <td class="px-6 py-4 text-sm text-gray-600">
+                {{ formatDate(stock.updated_at) }}
               </td>
               <td class="px-6 py-4 text-center">
                 <button
                   type="button"
-                  class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                  @click="handleProcessSale(harvest.id)"
+                  class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
+                  @click="openSaleModal(stock)"
                 >
+                  <ShoppingCart class="h-4 w-4" />
                   Proses penjualan
                 </button>
               </td>
@@ -251,78 +363,161 @@ function handleSearch(val: string) {
           </tbody>
         </table>
       </div>
-      <Pagination
-        v-if="filteredHarvests.length > 0"
-        :current-page="currentPage"
-        :total-pages="totalPages"
-        :total-rows="filteredHarvests.length"
-        :limit="limit"
-        @update:page="currentPage = $event"
-      />
-    </div>
+    </section>
 
-    <div
-      v-if="showConfirmModal && selectedHarvestData"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-    >
-      <div class="bg-white rounded-2xl max-w-lg w-full">
-        <div class="border-b border-gray-200 px-6 py-4">
-          <h3 class="text-lg font-semibold text-gray-900">Konfirmasi penjualan</h3>
-          <p class="text-sm text-gray-600 mt-1">Tinjau detail sebelum memproses</p>
+    <section class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div class="border-b border-gray-200 px-6 py-4">
+        <h3 class="text-lg font-semibold text-gray-900">Riwayat penjualan</h3>
+        <p class="text-sm text-gray-600 mt-1">Rekap transaksi yang sudah tercatat di sistem.</p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[980px]">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Order</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Pembeli</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Tanggal</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Detail</th>
+              <th class="text-right px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Total</th>
+              <th class="text-center px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <tr v-if="!orders.length">
+              <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">
+                Belum ada transaksi penjualan yang tercatat.
+              </td>
+            </tr>
+            <tr v-for="order in orders" :key="order.id" class="hover:bg-gray-50">
+              <td class="px-6 py-4">
+                <p class="font-medium text-gray-900">{{ order.orderNumber }}</p>
+                <p class="text-xs text-gray-500">{{ formatDate(order.createdAt) }}</p>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-700">{{ order.buyer }}</td>
+              <td class="px-6 py-4 text-sm text-gray-600">{{ formatDate(order.salesDate) }}</td>
+              <td class="px-6 py-4 text-sm text-gray-700">
+                <div v-if="order.details.length" class="space-y-1">
+                  <div v-for="detail in order.details" :key="detail.id" class="text-sm">
+                    <span class="font-medium text-gray-900">{{ detail.batchCode }}</span>
+                    <span class="text-xs text-gray-500">({{ detail.packageName }})</span>
+                    - {{ detail.gradeName }}: {{ formatQuantity(detail.quantity) }} kg x {{ formatRupiah(detail.unitPrice) }}
+                  </div>
+                </div>
+                <span v-else class="text-xs text-gray-500">-</span>
+              </td>
+              <td class="px-6 py-4 text-right font-semibold text-emerald-600">{{ formatRupiah(order.totalAmount) }}</td>
+              <td class="px-6 py-4 text-center">
+                <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                  {{ order.status || "completed" }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div v-if="saleModalOpen && selectedStock" class="fixed inset-0 z-50 bg-black/50 p-4">
+      <div class="mx-auto mt-10 w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-xl font-semibold text-gray-900">Proses penjualan</h3>
+            <p class="mt-1 text-sm text-gray-600">Masukkan detail transaksi sebelum konfirmasi penjualan.</p>
+          </div>
+          <button
+            type="button"
+            class="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:bg-gray-100"
+            @click="closeSaleModal"
+          >
+            <X class="h-4 w-4" />
+          </button>
         </div>
 
-        <div class="p-6 space-y-4">
-          <div class="bg-gray-50 rounded-lg p-4 space-y-3">
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-600">ID panen</span>
-              <span class="font-medium text-gray-900">{{ selectedHarvestData.id }}</span>
+        <div class="mt-5 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p class="font-medium text-gray-900">{{ selectedStock.batch_code }}</p>
+              <p class="text-xs text-gray-500">{{ selectedStock.package_name }}</p>
             </div>
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-600">Investor</span>
-              <span class="font-medium text-gray-900">{{ selectedHarvestData.investor }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-600">Jenis</span>
-              <span class="font-medium text-gray-900">{{ harvestTypeLabel(selectedHarvestData.type) }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-600">Total kuantitas</span>
-              <span class="font-medium text-gray-900">
-                {{
-                  selectedHarvestData.type === 'Dry'
-                    ? selectedHarvestData.totalQuantity
-                    : selectedHarvestData.quantity
-                }}
-                kg
-              </span>
-            </div>
-            <div class="flex justify-between pt-2 border-t border-gray-200">
-              <span class="text-sm font-medium text-gray-900">Total nilai penjualan</span>
-              <span class="text-xl font-bold text-green-600">
-                ${{ calculateTotalValue(selectedHarvestData).toLocaleString() }}
-              </span>
+            <div class="text-right">
+              <p class="text-xs text-gray-500">Stok tersedia</p>
+              <p class="font-semibold text-gray-900">
+                {{ formatQuantity(selectedStock.total_quantity) }} {{ selectedStock.unit || "kg" }}
+              </p>
             </div>
           </div>
+          <div class="mt-3 flex flex-wrap gap-3 text-xs text-gray-600">
+            <span class="rounded-full bg-white px-2.5 py-1">Investor: {{ selectedStock.user_name || "-" }}</span>
+            <span class="rounded-full bg-white px-2.5 py-1">Mutu: {{ selectedStock.grade_name || "Tidak diklasifikasi" }}</span>
+          </div>
+        </div>
 
-          <div class="flex gap-3">
+        <form class="mt-5 grid gap-4 md:grid-cols-2" @submit.prevent="submitSale">
+          <label class="space-y-2 md:col-span-2">
+            <span class="text-sm font-medium text-gray-700">Nama pembeli</span>
+            <input
+              v-model="saleForm.buyer"
+              type="text"
+              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+              placeholder="Contoh: PT Mitra Vanili"
+            />
+          </label>
+
+          <label class="space-y-2">
+            <span class="text-sm font-medium text-gray-700">Tanggal penjualan</span>
+            <input
+              v-model="saleForm.salesDate"
+              type="date"
+              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+            />
+          </label>
+
+          <label class="space-y-2">
+            <span class="text-sm font-medium text-gray-700">Kuantitas (kg)</span>
+            <input
+              v-model.number="saleForm.quantity"
+              type="number"
+              min="0"
+              step="0.1"
+              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+            />
+          </label>
+
+          <label class="space-y-2">
+            <span class="text-sm font-medium text-gray-700">Harga per kg</span>
+            <input
+              v-model.number="saleForm.unitPrice"
+              type="number"
+              min="0"
+              step="1000"
+              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+              placeholder="Contoh: 750000"
+            />
+          </label>
+
+          <div class="md:col-span-2 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3">
+            <p class="text-xs font-semibold uppercase tracking-wide text-emerald-600">Total nilai penjualan</p>
+            <p class="text-lg font-semibold text-emerald-700">{{ formatRupiah(orderTotalForForm) }}</p>
+          </div>
+
+          <div class="md:col-span-2 flex justify-end gap-2">
             <button
               type="button"
-              class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700 inline-flex items-center justify-center gap-2"
-              @click="showConfirmModal = false"
+              class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              @click="closeSaleModal"
             >
-              <X class="w-4 h-4" />
               Batal
             </button>
             <button
-              type="button"
-              class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium inline-flex items-center justify-center gap-2"
-              @click="confirmSale"
+              type="submit"
+              :disabled="submittingSale"
+              class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-70"
             >
-              <Check class="w-4 h-4" />
-              Konfirmasi penjualan
+              <Check class="h-4 w-4" />
+              {{ submittingSale ? "Menyimpan..." : "Konfirmasi penjualan" }}
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   </div>

@@ -74,6 +74,7 @@ const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
   investor: [
     "dashboard",
     "portfolio",
+    "harvest",
     "plants-input",
     "plants-history",
     "maintenance-schedule",
@@ -86,6 +87,7 @@ const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
   mitra: [
     "dashboard",
     "portfolio",
+    "harvest",
     "plants-input",
     "plants-history",
     "maintenance-schedule",
@@ -101,6 +103,7 @@ const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
     "vanili-management",
     "maintenance-validation",
     "monitoring-schedule",
+    "harvest",
     "harvest-sales",
     "warehouse",
     "financials",
@@ -126,6 +129,7 @@ const activeView = computed(() => {
     "/dashboard/reports": "reports",
     "/dashboard/notifications": "notifications",
     "/dashboard/investors": "investors",
+    "/dashboard/harvest": "harvest",
     "/dashboard/harvest-sales": "harvest-sales",
     "/dashboard/warehouse": "warehouse",
   };
@@ -145,6 +149,7 @@ function handleSetActiveView(view: string) {
   const routeMap: Record<string, string> = {
     dashboard: "/dashboard",
     portfolio: "/dashboard/portfolio",
+    harvest: "/dashboard/harvest",
     "plants-input": "/dashboard/plants/input",
     "plants-history": "/dashboard/plants/history",
     "vanili-management": "/dashboard/vanili-management",
@@ -209,7 +214,7 @@ watch(
 </script>
 
 <template>
-  <div class="flex h-screen bg-gray-50">
+  <div class="flex h-dvh overflow-hidden bg-gray-50">
     <Sidebar
       :active-view="activeView"
       :user-role="userRole"
@@ -217,8 +222,8 @@ watch(
       @logout="handleLogout"
     />
 
-    <div class="flex-1 flex flex-col overflow-hidden">
-      <header class="bg-white border-b border-gray-200 px-8 py-4">
+    <div class="flex-1 flex min-h-0 flex-col overflow-hidden">
+      <header class="shrink-0 bg-white border-b border-gray-200 px-8 py-4">
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-xl font-semibold text-gray-900">{{ pageTitle }}</h1>
