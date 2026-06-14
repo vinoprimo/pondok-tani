@@ -1,6 +1,7 @@
 package routes
 
 import (
+	contenthandler "pondok-tani-backend/handlers/content"
 	investmenthandler "pondok-tani-backend/handlers/investment"
 	maintenancehandler "pondok-tani-backend/handlers/maintenance"
 	notificationhandler "pondok-tani-backend/handlers/notification"
@@ -11,6 +12,9 @@ import (
 )
 
 func UserRoutes(r *gin.Engine) {
+	r.GET("/articles", contenthandler.ListArticles)
+	r.GET("/articles/:id", contenthandler.GetArticle)
+
 	user := r.Group("/users", middleware.AuthMiddleware())
 	{
 		user.GET("/me", userhandler.GetCurrentUser)

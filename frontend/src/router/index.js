@@ -40,6 +40,11 @@ const routes = [
     component: () => import("../views/landing/ContactUs.vue"),
   },
   {
+    path: "/artikel/:id",
+    name: "article-detail",
+    component: () => import("../views/landing/ArticleDetail.vue"),
+  },
+  {
     path: "/login",
     name: "login",
     component: () => import("../views/auth/Login.vue"),
@@ -95,6 +100,12 @@ const routes = [
         path: "vanili-management",
         name: "dashboard-vanili-management",
         component: () => import("../views/admin/VaniliManagement.vue"),
+        meta: { roles: ["admin"] },
+      },
+      {
+        path: "article-management",
+        name: "dashboard-article-management",
+        component: () => import("../views/admin/ArticleManagement.vue"),
         meta: { roles: ["admin"] },
       },
       {

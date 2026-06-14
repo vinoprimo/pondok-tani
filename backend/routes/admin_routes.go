@@ -1,6 +1,7 @@
 package routes
 
 import (
+	contenthandler "pondok-tani-backend/handlers/content"
 	investmenthandler "pondok-tani-backend/handlers/investment"
 	maintenancehandler "pondok-tani-backend/handlers/maintenance"
 	notificationhandler "pondok-tani-backend/handlers/notification"
@@ -44,6 +45,11 @@ func AdminRoutes(r *gin.Engine) {
 		admin.GET("/maintenance-activities/summary", maintenancehandler.GetAdminMaintenanceActivitySummary)
 		admin.GET("/maintenance-activities", maintenancehandler.ListAdminMaintenanceActivities)
 		admin.PUT("/maintenance-activities/:id/review", maintenancehandler.ReviewMaintenanceActivity)
+		admin.GET("/articles", contenthandler.ListArticles)
+		admin.GET("/articles/:id", contenthandler.GetArticle)
+		admin.POST("/articles", contenthandler.CreateArticle)
+		admin.PUT("/articles/:id", contenthandler.UpdateArticle)
+		admin.DELETE("/articles/:id", contenthandler.DeleteArticle)
 
 		admin.POST("/vanili/grades", pricehandler.CreateGrade)
 		admin.PUT("/vanili/grades/:id", pricehandler.UpdateGrade)

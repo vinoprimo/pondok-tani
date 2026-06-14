@@ -86,6 +86,7 @@ const adminMenuItems = [
   { id: 'financials', label: 'Keuangan', icon: DollarSign },
   { id: 'reports', label: 'Laporan', icon: FileText },
   { id: 'vanili-management', label: 'Harga & Grade Vanili', icon: DollarSign },
+  { id: 'article-management', label: 'Artikel', icon: FileText },
   { id: 'notifications', label: 'Notifikasi', icon: Bell },
 ];
 
