@@ -23,8 +23,8 @@ type createSalesDetailInput struct {
 }
 
 type createSalesOrderInput struct {
-	SalesDate string                 `json:"sales_date"`
-	Buyer     string                 `json:"buyer"`
+	SalesDate string                   `json:"sales_date"`
+	Buyer     string                   `json:"buyer"`
 	Details   []createSalesDetailInput `json:"details"`
 }
 
@@ -41,14 +41,14 @@ type salesDetailResponse struct {
 }
 
 type salesOrderResponse struct {
-	ID          uint                 `json:"id"`
-	OrderNumber string               `json:"order_number"`
-	SalesDate   time.Time            `json:"sales_date"`
-	Buyer       string               `json:"buyer"`
-	TotalAmount float64              `json:"total_amount"`
-	Status      string               `json:"status"`
-	CreatedBy   string               `json:"created_by"`
-	CreatedAt   time.Time            `json:"created_at"`
+	ID          uint                  `json:"id"`
+	OrderNumber string                `json:"order_number"`
+	SalesDate   time.Time             `json:"sales_date"`
+	Buyer       string                `json:"buyer"`
+	TotalAmount float64               `json:"total_amount"`
+	Status      string                `json:"status"`
+	CreatedBy   string                `json:"created_by"`
+	CreatedAt   time.Time             `json:"created_at"`
 	Details     []salesDetailResponse `json:"details"`
 }
 
@@ -104,7 +104,7 @@ func ListSalesOrders(c *gin.Context) {
 			orderMap[order.ID] = orderRow
 		}
 
-		gradeName := "Tidak diklasifikasi"
+		gradeName := "Basah"
 		if detail.WarehouseStock.Grade != nil {
 			gradeName = detail.WarehouseStock.Grade.GradeName
 		}

@@ -28,6 +28,7 @@ func AdminRoutes(r *gin.Engine) {
 		admin.DELETE("/users/:id", userhandler.DeleteUser)
 		admin.GET("/users/:id/plant-batches", plantbatchhandler.ListUserPlantBatches)
 		admin.PUT("/users/:id/activate-package", plantbatchhandler.ActivateUserPackage)
+		admin.PUT("/users/:id/validate-mitra", userhandler.ValidateMitra)
 		admin.PUT("/users/:id/investment-status", investmenthandler.UpdateInvestmentStatus)
 		admin.POST("/notifications/push", notificationhandler.SendPushNotification)
 		admin.GET("/emails/templates", notificationhandler.ListEmailTemplates)

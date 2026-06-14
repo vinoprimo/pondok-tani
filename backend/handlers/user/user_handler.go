@@ -195,6 +195,77 @@ func UpdateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
 }
 
+func ValidateMitra(c *gin.Context) {
+	userID := c.Param("id")
+	now := time.Now()
+
+	var user authmodels.User
+	if err := config.DB.First(&user, "id = ?", userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	if user.Role != "mitra" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Only mitra accounts can be validated"})
+		return
+	}
+
+	if user.PackageStatus != "pending_validation" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Mitra is not waiting for validation"})
+		return
+	}
+
+	tx := config.DB.Begin()
+	if tx.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start validation"})
+		return
+	}
+
+	if err := tx.Model(&authmodels.User{}).
+		Where("id = ?", userID).
+		Updates(map[string]interface{}{
+			"package_status":       "active",
+			"package_activated_at": now,
+			"updated_at":           now,
+		}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate mitra"})
+		return
+	}
+
+	if err := tx.Model(&coremodels.Investment{}).
+		Where("user_id = ? AND status = ?", userID, "pending_validation").
+		Updates(map[string]interface{}{
+			"status":     "active",
+			"updated_at": now,
+		}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate mitra investment"})
+		return
+	}
+
+	if err := tx.Model(&coremodels.PlantBatch{}).
+		Where("investment_id IN (?)",
+			tx.Model(&coremodels.Investment{}).Select("id").Where("user_id = ?", userID),
+		).
+		Where("status = ?", "pending_validation").
+		Updates(map[string]interface{}{
+			"status":     "active",
+			"updated_at": now,
+		}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to activate mitra plant batch"})
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to finish validation"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Mitra validated successfully"})
+}
+
 func UpdateFCMToken(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	var req updateUserFCMTokenRequest

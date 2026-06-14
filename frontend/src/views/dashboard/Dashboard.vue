@@ -17,6 +17,7 @@ import {
   getInvestmentPackages,
   updateInvestmentPackage,
 } from "../../services/investment/package";
+import { getCurrentUser } from "../../services/user/user";
 import SearchBar from "../../components/common/SearchBar.vue";
 import Pagination from "../../components/common/Pagination.vue";
 
@@ -61,6 +62,7 @@ const packageForm = reactive({
 });
 
 const isAdmin = computed(() => userRole.value === "admin");
+const isWaitingMitraValidation = ref(false);
 
 const formatRupiah = (value: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -214,6 +216,16 @@ onMounted(() => {
   const stored = localStorage.getItem("userRole") as UserRole | null;
   if (stored === "admin" || stored === "investor" || stored === "mitra") {
     userRole.value = stored;
+  }
+
+  if (userRole.value === "mitra") {
+    getCurrentUser()
+      .then((res) => {
+        isWaitingMitraValidation.value = res?.data?.package_status === "pending_validation";
+      })
+      .catch(() => {
+        isWaitingMitraValidation.value = false;
+      });
   }
 
   loadAdminPackages();
@@ -440,6 +452,21 @@ function closeModal() {
       </p>
     </div>
 
+    <div v-if="isWaitingMitraValidation" class="rounded-xl border border-amber-200 bg-amber-50 p-6">
+      <div class="flex items-start gap-4">
+        <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-amber-100">
+          <AlertCircle class="h-6 w-6 text-amber-700" />
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Pendaftaran mitra menunggu validasi admin</h3>
+          <p class="mt-2 max-w-2xl text-sm leading-6 text-gray-700">
+            Data pendaftaran dan penanaman awal Anda sudah terkirim. Dashboard akan terbuka setelah admin memvalidasi akun mitra Anda.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <template v-else>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <div
         v-for="(stat, index) in stats"
@@ -970,6 +997,7 @@ function closeModal() {
         </div>
       </div>
     </div>
+    </template>
 
     <Teleport to="body">
       <div
