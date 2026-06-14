@@ -3,6 +3,7 @@ package plantbatch
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -48,10 +49,10 @@ type activatePackageRequest struct {
 
 var phaseProgressMap = map[string]int{
 	"penanaman":        0,
-	"pertumbuhan_awal": 20,
+	"pertumbuhan_awal": 15,
 	"vegetatif":        40,
-	"pra-berbunga":     60,
-	"berbunga":         80,
+	"pembungaan":       70,
+	"pembuahan":        85,
 	"panen":            100,
 }
 
@@ -84,6 +85,46 @@ func saveBatchImage(c *gin.Context, fieldKey string) (string, error) {
 func getPhaseProgress(phase string) (int, bool) {
 	progress, ok := phaseProgressMap[strings.ToLower(strings.TrimSpace(phase))]
 	return progress, ok
+}
+
+func calculateAgeProgress(plantingDate time.Time) int {
+	ageMonths := int(math.Floor(time.Since(plantingDate).Hours() / 24 / 30.4375))
+	if ageMonths < 0 {
+		ageMonths = 0
+	}
+
+	switch {
+	case ageMonths < 3:
+		return int(math.Round(float64(ageMonths) / 3 * 15))
+	case ageMonths < 12:
+		return int(math.Round(15 + float64(ageMonths-3)/9*25))
+	case ageMonths < 24:
+		return int(math.Round(40 + float64(ageMonths-12)/12*30))
+	case ageMonths < 30:
+		return int(math.Round(70 + float64(ageMonths-24)/6*15))
+	case ageMonths < 36:
+		return int(math.Round(85 + float64(ageMonths-30)/6*10))
+	default:
+		return 100
+	}
+}
+
+func calculatePlantProgress(plantingDate time.Time, phaseKey string) int {
+	ageProgress := calculateAgeProgress(plantingDate)
+	phaseBase, exists := phaseProgressMap[phaseKey]
+	if !exists {
+		phaseBase = 0
+	}
+
+	progress := int(math.Max(float64(ageProgress), float64(phaseBase)))
+	if progress < 0 {
+		progress = 0
+	}
+	if progress > 100 {
+		progress = 100
+	}
+
+	return progress
 }
 
 func ActivateUserPackage(c *gin.Context) {
@@ -259,7 +300,7 @@ func ActivateUserPackage(c *gin.Context) {
 			return
 		}
 
-		progress, _ := getPhaseProgress("penanaman")
+		progress := calculatePlantProgress(plantingDate, "penanaman")
 		initialNote := fmt.Sprintf("Validasi penanaman awal untuk batch %s", batchCode)
 		creatorID := createdByStr
 		initialMonitoring := maintenancemodels.PlantMonitoring{

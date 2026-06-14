@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { Bell, CheckCircle2, AlertCircle, Info, TrendingUp, X } from 'lucide-vue-next';
+import { Bell, CheckCircle2, AlertCircle, Info, TrendingUp } from 'lucide-vue-next';
 import {
   fetchSystemNotifications,
   subscribeSystemNotifications,
@@ -28,50 +28,13 @@ function getCurrentUserId() {
 const filterItems = [
   { id: 'all', label: 'Semua' },
   { id: 'unread', label: 'Belum dibaca' },
-  { id: 'plant', label: 'Pembaruan tanaman' },
-  { id: 'payment', label: 'Pembayaran' },
-  { id: 'alert', label: 'Peringatan' },
-  { id: 'report', label: 'Laporan' },
-  { id: 'investment', label: 'Investasi' },
-];
-
-const preferenceRows = [
-  {
-    label: 'Notifikasi pembayaran',
-    description: 'Diberitahu saat imbal hasil dicairkan',
-    enabled: true,
-  },
-  {
-    label: 'Pembaruan tanaman',
-    description: 'Perubahan fase pertumbuhan dan status kesehatan',
-    enabled: true,
-  },
-  {
-    label: 'Laporan tersedia',
-    description: 'Saat laporan baru siap diunduh',
-    enabled: true,
-  },
-  {
-    label: 'Peringatan cuaca',
-    description: 'Informasi cuaca penting untuk tanaman Anda',
-    enabled: true,
-  },
-  {
-    label: 'Wawasan investasi',
-    description: 'Pembaruan ROI dan tren pasar',
-    enabled: false,
-  },
-  {
-    label: 'Email pemasaran',
-    description: 'Berita dan konten promosi',
-    enabled: false,
-  },
+  { id: 'read', label: 'Sudah dibaca' },
 ];
 
 const filteredNotifications = computed(() => {
-  if (filter.value === 'all') return notifications.value;
   if (filter.value === 'unread') return notifications.value.filter((n) => !n.read);
-  return notifications.value.filter((n) => n.category === filter.value);
+  if (filter.value === 'read') return notifications.value.filter((n) => n.read);
+  return notifications.value;
 });
 
 const unreadCount = computed(() => notifications.value.filter((n) => !n.read).length);
@@ -83,6 +46,8 @@ let unsubscribeNotifications = null;
 
 async function markAllAsRead() {
   const unreadItems = notifications.value.filter((n) => !n.read);
+  if (!unreadItems.length) return;
+
   await Promise.all(
     unreadItems.map((notification) =>
       markSystemNotificationRead(notification.id).catch((error) => {
@@ -90,25 +55,55 @@ async function markAllAsRead() {
       })
     )
   );
+
+  notifications.value = notifications.value.map((notification) => ({
+    ...notification,
+    read: true,
+  }));
 }
 
 async function markAsRead(notification) {
   if (notification.read || !notification.id) return;
+
   try {
     await markSystemNotificationRead(notification.id);
+    notifications.value = notifications.value.map((item) =>
+      item.id === notification.id ? { ...item, read: true } : item
+    );
   } catch (error) {
     console.error('Failed to mark notification read:', error);
   }
 }
 
 function normalizeNotification(doc) {
-  const createdAt = doc.createdAt && typeof doc.createdAt.toDate === 'function'
-    ? doc.createdAt.toDate().toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
-    : doc.time || 'Baru saja';
+  const rawTimestamp = doc.created_at || doc.createdAt || doc.sentAt || doc.time || null;
+
+  const formatTimestamp = (value) => {
+    if (!value) return 'Baru saja';
+
+    let dateValue = value;
+    if (typeof value?.toDate === 'function') {
+      dateValue = value.toDate();
+    } else if (typeof value === 'string') {
+      dateValue = new Date(value);
+    }
+
+    if (!(dateValue instanceof Date) || Number.isNaN(dateValue.getTime())) {
+      return 'Baru saja';
+    }
+
+    return dateValue.toLocaleString('id-ID', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   return {
     ...doc,
-    time: createdAt,
+    time: formatTimestamp(rawTimestamp),
   };
 }
 
@@ -164,16 +159,11 @@ function getIconBg(type: string) {
       <div class="flex items-center gap-3">
         <button
           type="button"
-          class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm"
+          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="unreadCount === 0"
           @click="markAllAsRead"
         >
           Tandai semua dibaca
-        </button>
-        <button
-          type="button"
-          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-        >
-          Pengaturan
         </button>
       </div>
     </div>
@@ -252,14 +242,16 @@ function getIconBg(type: string) {
         v-for="notification in filteredNotifications"
         :key="notification.id"
         :class="[
-          'bg-white rounded-xl border p-6 transition-all',
-          notification.read ? 'border-gray-200' : 'border-green-200 bg-green-50/30',
+          'rounded-xl border p-6 transition-all shadow-sm',
+          notification.read
+            ? 'bg-white border-gray-200 text-gray-700'
+            : 'bg-green-100/80 border-green-300 text-gray-900',
         ]"
       >
         <div class="flex items-start gap-4">
           <div
             class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-            :class="getIconBg(notification.type)"
+            :class="notification.type === 'info' ? '' : getIconBg(notification.type)"
           >
             <CheckCircle2
               v-if="notification.type === 'success'"
@@ -274,18 +266,13 @@ function getIconBg(type: string) {
 
           <div class="flex-1 min-w-0">
             <div class="flex items-start justify-between gap-4 mb-2">
-              <h3 class="font-semibold text-gray-900">{{ notification.title }}</h3>
-              <div class="flex items-center gap-2 flex-shrink-0">
-                <span
-                  v-if="!notification.read"
-                  class="w-2 h-2 bg-green-600 rounded-full"
-                />
-                <button type="button" class="text-gray-400 hover:text-gray-600">
-                  <X class="w-4 h-4" />
-                </button>
-              </div>
+              <h3 class="font-semibold" :class="notification.read ? 'text-gray-700' : 'text-gray-900'">{{ notification.title }}</h3>
+              <span
+                v-if="!notification.read"
+                class="w-2 h-2 bg-green-600 rounded-full flex-shrink-0"
+              />
             </div>
-            <p class="text-gray-600 mb-2">{{ notification.message }}</p>
+            <p class="text-gray-700 leading-relaxed whitespace-pre-line break-words mb-2">{{ notification.message }}</p>
             <div class="flex items-center gap-4">
               <span class="text-sm text-gray-500">{{ notification.time }}</span>
               <button
@@ -302,34 +289,5 @@ function getIconBg(type: string) {
       </div>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 class="font-semibold text-gray-900 mb-4">Preferensi notifikasi</h3>
-      <div class="space-y-4">
-        <div
-          v-for="(pref, index) in preferenceRows"
-          :key="index"
-          class="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
-        >
-          <div class="flex-1">
-            <p class="font-medium text-gray-900">{{ pref.label }}</p>
-            <p class="text-sm text-gray-600 mt-0.5">{{ pref.description }}</p>
-          </div>
-          <button
-            type="button"
-            :class="[
-              'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-              pref.enabled ? 'bg-green-600' : 'bg-gray-200',
-            ]"
-          >
-            <span
-              :class="[
-                'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                pref.enabled ? 'translate-x-6' : 'translate-x-1',
-              ]"
-            />
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>

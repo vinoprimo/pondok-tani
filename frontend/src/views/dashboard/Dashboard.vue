@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref } from "vue";
 import {
   TrendingUp,
   Sprout,
-  DollarSign,
+  Banknote,
   Users,
   ArrowUpRight,
   ArrowDownRight,
@@ -11,15 +11,22 @@ import {
   X,
   Calculator,
 } from "lucide-vue-next";
+import { getAdminDashboard, getUserDashboard } from "../../services/dashboard/dashboard";
+import { Bar, Doughnut, Line } from "vue-chartjs";
 import {
-  createInvestmentPackage,
-  deleteInvestmentPackage,
-  getInvestmentPackages,
-  updateInvestmentPackage,
-} from "../../services/investment/package";
-import { getCurrentUser } from "../../services/user/user";
-import SearchBar from "../../components/common/SearchBar.vue";
-import Pagination from "../../components/common/Pagination.vue";
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  ArcElement,
+  PointElement,
+  LineElement
+} from "chart.js";
+
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement, PointElement, LineElement);
 
 type UserRole = "investor" | "mitra" | "admin";
 
@@ -39,178 +46,46 @@ type InvestmentPackageItem = {
 const userRole = ref<UserRole>(
   (localStorage.getItem("userRole") as UserRole) || "investor"
 );
-
-const showProjectionModal = ref(false);
-
-const adminPackages = ref<InvestmentPackageItem[]>([]);
-const packageLoading = ref(false);
-const packageSaving = ref(false);
-const packageError = ref("");
-const packageSuccess = ref("");
-const editingPackageId = ref<number | null>(null);
-
-const packageForm = reactive({
-  package_name: "",
-  description: "",
-  min_quantity: 1,
-  price: 0,
-  status: "active",
-  roi: "",
-  duration: "",
-  benefits: "",
-  is_popular: false,
-});
-
 const isAdmin = computed(() => userRole.value === "admin");
 const isWaitingMitraValidation = ref(false);
 
-const formatRupiah = (value: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value);
+const showProjectionModal = ref(false);
 
-function resetPackageForm() {
-  packageForm.package_name = "";
-  packageForm.description = "";
-  packageForm.min_quantity = 1;
-  packageForm.price = 0;
-  packageForm.status = "active";
-  packageForm.roi = "";
-  packageForm.duration = "";
-  packageForm.benefits = "";
-  packageForm.is_popular = false;
-  editingPackageId.value = null;
-}
+const stats = ref<any[]>([]);
+const monthlyData = ref<any[]>([]);
+const plantStatusData = ref<any[]>([]);
+const revenueComparison = ref<any[]>([]);
+const salesHistory = ref<any[]>([]);
+const recentActivity = ref<any[]>([]);
+const upcomingMaintenance = ref<any[]>([]);
+const harvestStatus = ref<any[]>([]);
+const roiProgress = ref<any>(null);
+const loading = ref(true);
 
-const currentPage = ref(1);
-const totalPages = ref(1);
-const totalRows = ref(0);
-const searchQuery = ref("");
-const limit = ref(10);
-
-async function loadAdminPackages() {
-  if (!isAdmin.value) return;
-
-  packageLoading.value = true;
-  packageError.value = "";
+const loadDashboardData = async () => {
+  loading.value = true;
   try {
-    const res = await getInvestmentPackages({ 
-      page: currentPage.value, 
-      limit: limit.value,
-      search: searchQuery.value
-    });
-    // the backend now returns { data: [...], meta: { ... } }
-    if (res.data && res.data.meta) {
-      adminPackages.value = Array.isArray(res.data.data) ? res.data.data : [];
-      totalPages.value = res.data.meta.total_pages;
-      totalRows.value = res.data.meta.total_rows;
-      currentPage.value = res.data.meta.page;
+    let data;
+    if (isAdmin.value) {
+      data = await getAdminDashboard();
     } else {
-      adminPackages.value = Array.isArray(res.data) ? res.data : [];
-      totalPages.value = 1;
-      totalRows.value = adminPackages.value.length;
+      data = await getUserDashboard();
     }
+    stats.value = data.stats || [];
+    monthlyData.value = data.monthly_data || [];
+    plantStatusData.value = data.plant_status_data || [];
+    revenueComparison.value = data.revenue_comparison || [];
+    salesHistory.value = data.sales_history || [];
+    recentActivity.value = data.recent_activity || [];
+    if (data.upcoming_maintenance) upcomingMaintenance.value = data.upcoming_maintenance;
+    if (data.harvest_status) harvestStatus.value = data.harvest_status;
+    if (data.roi_progress) roiProgress.value = data.roi_progress;
   } catch (err) {
-    console.error("Failed to load investment packages", err);
-    packageError.value = "Gagal memuat data paket investasi.";
+    console.error("Gagal memuat dashboard", err);
   } finally {
-    packageLoading.value = false;
+    loading.value = false;
   }
-}
-
-function handleSearch(val: string) {
-  searchQuery.value = val;
-  currentPage.value = 1;
-  loadAdminPackages();
-}
-
-function handlePageChange(val: number) {
-  currentPage.value = val;
-  loadAdminPackages();
-}
-
-function startEditPackage(item: InvestmentPackageItem) {
-  editingPackageId.value = item.id;
-  packageForm.package_name = item.package_name;
-  packageForm.description = item.description || "";
-  packageForm.min_quantity = item.min_quantity;
-  packageForm.price = item.price;
-  packageForm.status = item.status || "active";
-  packageForm.roi = item.roi || "";
-  packageForm.duration = item.duration || "";
-  packageForm.benefits = Array.isArray(item.benefits) ? item.benefits.join("\n") : "";
-  packageForm.is_popular = item.is_popular || false;
-}
-
-async function submitPackageForm() {
-  packageError.value = "";
-  packageSuccess.value = "";
-
-  if (!packageForm.package_name.trim()) {
-    packageError.value = "Nama paket wajib diisi.";
-    return;
-  }
-  if (packageForm.min_quantity <= 0) {
-    packageError.value = "Minimum kuantitas harus lebih dari 0.";
-    return;
-  }
-  if (packageForm.price <= 0) {
-    packageError.value = "Harga harus lebih dari 0.";
-    return;
-  }
-
-  const payload = {
-    package_name: packageForm.package_name.trim(),
-    description: packageForm.description.trim() || null,
-    min_quantity: Number(packageForm.min_quantity),
-    price: Number(packageForm.price),
-    status: packageForm.status,
-    roi: packageForm.roi.trim(),
-    duration: packageForm.duration.trim(),
-    benefits: packageForm.benefits.split("\n").map(b => b.trim()).filter(b => b !== ""),
-    is_popular: packageForm.is_popular,
-  };
-
-  packageSaving.value = true;
-  try {
-    if (editingPackageId.value) {
-      await updateInvestmentPackage(editingPackageId.value, payload);
-      packageSuccess.value = "Paket investasi berhasil diperbarui.";
-    } else {
-      await createInvestmentPackage(payload);
-      packageSuccess.value = "Paket investasi berhasil dibuat.";
-    }
-
-    resetPackageForm();
-    await loadAdminPackages();
-  } catch (err) {
-    console.error("Failed to save investment package", err);
-    packageError.value = "Gagal menyimpan paket investasi.";
-  } finally {
-    packageSaving.value = false;
-  }
-}
-
-async function removePackage(id: number) {
-  packageError.value = "";
-  packageSuccess.value = "";
-  const confirmed = window.confirm("Hapus paket investasi ini?");
-  if (!confirmed) return;
-
-  try {
-    await deleteInvestmentPackage(id);
-    packageSuccess.value = "Paket investasi berhasil dihapus.";
-    if (editingPackageId.value === id) {
-      resetPackageForm();
-    }
-    await loadAdminPackages();
-  } catch (err) {
-    console.error("Failed to delete investment package", err);
-    packageError.value = "Gagal menghapus paket investasi.";
-  }
-}
+};
 
 onMounted(() => {
   const stored = localStorage.getItem("userRole") as UserRole | null;
@@ -218,6 +93,7 @@ onMounted(() => {
     userRole.value = stored;
   }
 
+  loadDashboardData();
   if (userRole.value === "mitra") {
     getCurrentUser()
       .then((res) => {
@@ -231,208 +107,103 @@ onMounted(() => {
   loadAdminPackages();
 });
 
-const monthlyData = [
-  { month: "Jan", revenue: 12000, costs: 8000 },
-  { month: "Peb", revenue: 15000, costs: 8500 },
-  { month: "Mar", revenue: 18000, costs: 9000 },
-  { month: "Apr", revenue: 22000, costs: 9500 },
-  { month: "Mei", revenue: 25000, costs: 10000 },
-  { month: "Jun", revenue: 28000, costs: 10500 },
-];
+const monthlyChartData = computed(() => ({
+  labels: monthlyData.value.map(d => d.month),
+  datasets: [
+    {
+      label: 'Investasi',
+      backgroundColor: '#10b981',
+      data: monthlyData.value.map(d => d.revenue)
+    },
+    {
+      label: 'Biaya',
+      backgroundColor: '#3b82f6',
+      data: monthlyData.value.map(d => d.costs)
+    }
+  ]
+}));
 
-const plantStatusData = [
-  { name: "Berbunga", value: 35, color: "#10b981" },
-  { name: "Tumbuh", value: 45, color: "#3b82f6" },
-  { name: "Panen", value: 15, color: "#f59e0b" },
-  { name: "Baru", value: 5, color: "#6366f1" },
-];
+const monthlyChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  scales: {
+    y: {
+      beginAtZero: true,
+      suggestedMax: 1000000,
+      ticks: {
+        callback: function(value: any) {
+          return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+          }).format(value);
+        }
+      }
+    }
+  },
+  plugins: {
+    tooltip: {
+      callbacks: {
+        label: function(context: any) {
+          let label = context.dataset.label || '';
+          if (label) {
+            label += ': ';
+          }
+          if (context.parsed.y !== null) {
+            label += new Intl.NumberFormat('id-ID', {
+              style: 'currency',
+              currency: 'IDR',
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0
+            }).format(context.parsed.y);
+          }
+          return label;
+        }
+      }
+    }
+  }
+};
 
-const investorStats = [
-  {
-    label: "Total investasi",
-    value: "$45,000",
-    change: "+12%",
-    isPositive: true,
-    icon: DollarSign,
-  },
-  {
-    label: "ROI saat ini",
-    value: "24.5%",
-    change: "+3.2%",
-    isPositive: true,
-    icon: TrendingUp,
-  },
-  {
-    label: "Tanaman aktif",
-    value: "85",
-    change: "+5",
-    isPositive: true,
-    icon: Sprout,
-  },
-  {
-    label: "Perkiraan imbal tahunan",
-    value: "$11,025",
-    change: "+15%",
-    isPositive: true,
-    icon: DollarSign,
-  },
-];
+const plantStatusChartData = computed(() => ({
+  labels: plantStatusData.value.map(d => d.name),
+  datasets: [
+    {
+      backgroundColor: plantStatusData.value.map(d => d.color),
+      data: plantStatusData.value.map(d => d.value)
+    }
+  ]
+}));
 
-const adminStats = [
-  {
-    label: "Total pendapatan",
-    value: "$128,450",
-    change: "+18%",
-    isPositive: true,
-    icon: DollarSign,
-  },
-  {
-    label: "Investor aktif",
-    value: "234",
-    change: "+12",
-    isPositive: true,
-    icon: Users,
-  },
-  {
-    label: "Total tanaman",
-    value: "1,850",
-    change: "+45",
-    isPositive: true,
-    icon: Sprout,
-  },
-  {
-    label: "ROI rata-rata",
-    value: "22.8%",
-    change: "-0.8%",
-    isPositive: false,
-    icon: TrendingUp,
-  },
-];
+const plantStatusChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'bottom' as const
+    }
+  }
+};
 
-const harvestStatus = [
-  { status: "Siap panen", count: 35, color: "#10b981" },
-  { status: "Pengeringan", count: 25, color: "#f59e0b" },
-  { status: "Terjual", count: 15, color: "#3b82f6" },
-];
+// Removed revenueComparisonChartData and revenueComparisonChartOptions
 
-const revenueComparison = [
-  { month: "Jan", estimated: 8000, actual: 7500 },
-  { month: "Peb", estimated: 9000, actual: 9200 },
-  { month: "Mar", estimated: 10000, actual: 9800 },
-  { month: "Apr", estimated: 11000, actual: 11500 },
-  { month: "Mei", estimated: 12000, actual: 11800 },
-  { month: "Jun", estimated: 13000, actual: 13200 },
-];
+const iconMap: Record<string, any> = {
+  Banknote,
+  TrendingUp,
+  Sprout,
+  Users
+};
 
-const salesHistory = [
-  {
-    id: "SALE-089",
-    date: "2024-01-19",
-    grade: "A",
-    quantity: 40,
-    revenue: "$200,000",
-    buyer: "PT Ekspor Premium",
-  },
-  {
-    id: "SALE-088",
-    date: "2024-01-17",
-    grade: "B",
-    quantity: 25,
-    revenue: "$106,250",
-    buyer: "Distributor Lokal",
-  },
-  {
-    id: "SALE-087",
-    date: "2024-01-15",
-    grade: "A",
-    quantity: 35,
-    revenue: "$175,000",
-    buyer: "PT Impor Global",
-  },
-];
 
-const recentActivity = [
-  { action: "Tanaman mencapai fase berbunga", time: "2 jam lalu", type: "success" as const },
-  { action: "Imbal bulanan $918 telah dicairkan", time: "5 jam lalu", type: "info" as const },
-  { action: "Inspeksi kesehatan tanaman selesai", time: "1 hari lalu", type: "success" as const },
-  { action: "Siklus panen batch #34 dimulai", time: "2 hari lalu", type: "warning" as const },
-];
-
-const stats = computed(() => (userRole.value === "admin" ? adminStats : investorStats));
-
-const maxMonthly = computed(() =>
-  Math.max(...monthlyData.map((d) => Math.max(d.revenue, d.costs)), 1)
-);
-
-const maxRevenueCompare = computed(() =>
-  Math.max(...revenueComparison.map((d) => Math.max(d.estimated, d.actual)), 1)
-);
 
 function activityDotClass(type: string) {
   if (type === "success") return "bg-green-500";
   if (type === "warning") return "bg-yellow-500";
+  if (type === "error") return "bg-red-500";
   return "bg-blue-500";
 }
 
-const harvestQty = ref("");
-const harvestType = ref<"wet" | "dry">("wet");
-const grade = ref("");
-const province = ref("");
-const shrinkage = ref("75");
-const operationalCost = ref("");
-
-const priceData: Record<string, { wet: number; dry: Record<string, number> }> = {
-  "West Java": {
-    wet: 750000,
-    dry: { A: 5000000, B: 4250000, C: 3500000, Split: 2500000, Asalan: 2000000 },
-  },
-  "Central Java": {
-    wet: 725000,
-    dry: { A: 4800000, B: 4080000, C: 3360000, Split: 2400000, Asalan: 1920000 },
-  },
-  "East Java": {
-    wet: 780000,
-    dry: { A: 5200000, B: 4420000, C: 3640000, Split: 2600000, Asalan: 2080000 },
-  },
-  Bali: {
-    wet: 800000,
-    dry: { A: 5400000, B: 4590000, C: 3780000, Split: 2700000, Asalan: 2160000 },
-  },
-};
-
-const projection = computed(() => {
-  if (!harvestQty.value || !province.value) return null;
-  const qty = parseFloat(harvestQty.value);
-  const provinceData = priceData[province.value];
-  if (!provinceData || Number.isNaN(qty)) return null;
-
-  let revenue = 0;
-  let effectiveQty = qty;
-
-  if (harvestType.value === "wet") {
-    revenue = qty * provinceData.wet;
-  } else {
-    if (!grade.value) return null;
-    const shrinkagePercent = parseFloat(shrinkage.value) / 100;
-    if (Number.isNaN(shrinkagePercent)) return null;
-    effectiveQty = qty * (1 - shrinkagePercent);
-    const dryPrice = provinceData.dry[grade.value];
-    if (dryPrice === undefined) return null;
-    revenue = effectiveQty * dryPrice;
-  }
-
-  const costs = operationalCost.value
-    ? parseFloat(operationalCost.value)
-    : revenue * 0.15;
-  const netProfit = revenue - costs;
-  const roi = costs !== 0 ? (netProfit / costs) * 100 : 0;
-
-  return { revenue, costs, netProfit, roi, effectiveQty };
-});
-
-function closeModal() {
-  showProjectionModal.value = false;
-}
+// projection modal removed
 </script>
 
 <template>
@@ -475,7 +246,7 @@ function closeModal() {
       >
         <div class="flex items-center justify-between mb-4">
           <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-            <component :is="stat.icon" class="w-6 h-6 text-green-600" />
+            <component :is="iconMap[stat.icon]" class="w-6 h-6 text-green-600" />
           </div>
           <div
             :class="[
@@ -493,280 +264,24 @@ function closeModal() {
       </div>
     </div>
 
-    <template v-if="isAdmin">
-      <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-lg font-semibold text-gray-900">CRUD Paket Investasi</h3>
-            <p class="text-sm text-gray-600 mt-1">
-              Kelola paket investasi yang akan tampil di landing page.
-            </p>
-          </div>
-          <button
-            type="button"
-            class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50"
-            @click="loadAdminPackages"
-          >
-            Refresh Data
-          </button>
-        </div>
-
-        <p v-if="packageError" class="text-sm text-red-600">{{ packageError }}</p>
-        <p v-if="packageSuccess" class="text-sm text-emerald-600">{{ packageSuccess }}</p>
-
-        <form class="grid grid-cols-1 md:grid-cols-2 gap-4" @submit.prevent="submitPackageForm">
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Nama Paket</label>
-            <input
-              v-model="packageForm.package_name"
-              type="text"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Contoh: Growth Vanili"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Harga (IDR)</label>
-            <input
-              v-model.number="packageForm.price"
-              type="number"
-              min="1"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Min Quantity</label>
-            <input
-              v-model.number="packageForm.min_quantity"
-              type="number"
-              min="1"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select
-              v-model="packageForm.status"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Estimasi ROI</label>
-            <input
-              v-model="packageForm.roi"
-              type="text"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Contoh: 30-40%"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Durasi</label>
-            <input
-              v-model="packageForm.duration"
-              type="text"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Contoh: 24-36 bulan"
-            />
-          </div>
-
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Benefit (Pisahkan dengan baris baru)</label>
-            <textarea
-              v-model="packageForm.benefits"
-              rows="4"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Cocok untuk pemula&#10;Laporan bulanan terperinci"
-            />
-          </div>
-
-          <div class="md:col-span-2">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
-            <textarea
-              v-model="packageForm.description"
-              rows="3"
-              class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="Deskripsi singkat paket investasi"
-            />
-          </div>
-
-          <div class="md:col-span-2 flex items-center mb-4">
-            <input
-              v-model="packageForm.is_popular"
-              type="checkbox"
-              id="is_popular"
-              class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-            />
-            <label for="is_popular" class="ml-2 block text-sm text-gray-900">
-              Tandai sebagai Paket Paling Populer
-            </label>
-          </div>
-
-          <div class="md:col-span-2 flex items-center gap-3">
-            <button
-              type="submit"
-              class="px-5 py-2.5 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50"
-              :disabled="packageSaving"
-            >
-              {{ editingPackageId ? "Update Paket" : "Tambah Paket" }}
-            </button>
-            <button
-              v-if="editingPackageId"
-              type="button"
-              class="px-5 py-2.5 rounded-lg border border-gray-300 font-medium hover:bg-gray-50"
-              @click="resetPackageForm"
-            >
-              Batal Edit
-            </button>
-          </div>
-        </form>
-
-        <div class="flex items-center justify-between mb-4 mt-8">
-          <h4 class="text-md font-medium text-gray-900">Daftar Paket Investasi</h4>
-          <SearchBar v-model="searchQuery" @search="handleSearch" placeholder="Cari nama atau deskripsi..." />
-        </div>
-
-        <div class="overflow-x-auto rounded-lg border border-gray-100">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50 text-left text-gray-600">
-              <tr>
-                <th class="px-3 py-2 font-medium">Nama Paket</th>
-                <th class="px-3 py-2 font-medium">Harga</th>
-                <th class="px-3 py-2 font-medium">Min Qty</th>
-                <th class="px-3 py-2 font-medium">Status</th>
-                <th class="px-3 py-2 font-medium">Aksi</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              <tr v-if="packageLoading">
-                <td colspan="5" class="px-3 py-4 text-center text-gray-500">Memuat data paket...</td>
-              </tr>
-              <tr v-else-if="adminPackages.length === 0">
-                <td colspan="5" class="px-3 py-4 text-center text-gray-500">Belum ada paket investasi.</td>
-              </tr>
-              <tr v-for="item in adminPackages" :key="item.id">
-                <td class="px-3 py-2 font-medium text-gray-900">{{ item.package_name }}</td>
-                <td class="px-3 py-2">{{ formatRupiah(item.price) }}</td>
-                <td class="px-3 py-2">{{ item.min_quantity }}</td>
-                <td class="px-3 py-2">
-                  <span
-                    class="px-2 py-1 rounded-full text-xs font-medium"
-                    :class="item.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'"
-                  >
-                    {{ item.status }}
-                  </span>
-                </td>
-                <td class="px-3 py-2">
-                  <div class="flex items-center gap-2">
-                    <button
-                      type="button"
-                      class="px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium hover:bg-gray-50"
-                      @click="startEditPackage(item)"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      class="px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50"
-                      @click="removePackage(item.id)"
-                    >
-                      Hapus
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        
-        <Pagination 
-          v-if="adminPackages.length > 0"
-          :current-page="currentPage" 
-          :total-pages="totalPages" 
-          :total-rows="totalRows" 
-          :limit="limit"
-          @update:page="handlePageChange"
-        />
-      </div>
-    </template>
-
+    <div v-if="loading" class="flex justify-center items-center py-20">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+    </div>
+    
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Kinerja investasi</h3>
-        <p class="text-xs text-gray-500 mb-3">Grafik batang (placeholder) — data di bawah</p>
-        <div class="overflow-x-auto rounded-lg border border-gray-100">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50 text-left text-gray-600">
-              <tr>
-                <th class="px-3 py-2 font-medium">Bulan</th>
-                <th class="px-3 py-2 font-medium text-right">Pendapatan</th>
-                <th class="px-3 py-2 font-medium text-right">Biaya</th>
-                <th class="px-3 py-2 font-medium">Batang pendapatan</th>
-                <th class="px-3 py-2 font-medium">Batang biaya</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              <tr v-for="row in monthlyData" :key="row.month">
-                <td class="px-3 py-2 font-medium text-gray-900">{{ row.month }}</td>
-                <td class="px-3 py-2 text-right text-gray-900">${{ row.revenue.toLocaleString() }}</td>
-                <td class="px-3 py-2 text-right text-gray-900">${{ row.costs.toLocaleString() }}</td>
-                <td class="px-3 py-2 w-32">
-                  <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      class="h-full rounded-full bg-emerald-500"
-                      :style="{ width: `${(row.revenue / maxMonthly) * 100}%` }"
-                    />
-                  </div>
-                </td>
-                <td class="px-3 py-2 w-32">
-                  <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      class="h-full rounded-full bg-blue-500"
-                      :style="{ width: `${(row.costs / maxMonthly) * 100}%` }"
-                    />
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="h-80">
+          <Bar :data="monthlyChartData" :options="monthlyChartOptions" />
         </div>
       </div>
 
+
+
       <div class="bg-white rounded-xl border border-gray-200 p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Status tanaman</h3>
-        <p class="text-xs text-gray-500 mb-3">Grafik pie (placeholder) — distribusi di bawah</p>
-        <div class="space-y-3 mb-4">
-          <div v-for="(item, index) in plantStatusData" :key="index">
-            <div class="flex items-center justify-between text-sm mb-1">
-              <span class="text-gray-600">{{ item.name }}</span>
-              <span class="font-medium text-gray-900">{{ item.value }}%</span>
-            </div>
-            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                class="h-full rounded-full"
-                :style="{ width: `${item.value}%`, backgroundColor: item.color }"
-              />
-            </div>
-          </div>
-        </div>
-        <div class="mt-4 space-y-2">
-          <div
-            v-for="(item, index) in plantStatusData"
-            :key="`leg-${index}`"
-            class="flex items-center justify-between text-sm"
-          >
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: item.color }" />
-              <span class="text-gray-600">{{ item.name }}</span>
-            </div>
-            <span class="font-medium text-gray-900">{{ item.value }}%</span>
-          </div>
+        <div class="h-64 mt-4">
+          <Doughnut :data="plantStatusChartData" :options="plantStatusChartOptions" />
         </div>
       </div>
     </div>
@@ -786,54 +301,51 @@ function closeModal() {
           <button
             type="button"
             class="px-4 py-2 bg-white text-orange-600 border border-orange-300 rounded-lg hover:bg-orange-50 transition-colors font-medium text-sm"
+            @click="$router.push('/dashboard/maintenance')"
           >
             Lihat semua
           </button>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="bg-white rounded-lg p-4 border-2 border-red-300">
+          <div
+            v-for="(task, index) in upcomingMaintenance"
+            :key="index"
+            :class="[
+              'bg-white rounded-lg p-4 border-2',
+              task.is_overdue ? 'border-red-300' : 'border-orange-200'
+            ]"
+          >
             <div class="flex items-start justify-between mb-2">
               <div>
-                <p class="font-semibold text-gray-900">Penyiraman - BATCH-038</p>
-                <p class="text-sm text-gray-600 mt-1">Jatuh tempo: 2024-01-20</p>
+                <p class="font-semibold text-gray-900">{{ task.task_name }}</p>
+                <p class="text-sm text-gray-600 mt-1">Jatuh tempo: {{ task.due_date }}</p>
               </div>
-              <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">
-                Terlambat 2 hari
+              <span
+                :class="[
+                  'px-3 py-1 rounded-full text-xs font-bold',
+                  task.is_overdue ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                ]"
+              >
+                {{ task.is_overdue ? `Terlambat ${Math.abs(task.days_diff)} hari` : `Tersisa ${task.days_diff} hari` }}
               </span>
             </div>
-            <p class="text-sm text-red-600 mt-2">Perlu tindakan segera</p>
+            <p
+              :class="[
+                'text-sm mt-2',
+                task.is_overdue ? 'text-red-600' : 'text-gray-600'
+              ]"
+            >
+              {{ task.is_overdue ? 'Perlu tindakan segera' : 'Segera datang' }}
+            </p>
           </div>
-          <div class="bg-white rounded-lg p-4 border-2 border-orange-200">
-            <div class="flex items-start justify-between mb-2">
-              <div>
-                <p class="font-semibold text-gray-900">Pemupukan - BATCH-045</p>
-                <p class="text-sm text-gray-600 mt-1">Jatuh tempo: 2024-01-26</p>
-              </div>
-              <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-bold">
-                Tersisa 3 hari
-              </span>
-            </div>
-            <p class="text-sm text-gray-600 mt-2">Segera datang</p>
+          <div v-if="upcomingMaintenance.length === 0" class="col-span-full py-4 text-center text-gray-500">
+            Tidak ada tugas perawatan dalam waktu dekat.
           </div>
         </div>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border-2 border-blue-200 p-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">Proyeksi pendapatan</h3>
-          <p class="text-sm text-gray-600 mb-4">
-            Perkirakan pendapatan dan ROI untuk panen Anda
-          </p>
-          <button
-            type="button"
-            class="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
-            @click="showProjectionModal = true"
-          >
-            <DollarSign class="w-5 h-5" />
-            Buat proyeksi pendapatan
-          </button>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-200 p-6">
+        <div class="bg-white rounded-xl border border-gray-200 p-6 lg:col-span-2">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">Status panen</h3>
           <div class="space-y-3">
             <div
@@ -853,79 +365,7 @@ function closeModal() {
         </div>
       </div>
 
-      <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">Perkiraan vs pendapatan aktual</h3>
-          <div class="flex items-center gap-4 text-sm">
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-blue-500" />
-              <span class="text-gray-600">Perkiraan</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="w-3 h-3 rounded-full bg-green-500" />
-              <span class="text-gray-600">Aktual</span>
-            </div>
-          </div>
-        </div>
-        <p class="text-xs text-gray-500 mb-3">Grafik garis (placeholder) — seri di bawah</p>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50 text-left">
-              <tr>
-                <th class="px-3 py-2 font-medium text-gray-600">Bulan</th>
-                <th class="px-3 py-2 font-medium text-gray-600 text-right">Perkiraan</th>
-                <th class="px-3 py-2 font-medium text-gray-600 text-right">Aktual</th>
-                <th class="px-3 py-2 font-medium text-gray-600">Bandingkan</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              <tr v-for="row in revenueComparison" :key="row.month">
-                <td class="px-3 py-2 font-medium">{{ row.month }}</td>
-                <td class="px-3 py-2 text-right text-blue-600">${{ row.estimated.toLocaleString() }}</td>
-                <td class="px-3 py-2 text-right text-emerald-600">${{ row.actual.toLocaleString() }}</td>
-                <td class="px-3 py-2">
-                  <div class="flex gap-1 h-8 items-end">
-                    <div
-                      class="w-3 bg-blue-500 rounded-t"
-                      :style="{ height: `${(row.estimated / maxRevenueCompare) * 100}%` }"
-                    />
-                    <div
-                      class="w-3 bg-emerald-500 rounded-t"
-                      :style="{ height: `${(row.actual / maxRevenueCompare) * 100}%` }"
-                    />
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Kemajuan ROI</h3>
-        <div class="space-y-4">
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm text-gray-600">ROI saat ini</span>
-              <span class="text-lg font-semibold text-green-600">24.5%</span>
-            </div>
-            <div class="relative h-4 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                class="absolute inset-y-0 left-0 bg-gradient-to-r from-green-500 to-green-600 rounded-full"
-                style="width: 61.25%"
-              />
-            </div>
-            <div class="flex justify-between mt-1 text-xs text-gray-500">
-              <span>0%</span>
-              <span>Target: 40%</span>
-            </div>
-          </div>
-          <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
-            <span class="text-sm text-gray-700">Perkiraan capai target dalam:</span>
-            <span class="text-lg font-semibold text-green-600">8 bulan</span>
-          </div>
-        </div>
-      </div>
+      <!-- Removed Perkiraan vs pendapatan aktual and Kemajuan ROI -->
 
       <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -999,172 +439,6 @@ function closeModal() {
     </div>
     </template>
 
-    <Teleport to="body">
-      <div
-        v-if="showProjectionModal"
-        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-        role="dialog"
-        aria-modal="true"
-        @click.self="closeModal"
-      >
-        <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-          <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                <Calculator class="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h2 class="text-xl font-semibold text-gray-900">Kalkulator proyeksi pendapatan</h2>
-                <p class="text-sm text-gray-600">Perkirakan pendapatan panen dan ROI Anda</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              class="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
-              @click="closeModal"
-            >
-              <X class="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-          <div class="p-6 space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Perkiraan jumlah panen (kg)
-                </label>
-                <input
-                  v-model="harvestQty"
-                  type="number"
-                  placeholder="mis. 100"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Jenis panen</label>
-                <div class="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    :class="[
-                      'px-4 py-2 rounded-lg font-medium transition-colors',
-                      harvestType === 'wet'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-                    ]"
-                    @click="harvestType = 'wet'"
-                  >
-                    Basah
-                  </button>
-                  <button
-                    type="button"
-                    :class="[
-                      'px-4 py-2 rounded-lg font-medium transition-colors',
-                      harvestType === 'dry'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-                    ]"
-                    @click="harvestType = 'dry'"
-                  >
-                    Kering
-                  </button>
-                </div>
-              </div>
-              <div v-if="harvestType === 'dry'">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Pilihan mutu</label>
-                <select
-                  v-model="grade"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Pilih mutu</option>
-                  <option value="A">Mutu A — Premium</option>
-                  <option value="B">Mutu B — Standar</option>
-                  <option value="C">Mutu C — Ekonomi</option>
-                  <option value="Split">Split</option>
-                  <option value="Asalan">Asalan</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Provinsi (acuan harga)
-                </label>
-                <select
-                  v-model="province"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Pilih provinsi</option>
-                  <option value="West Java">Jawa Barat</option>
-                  <option value="Central Java">Jawa Tengah</option>
-                  <option value="East Java">Jawa Timur</option>
-                  <option value="Bali">Bali</option>
-                </select>
-              </div>
-              <div v-if="harvestType === 'dry'">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Perkiraan susut pengeringan (%)
-                </label>
-                <input
-                  v-model="shrinkage"
-                  type="number"
-                  placeholder="75"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Perkiraan biaya operasional (opsional)
-                </label>
-                <input
-                  v-model="operationalCost"
-                  type="number"
-                  placeholder="Otomatis: 15% dari pendapatan"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-            <div
-              v-if="projection"
-              class="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-6 border-2 border-green-200"
-            >
-              <div class="flex items-center gap-2 mb-4">
-                <TrendingUp class="w-5 h-5 text-green-600" />
-                <h3 class="text-lg font-semibold text-gray-900">Hasil proyeksi</h3>
-              </div>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-white rounded-lg p-4">
-                  <p class="text-sm text-gray-600 mb-1">Perkiraan pendapatan</p>
-                  <p class="text-2xl font-bold text-green-600">
-                    ${{ projection.revenue.toLocaleString() }}
-                  </p>
-                </div>
-                <div class="bg-white rounded-lg p-4">
-                  <p class="text-sm text-gray-600 mb-1">Biaya operasional</p>
-                  <p class="text-2xl font-bold text-orange-600">
-                    ${{ projection.costs.toLocaleString() }}
-                  </p>
-                </div>
-                <div class="bg-white rounded-lg p-4">
-                  <p class="text-sm text-gray-600 mb-1">Laba bersih</p>
-                  <p class="text-2xl font-bold text-green-600">
-                    ${{ projection.netProfit.toLocaleString() }}
-                  </p>
-                </div>
-                <div class="bg-white rounded-lg p-4">
-                  <p class="text-sm text-gray-600 mb-1">Proyeksi ROI</p>
-                  <p class="text-2xl font-bold text-blue-600">{{ projection.roi.toFixed(1) }}%</p>
-                </div>
-              </div>
-              <div
-                v-if="harvestType === 'dry'"
-                class="mt-4 p-3 bg-white/50 rounded-lg border border-green-200"
-              >
-                <p class="text-sm text-gray-700">
-                  <span class="font-medium">Catatan:</span> Setelah susut {{ shrinkage }}%, jumlah efektif:
-                  <span class="font-semibold">{{ projection.effectiveQty.toFixed(2) }} kg</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <!-- Modal removed -->
   </div>
 </template>

@@ -40,6 +40,11 @@ const routes = [
     component: () => import("../views/landing/ContactUs.vue"),
   },
   {
+    path: "/artikel/:id",
+    name: "article-detail",
+    component: () => import("../views/landing/ArticleDetail.vue"),
+  },
+  {
     path: "/login",
     name: "login",
     component: () => import("../views/auth/Login.vue"),
@@ -98,6 +103,12 @@ const routes = [
         meta: { roles: ["admin"] },
       },
       {
+        path: "article-management",
+        name: "dashboard-article-management",
+        component: () => import("../views/admin/ArticleManagement.vue"),
+        meta: { roles: ["admin"] },
+      },
+      {
         path: "maintenance",
         name: "dashboard-maintenance",
         component: () => import("../views/plant-monitoring/MaintenanceActivities.vue"),
@@ -149,6 +160,12 @@ const routes = [
         path: "maintenance-validation",
         name: "dashboard-maintenance-validation",
         component: () => import("../views/plant-monitoring/MaintenanceValidation.vue"),
+        meta: { roles: ["admin"] },
+      },
+      {
+        path: "investment-packages",
+        name: "dashboard-investment-packages",
+        component: () => import("../views/admin/InvestmentPackageCRUD.vue"),
         meta: { roles: ["admin"] },
       },
       {

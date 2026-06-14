@@ -1,13 +1,27 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue';
 import { ArrowRight, Sprout, TrendingUp, Shield, BarChart3, Users, Handshake, BookOpenText, CalendarDays, Network, Globe } from 'lucide-vue-next';
 import { useRouter } from "vue-router";
 import LandingLayout from '../../layouts/LandingLayout.vue';
 import heroImage from '../../assets/pondok-tani-hero.jpg';
-import berita1 from '../../assets/berita-1.jpg';
-import berita2 from '../../assets/berita-2.jpg';
-import berita3 from '../../assets/berita-3.jpg';
+import { getPublishedArticles } from '../../services/content/articles';
 
 const router = useRouter();
+const articles = ref<any[]>([]);
+
+async function loadArticles() {
+  try {
+    const res = await getPublishedArticles({ status: 'publish' });
+    articles.value = Array.isArray(res.data) ? res.data.slice(0, 3) : [];
+  } catch (error) {
+    console.error('Failed to load articles:', error);
+    articles.value = [];
+  }
+}
+
+onMounted(() => {
+  loadArticles();
+});
 </script>
 
 <template>
@@ -363,32 +377,23 @@ const router = useRouter();
           </div>
           <a class="rounded-xl border border-green-200 px-5 py-3 font-semibold text-green-600 hover:bg-green-50" href="https://news.google.com/search?q=vanili&hl=id&gl=ID&ceid=ID:id" target="_blank" rel="noopener noreferrer">Lihat Semua Berita</a>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <a class="rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition" href="https://news.google.com/search?q=vanili+indonesia+terbaru&hl=id&gl=ID&ceid=ID:id" target="_blank" rel="noopener noreferrer">
-            <img class="h-48 w-full object-cover" :src="berita1" alt="Berita vanili Indonesia" />
+        <div v-if="articles.length" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <router-link
+            v-for="item in articles"
+            :key="item.id"
+            class="rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition"
+            :to="{ name: 'article-detail', params: { id: item.id } }"
+          >
+            <img v-if="item.image_url" class="h-48 w-full object-cover" :src="item.image_url" :alt="item.title" />
+            <div class="h-48 w-full bg-gradient-to-br from-green-100 to-green-50 flex items-center justify-center text-green-700 font-semibold" v-else>Artikel Pondok Tani</div>
             <div class="p-6">
-                <p class="text-xs font-semibold text-green-600">Google News</p>
-              <h4 class="mt-2 text-xl font-bold text-slate-900">Berita Vanili Indonesia Terbaru</h4>
-              <p class="mt-3 text-slate-600">Update perkembangan budidaya, petani, dan industri vanili di Indonesia.</p>
+              <p class="text-xs font-semibold text-green-600">{{ item.category || 'Artikel' }}</p>
+              <h4 class="mt-2 text-xl font-bold text-slate-900">{{ item.title }}</h4>
+              <p class="mt-3 text-slate-600">{{ item.excerpt || item.content?.slice(0, 120) }}</p>
             </div>
-          </a>
-          <a class="rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition" href="https://news.google.com/search?q=harga+vanili+dunia&hl=id&gl=ID&ceid=ID:id" target="_blank" rel="noopener noreferrer">
-            <img class="h-48 w-full object-cover" :src="berita2" alt="Berita harga vanili dunia" />
-            <div class="p-6">
-                <p class="text-xs font-semibold text-green-600">Google News</p>
-              <h4 class="mt-2 text-xl font-bold text-slate-900">Pergerakan Harga Vanili Global</h4>
-              <p class="mt-3 text-slate-600">Pantau kabar terbaru terkait harga vanili dunia dan permintaan pasar internasional.</p>
-            </div>
-          </a>
-          <a class="rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition" href="https://news.google.com/search?q=teknik+budidaya+vanili+terkini&hl=id&gl=ID&ceid=ID:id" target="_blank" rel="noopener noreferrer">
-            <img class="h-48 w-full object-cover" :src="berita3" alt="Teknik budidaya vanili" />
-            <div class="p-6">
-                <p class="text-xs font-semibold text-green-600">Google News</p>
-              <h4 class="mt-2 text-xl font-bold text-slate-900">Teknik Budidaya Vanili Terkini</h4>
-              <p class="mt-3 text-slate-600">Kumpulan berita dan tips terbaru seputar teknik budidaya untuk hasil optimal.</p>
-            </div>
-          </a>
+          </router-link>
         </div>
+        <div v-else class="rounded-2xl border border-dashed border-green-200 bg-green-50 p-8 text-center text-green-700">Belum ada artikel publik yang tersedia.</div>
       </div>
     </section>
 
