@@ -51,6 +51,10 @@ export const activateUserPackage = (userId, payload) => {
   return api.put(`/admin/users/${userId}/activate-package`, payload);
 };
 
+export const validateMitra = (userId) => {
+  return api.put(`/admin/users/${userId}/validate-mitra`);
+};
+
 export const updateInvestmentStatus = (userId, status) => {
   return api.put(`/admin/users/${userId}/investment-status`, { status });
 };

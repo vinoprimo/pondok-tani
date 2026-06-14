@@ -23,6 +23,7 @@ import { listActualRevenues } from "../../services/financial/revenue";
 import { getCurrentUser } from "../../services/user/user";
 import { getGrades, getNationalPrices } from "../../services/price/vanili";
 import { calculateRevenueProjection, getProjectionStats } from "../../services/financial/projection";
+import Pagination from "../../components/common/Pagination.vue";
 
 type MonitoringRow = {
   plant_batch_id: number;
@@ -991,17 +992,21 @@ async function confirmDelete() {
   if (!deleteTarget.value) return;
 
   deleteSubmitting.value = true;
+  let success = false;
   try {
     await deleteOperationalCost(deleteTarget.value.id);
     await fetchOperationalCosts();
     infoMessage.value = "Data biaya operasional berhasil dihapus.";
-
-    closeDeleteModal();
+    success = true;
   } catch (error) {
     console.error("Failed to delete tracker data", error);
     errorMessage.value = "Gagal menghapus data.";
   } finally {
     deleteSubmitting.value = false;
+  }
+
+  if (success) {
+    closeDeleteModal();
   }
 }
 
@@ -1523,30 +1528,14 @@ onMounted(async () => {
           </table>
         </div>
 
-        <div class="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-          <p class="text-xs text-gray-500">
-            Menampilkan {{ paginatedExpenses.length }} dari {{ filteredExpenses.length }} data biaya
-          </p>
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-              :disabled="expensePage <= 1"
-              @click="expensePage -= 1"
-            >
-              Sebelumnya
-            </button>
-            <span class="text-sm text-gray-600">Halaman {{ expensePage }} / {{ expenseTotalPages }}</span>
-            <button
-              type="button"
-              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-              :disabled="expensePage >= expenseTotalPages"
-              @click="expensePage += 1"
-            >
-              Berikutnya
-            </button>
-          </div>
-        </div>
+        <Pagination
+          v-if="filteredExpenses.length > 0"
+          :current-page="expensePage"
+          :total-pages="expenseTotalPages"
+          :total-rows="filteredExpenses.length"
+          :limit="COST_PAGE_SIZE"
+          @update:page="expensePage = $event"
+        />
       </div>
 
       <div v-else>
@@ -1601,30 +1590,14 @@ onMounted(async () => {
           </table>
         </div>
 
-        <div class="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-          <p class="text-xs text-gray-500">
-            Menampilkan {{ paginatedRevenues.length }} dari {{ filteredRevenues.length }} data pendapatan
-          </p>
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-              :disabled="revenuePage <= 1"
-              @click="revenuePage -= 1"
-            >
-              Sebelumnya
-            </button>
-            <span class="text-sm text-gray-600">Halaman {{ revenuePage }} / {{ revenueTotalPages }}</span>
-            <button
-              type="button"
-              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-              :disabled="revenuePage >= revenueTotalPages"
-              @click="revenuePage += 1"
-            >
-              Berikutnya
-            </button>
-          </div>
-        </div>
+        <Pagination
+          v-if="filteredRevenues.length > 0"
+          :current-page="revenuePage"
+          :total-pages="revenueTotalPages"
+          :total-rows="filteredRevenues.length"
+          :limit="REVENUE_PAGE_SIZE"
+          @update:page="revenuePage = $event"
+        />
       </div>
     </section>
 

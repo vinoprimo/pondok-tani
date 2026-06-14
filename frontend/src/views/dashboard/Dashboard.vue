@@ -47,6 +47,7 @@ const userRole = ref<UserRole>(
   (localStorage.getItem("userRole") as UserRole) || "investor"
 );
 const isAdmin = computed(() => userRole.value === "admin");
+const isWaitingMitraValidation = ref(false);
 
 const showProjectionModal = ref(false);
 
@@ -93,6 +94,17 @@ onMounted(() => {
   }
 
   loadDashboardData();
+  if (userRole.value === "mitra") {
+    getCurrentUser()
+      .then((res) => {
+        isWaitingMitraValidation.value = res?.data?.package_status === "pending_validation";
+      })
+      .catch(() => {
+        isWaitingMitraValidation.value = false;
+      });
+  }
+
+  loadAdminPackages();
 });
 
 const monthlyChartData = computed(() => {
@@ -218,6 +230,21 @@ function activityDotClass(type: string) {
       </p>
     </div>
 
+    <div v-if="isWaitingMitraValidation" class="rounded-xl border border-amber-200 bg-amber-50 p-6">
+      <div class="flex items-start gap-4">
+        <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-amber-100">
+          <AlertCircle class="h-6 w-6 text-amber-700" />
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Pendaftaran mitra menunggu validasi admin</h3>
+          <p class="mt-2 max-w-2xl text-sm leading-6 text-gray-700">
+            Data pendaftaran dan penanaman awal Anda sudah terkirim. Dashboard akan terbuka setelah admin memvalidasi akun mitra Anda.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <template v-else>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <div
         v-for="(stat, index) in stats"
@@ -417,6 +444,7 @@ function activityDotClass(type: string) {
         </div>
       </div>
     </div>
+    </template>
 
     <!-- Modal removed -->
   </div>

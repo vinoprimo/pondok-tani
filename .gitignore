@@ -10,3 +10,5 @@
 *.py
 /backend/uploads
 /docs
+frontend/.env
+/.gocache

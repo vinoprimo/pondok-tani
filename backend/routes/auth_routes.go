@@ -12,6 +12,7 @@ func AuthRoutes(r *gin.Engine) {
 	auth := r.Group("/auth")
 	{
 		auth.POST("/register", authhandler.Register)
+		auth.POST("/register/mitra", authhandler.RegisterMitra)
 		auth.POST("/login", authhandler.Login)
 	}
 	auth.GET("/me", middleware.AuthMiddleware(), userhandler.GetCurrentUser)
