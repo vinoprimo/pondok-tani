@@ -92,8 +92,6 @@ const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
     "my-warehouse",
     "plants-input",
     "plants-history",
-    "maintenance-schedule",
-    "maintenance-history",
     "reminder-settings",
     "financials",
     "reports",

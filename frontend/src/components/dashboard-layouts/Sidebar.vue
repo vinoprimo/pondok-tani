@@ -76,6 +76,9 @@ const investorMenuItems = [
   { id: 'reports', label: 'Laporan', icon: FileText },
   { id: 'notifications', label: 'Notifikasi', icon: Bell },
 ];
+
+const mitraMenuItems = investorMenuItems.filter((item) => item.id !== 'maintenance-group');
+
 // Admin memiliki akses ke semua menu investor plus menu tambahan untuk manajemen
 const adminMenuItems = [
   { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
@@ -92,7 +95,7 @@ const adminMenuItems = [
 ];
 
 const menuItems = computed(() =>
-  props.userRole === 'admin' ? adminMenuItems : investorMenuItems
+  props.userRole === 'admin' ? adminMenuItems : props.userRole === 'mitra' ? mitraMenuItems : investorMenuItems
 );
 
 const roleLabel = computed(() => {
