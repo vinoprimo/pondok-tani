@@ -14,7 +14,7 @@ import { clearAuthSession, isSessionExpired, touchSession } from "../utils/sessi
  *   views/notifications/{Notifications,ReminderSettings}.vue
  *   views/plant-monitoring/{MaintenanceActivities,MaintenanceValidation,PlantMonitoring}.vue
  *   views/reporting/Reports.vue
- *   views/warehouse/WarehouseStock.vue
+ *   views/warehouse/{UserWarehouseStock,WarehouseStock}.vue
  * Layout: layouts/DashboardLayout.vue
  */
 
@@ -174,6 +174,12 @@ const routes = [
         name: "dashboard-harvest",
         component: () => import("../views/harvest/HarvestRequests.vue"),
         meta: { roles: ["investor", "mitra", "admin"] },
+      },
+      {
+        path: "my-warehouse",
+        name: "dashboard-my-warehouse",
+        component: () => import("../views/warehouse/UserWarehouseStock.vue"),
+        meta: { roles: ["investor", "mitra"] },
       },
       {
         path: "warehouse",

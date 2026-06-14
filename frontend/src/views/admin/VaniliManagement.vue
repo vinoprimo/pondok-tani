@@ -420,15 +420,20 @@ async function confirmDelete() {
   if (!deleteTarget.value) return;
 
   deleteSubmitting.value = true;
+  let success = false;
   try {
     if (deleteTarget.value.type === "grade") {
       await removeGrade(deleteTarget.value.id);
     } else {
       await removePrice(deleteTarget.value.id);
     }
-    closeDeleteModal();
+    success = true;
   } finally {
     deleteSubmitting.value = false;
+  }
+
+  if (success) {
+    closeDeleteModal();
   }
 }
 

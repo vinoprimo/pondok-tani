@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
+  AlertCircle,
   ArrowRight,
   BarChart3,
   Check,
@@ -17,6 +18,7 @@ import { getWarehouseSummary, listStockMovements, listWarehouseStocks } from '..
 import { listDryingProcesses, completeDryingProcess } from '../../services/postharvest/drying'
 import { listGradingBatches, createGradingBatch } from '../../services/postharvest/grading'
 import { getGrades } from '../../services/price/vanili'
+import Pagination from '../../components/common/Pagination.vue'
 
 const summary = ref<any>({
   total_quantity: 0,
@@ -34,6 +36,11 @@ const grades = ref<any[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const alertPopup = ref({
+  show: false,
+  type: 'success',
+  message: '',
+})
 
 const showCompleteModal = ref(false)
 const selectedDrying = ref<any | null>(null)
@@ -44,6 +51,7 @@ const dryingForm = ref({
   notes: '',
 })
 
+const selectedDryingForGrading = ref<any | null>(null)
 const showGradingModal = ref(false)
 const creatingGrading = ref(false)
 const gradingForm = ref({
@@ -89,6 +97,45 @@ const paginatedOrigins = computed(() => {
   return originStocks.value.slice(start, start + ORIGIN_PAGE_SIZE)
 })
 
+// Movement pagination logic
+const currentPage = ref(1)
+const limit = ref(8)
+
+const filteredMovements = computed(() => movements.value)
+
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredMovements.value.length / limit.value))
+)
+
+const paginatedMovements = computed(() => {
+  const start = (currentPage.value - 1) * limit.value
+  return filteredMovements.value.slice(start, start + limit.value)
+})
+
+watch(filteredMovements, () => {
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = totalPages.value
+  }
+})
+
+watch(errorMessage, (message) => {
+  if (!message) return
+  alertPopup.value = {
+    show: true,
+    type: 'error',
+    message,
+  }
+})
+
+watch(successMessage, (message) => {
+  if (!message) return
+  alertPopup.value = {
+    show: true,
+    type: 'success',
+    message,
+  }
+})
+
 const chartMax = computed(() => {
   if (!monthlyMovements.value.length) return 1
   return Math.max(
@@ -109,6 +156,25 @@ function formatDate(value: string | Date) {
     month: 'short',
     year: 'numeric',
   })
+}
+
+function formatReferenceType(value: string) {
+  const labels: Record<string, string> = {
+    harvest_output: 'Panen basah',
+    grading_detail: 'Hasil grading',
+    sales_detail: 'Penjualan',
+  }
+  const normalized = String(value || '').trim().toLowerCase()
+  if (!normalized) return '-'
+  return labels[normalized] || normalized
+    .split('_')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+function closeAlertPopup() {
+  alertPopup.value.show = false
 }
 
 async function fetchAll() {
@@ -173,6 +239,7 @@ async function confirmCompleteDrying() {
 }
 
 function openGradingModal(item: any) {
+  selectedDryingForGrading.value = item
   gradingForm.value.dryingProcessId = item.id
   gradingForm.value.gradingDate = new Date().toISOString().slice(0, 10)
   gradingForm.value.details = [{ gradeId: '', quantity: 0 }]
@@ -203,6 +270,13 @@ async function confirmGrading() {
 
   if (!gradingForm.value.dryingProcessId || detailPayload.length === 0) {
     errorMessage.value = 'Detail grading wajib diisi.'
+    return
+  }
+
+  const totalGradingQuantity = detailPayload.reduce((sum, item) => sum + item.quantity, 0)
+  const expectedQuantity = Number(selectedDryingForGrading.value?.final_quantity || 0)
+  if (Math.abs(totalGradingQuantity - expectedQuantity) > 0.01) {
+    errorMessage.value = `Total kuantitas grading (${totalGradingQuantity.toFixed(1)} kg) harus sama dengan kuantitas akhir pengeringan (${expectedQuantity.toFixed(1)} kg).`
     return
   }
 
@@ -241,13 +315,6 @@ onMounted(() => {
       <div class="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs text-emerald-700">
         Update terakhir: {{ new Date().toLocaleDateString('id-ID') }}
       </div>
-    </div>
-
-    <div v-if="errorMessage" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-      {{ errorMessage }}
-    </div>
-    <div v-if="successMessage" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-      {{ successMessage }}
     </div>
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -502,10 +569,10 @@ onMounted(() => {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-if="!movements.length">
+            <tr v-if="!filteredMovements.length">
               <td colspan="7" class="px-4 py-4 text-center text-gray-500">Belum ada pergerakan stok.</td>
             </tr>
-            <tr v-for="movement in movements" :key="movement.id" class="hover:bg-gray-50">
+            <tr v-for="movement in paginatedMovements" :key="movement.id" class="hover:bg-gray-50">
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
                   <TrendingUp v-if="movement.movement_type === 'in'" class="h-4 w-4 text-emerald-600" />
@@ -513,7 +580,7 @@ onMounted(() => {
                   <span class="font-medium text-gray-900">{{ movement.id }}</span>
                 </div>
               </td>
-              <td class="px-4 py-3 text-gray-700">{{ movement.reference_type }}</td>
+              <td class="px-4 py-3 text-gray-700">{{ formatReferenceType(movement.reference_type) }}</td>
               <td class="px-4 py-3">
                 <span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
                   {{ movement.grade_name }}
@@ -550,6 +617,49 @@ onMounted(() => {
         :limit="limit"
         @update:page="currentPage = $event"
       />
+    </div>
+
+    <div
+      v-if="alertPopup.show"
+      class="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4"
+      role="alertdialog"
+      aria-modal="true"
+    >
+      <div class="w-full max-w-md rounded-2xl bg-white shadow-xl">
+        <div class="flex items-start gap-3 px-6 py-5">
+          <div
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+            :class="alertPopup.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'"
+          >
+            <AlertCircle v-if="alertPopup.type === 'error'" class="h-5 w-5" />
+            <Check v-else class="h-5 w-5" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <h3 class="text-base font-semibold text-gray-900">
+              {{ alertPopup.type === 'error' ? 'Perlu diperiksa' : 'Berhasil' }}
+            </h3>
+            <p class="mt-1 text-sm leading-6 text-gray-600">{{ alertPopup.message }}</p>
+          </div>
+          <button
+            type="button"
+            class="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Tutup popup"
+            @click="closeAlertPopup"
+          >
+            <X class="h-5 w-5" />
+          </button>
+        </div>
+        <div class="flex justify-end border-t border-gray-200 px-6 py-4">
+          <button
+            type="button"
+            class="rounded-lg px-4 py-2 text-sm font-semibold text-white"
+            :class="alertPopup.type === 'error' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'"
+            @click="closeAlertPopup"
+          >
+            Mengerti
+          </button>
+        </div>
+      </div>
     </div>
 
     <div

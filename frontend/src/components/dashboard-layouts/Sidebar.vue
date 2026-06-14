@@ -52,6 +52,7 @@ const investorMenuItems = [
   { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
   { id: 'portfolio', label: 'Portofolio Saya', icon: TrendingUp },
   { id: 'harvest', label: 'Panen', icon: Sprout },
+  { id: 'my-warehouse', label: 'Stok Gudang Saya', icon: Package },
   {
     id: 'plants-group',
     label: 'Monitoring Tanaman',

@@ -341,7 +341,7 @@ onMounted(async () => {
                 {{ stock.user_name || "-" }}
               </td>
               <td class="px-6 py-4 text-sm text-gray-700">
-                {{ stock.grade_name || "Tidak diklasifikasi" }}
+                {{ stock.grade_name || "Basah" }}
               </td>
               <td class="px-6 py-4 text-right font-medium text-gray-900">
                 {{ formatQuantity(stock.total_quantity) }} {{ stock.unit || "kg" }}
@@ -448,7 +448,7 @@ onMounted(async () => {
           </div>
           <div class="mt-3 flex flex-wrap gap-3 text-xs text-gray-600">
             <span class="rounded-full bg-white px-2.5 py-1">Investor: {{ selectedStock.user_name || "-" }}</span>
-            <span class="rounded-full bg-white px-2.5 py-1">Mutu: {{ selectedStock.grade_name || "Tidak diklasifikasi" }}</span>
+            <span class="rounded-full bg-white px-2.5 py-1">Mutu: {{ selectedStock.grade_name || "Basah" }}</span>
           </div>
         </div>
 

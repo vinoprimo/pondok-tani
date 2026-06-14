@@ -9,6 +9,7 @@ import {
   validateHarvestRequest,
 } from '../../services/harvest/harvest'
 import { listPlantMonitorings } from '../../services/plant-monitoring/monitoring'
+import Pagination from '../../components/common/Pagination.vue'
 
 const storedRole = localStorage.getItem('userRole') as 'investor' | 'mitra' | 'admin' | null
 const userRole = ref<'investor' | 'mitra' | 'admin'>(storedRole || 'investor')
@@ -187,6 +188,29 @@ const filteredRows = computed(() => {
 
     return tokens.some((value) => value.includes(query))
   })
+})
+
+// Pagination state & logic for harvest requests
+const currentPage = ref(1)
+const limit = ref(8)
+
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredRows.value.length / limit.value))
+)
+
+const paginatedRows = computed(() => {
+  const start = (currentPage.value - 1) * limit.value
+  return filteredRows.value.slice(start, start + limit.value)
+})
+
+watch(filteredRows, () => {
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = totalPages.value
+  }
+})
+
+watch(searchQuery, () => {
+  currentPage.value = 1
 })
 
 const selectedMonitoring = computed(() =>
@@ -539,7 +563,7 @@ watch(
             <tr v-if="!filteredRows.length">
               <td colspan="8" class="px-4 py-4 text-center text-gray-500">Belum ada data panen.</td>
             </tr>
-            <tr v-for="row in filteredRows" :key="row.id">
+            <tr v-for="row in paginatedRows" :key="row.id">
               <td class="px-4 py-3">
                 <p class="font-medium text-gray-900">{{ row.batchCode }}</p>
                 <p class="text-xs text-gray-500">{{ row.packageName }}</p>
@@ -584,6 +608,14 @@ watch(
           </tbody>
         </table>
       </div>
+      <Pagination
+        v-if="filteredRows.length > 0"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :total-rows="filteredRows.length"
+        :limit="limit"
+        @update:page="currentPage = $event"
+      />
     </section>
 
     <div
