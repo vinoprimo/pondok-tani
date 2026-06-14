@@ -46,7 +46,11 @@ async function loadPackages() {
   loadingPackages.value = true;
   try {
     const response = await getInvestmentPackages({ status: 'active' });
-    const list = Array.isArray(response.data) ? response.data : [];
+    const list = Array.isArray(response.data)
+      ? response.data
+      : Array.isArray(response.data?.data)
+      ? response.data.data
+      : [];
     paketItems.value = list.map((item: any) => ({
       id: item.id,
       name: item.package_name,

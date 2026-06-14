@@ -6,6 +6,7 @@ import (
 
 	"pondok-tani-backend/config"
 	coremodels "pondok-tani-backend/models/core"
+	"pondok-tani-backend/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -49,17 +50,26 @@ func ensureAdmin(c *gin.Context) bool {
 func ListInvestmentPackages(c *gin.Context) {
 	var items []coremodels.InvestmentPackage
 
-	query := config.DB.Order("id ASC")
+	query := config.DB.Model(&coremodels.InvestmentPackage{})
+	
 	if status := strings.ToLower(strings.TrimSpace(c.Query("status"))); status != "" {
 		query = query.Where("status = ?", status)
 	}
 
-	if err := query.Find(&items).Error; err != nil {
+	searchQuery := c.Query("search")
+	if searchQuery != "" {
+		query = query.Scopes(utils.Search([]string{"package_name", "description"}, searchQuery))
+	}
+
+	pagination := utils.GeneratePaginationFromRequest(c)
+	utils.Paginate(query, &pagination, &items)
+
+	if query.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch investment packages"})
 		return
 	}
 
-	c.JSON(http.StatusOK, items)
+	c.JSON(http.StatusOK, utils.FormatPaginationResponse(&pagination))
 }
 
 func GetInvestmentPackage(c *gin.Context) {

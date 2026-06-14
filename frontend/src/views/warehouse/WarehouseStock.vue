@@ -542,6 +542,14 @@ onMounted(() => {
           </tbody>
         </table>
       </div>
+      <Pagination
+        v-if="filteredMovements.length > 0"
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :total-rows="filteredMovements.length"
+        :limit="limit"
+        @update:page="currentPage = $event"
+      />
     </div>
 
     <div

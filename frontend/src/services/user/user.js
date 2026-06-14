@@ -15,8 +15,12 @@ export const saveSelectedPackage = (packageIds) => {
   });
 };
 
-export const getAdminUsers = () => {
-  return api.get('/admin/users');
+export const getAdminUsers = (params) => {
+  return api.get('/admin/users', { params });
+};
+
+export const getAdminUser = (userId) => {
+  return api.get(`/admin/users/${userId}`);
 };
 
 export const createAdminUser = (payload) => {

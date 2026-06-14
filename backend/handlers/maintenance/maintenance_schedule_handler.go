@@ -16,6 +16,7 @@ import (
 	maintenancemodels "pondok-tani-backend/models/maintenance"
 	notificationmodels "pondok-tani-backend/models/notification"
 	notificationhandler "pondok-tani-backend/handlers/notification"
+	"pondok-tani-backend/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -282,6 +283,8 @@ func ListAdminMaintenanceActivities(c *gin.Context) {
 		status = "pending"
 	}
 
+	pagination := utils.GeneratePaginationFromRequest(c)
+
 	query := config.DB.Table("maintenance_activities AS ma").
 		Select(`
 			ma.id,
@@ -302,14 +305,25 @@ func ListAdminMaintenanceActivities(c *gin.Context) {
 		Joins("JOIN users u ON u.id = ms.user_id").
 		Joins("JOIN plant_batches pb ON pb.id = ma.plant_batch_id")
 
-	if status == "all" {
-		// no status filter
-	} else {
+	if status != "all" {
 		query = query.Where("ma.validation_status = ?", status)
 	}
 
+	if pagination.Search != "" {
+		searchPattern := "%" + pagination.Search + "%"
+		query = query.Where("u.name ILIKE ? OR pb.batch_code ILIKE ? OR ma.activity_type ILIKE ?", searchPattern, searchPattern, searchPattern)
+	}
+
+	// Override default sort for specific column name
+	sortOrder := pagination.Sort
+	if sortOrder == "created_at desc" {
+		sortOrder = "ma.created_at DESC"
+	}
+
+	query = query.Order(sortOrder)
+
 	var rows []adminMaintenanceActivityRaw
-	if err := query.Order("ma.created_at DESC").Scan(&rows).Error; err != nil {
+	if err := utils.Paginate(query, &pagination, &rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch maintenance activities"})
 		return
 	}
@@ -339,7 +353,16 @@ func ListAdminMaintenanceActivities(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, gin.H{
+		"data": response,
+		"meta": map[string]interface{}{
+			"limit":       pagination.GetLimit(),
+			"page":        pagination.GetPage(),
+			"sort":        pagination.GetSort(),
+			"total_rows":  pagination.TotalRows,
+			"total_pages": pagination.TotalPages,
+		},
+	})
 }
 
 func ReviewMaintenanceActivity(c *gin.Context) {

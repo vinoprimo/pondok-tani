@@ -17,6 +17,8 @@ import {
   getInvestmentPackages,
   updateInvestmentPackage,
 } from "../../services/investment/package";
+import SearchBar from "../../components/common/SearchBar.vue";
+import Pagination from "../../components/common/Pagination.vue";
 
 type UserRole = "investor" | "mitra" | "admin";
 
@@ -80,20 +82,51 @@ function resetPackageForm() {
   editingPackageId.value = null;
 }
 
+const currentPage = ref(1);
+const totalPages = ref(1);
+const totalRows = ref(0);
+const searchQuery = ref("");
+const limit = ref(10);
+
 async function loadAdminPackages() {
   if (!isAdmin.value) return;
 
   packageLoading.value = true;
   packageError.value = "";
   try {
-    const res = await getInvestmentPackages();
-    adminPackages.value = Array.isArray(res.data) ? res.data : [];
+    const res = await getInvestmentPackages({ 
+      page: currentPage.value, 
+      limit: limit.value,
+      search: searchQuery.value
+    });
+    // the backend now returns { data: [...], meta: { ... } }
+    if (res.data && res.data.meta) {
+      adminPackages.value = Array.isArray(res.data.data) ? res.data.data : [];
+      totalPages.value = res.data.meta.total_pages;
+      totalRows.value = res.data.meta.total_rows;
+      currentPage.value = res.data.meta.page;
+    } else {
+      adminPackages.value = Array.isArray(res.data) ? res.data : [];
+      totalPages.value = 1;
+      totalRows.value = adminPackages.value.length;
+    }
   } catch (err) {
     console.error("Failed to load investment packages", err);
     packageError.value = "Gagal memuat data paket investasi.";
   } finally {
     packageLoading.value = false;
   }
+}
+
+function handleSearch(val: string) {
+  searchQuery.value = val;
+  currentPage.value = 1;
+  loadAdminPackages();
+}
+
+function handlePageChange(val: number) {
+  currentPage.value = val;
+  loadAdminPackages();
 }
 
 function startEditPackage(item: InvestmentPackageItem) {
@@ -567,6 +600,11 @@ function closeModal() {
           </div>
         </form>
 
+        <div class="flex items-center justify-between mb-4 mt-8">
+          <h4 class="text-md font-medium text-gray-900">Daftar Paket Investasi</h4>
+          <SearchBar v-model="searchQuery" @search="handleSearch" placeholder="Cari nama atau deskripsi..." />
+        </div>
+
         <div class="overflow-x-auto rounded-lg border border-gray-100">
           <table class="w-full text-sm">
             <thead class="bg-gray-50 text-left text-gray-600">
@@ -619,6 +657,15 @@ function closeModal() {
             </tbody>
           </table>
         </div>
+        
+        <Pagination 
+          v-if="adminPackages.length > 0"
+          :current-page="currentPage" 
+          :total-pages="totalPages" 
+          :total-rows="totalRows" 
+          :limit="limit"
+          @update:page="handlePageChange"
+        />
       </div>
     </template>
 
