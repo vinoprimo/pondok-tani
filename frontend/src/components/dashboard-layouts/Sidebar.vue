@@ -84,7 +84,7 @@ const adminMenuItems = [
   { id: 'harvest', label: 'Panen', icon: Sprout },
   { id: 'harvest-sales', label: 'Penjualan Panen', icon: ShoppingCart },
   { id: 'warehouse', label: 'Stok Gudang', icon: Package },
-  { id: 'financials', label: 'Keuangan', icon: DollarSign },
+  // { id: 'financials', label: 'Keuangan', icon: DollarSign }, // Hide temporarily
   { id: 'reports', label: 'Laporan', icon: FileText },
   { id: 'investment-packages', label: 'Paket Investasi', icon: Briefcase },
   { id: 'vanili-management', label: 'Harga & Grade Vanili', icon: DollarSign },

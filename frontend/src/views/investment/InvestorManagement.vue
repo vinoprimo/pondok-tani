@@ -429,14 +429,7 @@ onMounted(() => {
         <h2 class="text-2xl font-semibold text-gray-900">Manajemen investor</h2>
         <p class="text-gray-600 mt-1">Kelola pilihan paket dan aktivasi akun investor</p>
       </div>
-      <button
-        type="button"
-        class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-        @click="loadUsers"
-      >
-        <UserCheck class="w-4 h-4" />
-        Refresh data
-      </button>
+
       <button
         type="button"
         class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -532,7 +525,7 @@ onMounted(() => {
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User / ID
+                User
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Kontak
@@ -560,7 +553,7 @@ onMounted(() => {
                   </div>
                   <div>
                     <p class="font-medium text-gray-900">{{ user.name }}</p>
-                    <p class="text-xs text-gray-500 font-mono mt-0.5">ID: {{ user.id }}</p>
+
                   </div>
                 </div>
               </td>

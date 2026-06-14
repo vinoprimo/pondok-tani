@@ -525,12 +525,12 @@ onMounted(() => {
                 </div>
 
                 <div class="grid grid-cols-1 gap-2 text-sm text-gray-700 md:grid-cols-2">
-                  <p class="md:col-span-2">
+                  <!-- <p class="md:col-span-2">
                     ID Monitoring:
                     <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs font-semibold text-gray-600">
                       #{{ item.id }}
                     </span>
-                  </p>
+                  </p> -->
                   <p>Disease: <span class="font-medium">{{ diseaseLabel(item.disease) }}</span></p>
                   <p>Terdampak: <span class="font-medium">{{ item.affected_count }} / {{ item.total_plants }}</span></p>
                   <p class="md:col-span-2">Tanggal: <span class="font-medium">{{ formatDate(item.created_at) }}</span></p>

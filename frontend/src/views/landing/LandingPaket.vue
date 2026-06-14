@@ -340,7 +340,7 @@ onMounted(() => {
     </section>
 
     <!-- FAQ Preview -->
-    <section class="py-20 bg-slate-50">
+    <!-- <section class="py-20 bg-slate-50">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <h2 class="text-3xl font-bold text-gray-900 mb-12 text-center">
           Pertanyaan Umum
@@ -380,7 +380,7 @@ onMounted(() => {
           </div>
         </div>
       </div>
-    </section>
+    </section> -->
 
     <!-- CTA Section -->
     <section class="py-24 bg-green-600 text-white relative overflow-hidden">
