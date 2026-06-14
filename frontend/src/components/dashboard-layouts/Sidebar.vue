@@ -70,7 +70,6 @@ const investorMenuItems = [
       { id: 'maintenance-history', label: 'Riwayat Aktivitas', icon: ListChecks },
     ],
   },
-  { id: 'reminder-settings', label: 'Pengaturan Pengingat', icon: Bell },
   { id: 'financials', label: 'Keuangan', icon: DollarSign },
   { id: 'reports', label: 'Laporan', icon: FileText },
   { id: 'notifications', label: 'Notifikasi', icon: Bell },

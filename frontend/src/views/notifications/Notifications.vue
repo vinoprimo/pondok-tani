@@ -28,44 +28,6 @@ function getCurrentUserId() {
 const filterItems = [
   { id: 'all', label: 'Semua' },
   { id: 'unread', label: 'Belum dibaca' },
-  { id: 'plant', label: 'Pembaruan tanaman' },
-  { id: 'payment', label: 'Pembayaran' },
-  { id: 'alert', label: 'Peringatan' },
-  { id: 'report', label: 'Laporan' },
-  { id: 'investment', label: 'Investasi' },
-];
-
-const preferenceRows = [
-  {
-    label: 'Notifikasi pembayaran',
-    description: 'Diberitahu saat imbal hasil dicairkan',
-    enabled: true,
-  },
-  {
-    label: 'Pembaruan tanaman',
-    description: 'Perubahan fase pertumbuhan dan status kesehatan',
-    enabled: true,
-  },
-  {
-    label: 'Laporan tersedia',
-    description: 'Saat laporan baru siap diunduh',
-    enabled: true,
-  },
-  {
-    label: 'Peringatan cuaca',
-    description: 'Informasi cuaca penting untuk tanaman Anda',
-    enabled: true,
-  },
-  {
-    label: 'Wawasan investasi',
-    description: 'Pembaruan ROI dan tren pasar',
-    enabled: false,
-  },
-  {
-    label: 'Email pemasaran',
-    description: 'Berita dan konten promosi',
-    enabled: false,
-  },
 ];
 
 const filteredNotifications = computed(() => {
@@ -83,6 +45,8 @@ let unsubscribeNotifications = null;
 
 async function markAllAsRead() {
   const unreadItems = notifications.value.filter((n) => !n.read);
+  if (!unreadItems.length) return;
+
   await Promise.all(
     unreadItems.map((notification) =>
       markSystemNotificationRead(notification.id).catch((error) => {
@@ -90,6 +54,11 @@ async function markAllAsRead() {
       })
     )
   );
+
+  notifications.value = notifications.value.map((notification) => ({
+    ...notification,
+    read: true,
+  }));
 }
 
 async function markAsRead(notification) {
@@ -164,16 +133,11 @@ function getIconBg(type: string) {
       <div class="flex items-center gap-3">
         <button
           type="button"
-          class="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium text-sm"
+          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="unreadCount === 0"
           @click="markAllAsRead"
         >
           Tandai semua dibaca
-        </button>
-        <button
-          type="button"
-          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-        >
-          Pengaturan
         </button>
       </div>
     </div>
@@ -302,34 +266,5 @@ function getIconBg(type: string) {
       </div>
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 p-6">
-      <h3 class="font-semibold text-gray-900 mb-4">Preferensi notifikasi</h3>
-      <div class="space-y-4">
-        <div
-          v-for="(pref, index) in preferenceRows"
-          :key="index"
-          class="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
-        >
-          <div class="flex-1">
-            <p class="font-medium text-gray-900">{{ pref.label }}</p>
-            <p class="text-sm text-gray-600 mt-0.5">{{ pref.description }}</p>
-          </div>
-          <button
-            type="button"
-            :class="[
-              'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-              pref.enabled ? 'bg-green-600' : 'bg-gray-200',
-            ]"
-          >
-            <span
-              :class="[
-                'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                pref.enabled ? 'translate-x-6' : 'translate-x-1',
-              ]"
-            />
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
