@@ -6,6 +6,7 @@ import (
 	maintenancehandler "pondok-tani-backend/handlers/maintenance"
 	notificationhandler "pondok-tani-backend/handlers/notification"
 	userhandler "pondok-tani-backend/handlers/user"
+	dashboardhandler "pondok-tani-backend/handlers/dashboard"
 	"pondok-tani-backend/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -25,5 +26,6 @@ func UserRoutes(r *gin.Engine) {
 		user.POST("/me/maintenance-activities", middleware.RequireRoles("investor", "mitra"), maintenancehandler.SubmitMyMaintenanceActivity)
 		user.GET("/me/notifications", notificationhandler.GetMyNotifications)
 		user.PUT("/me/notifications/:id/read", notificationhandler.MarkNotificationRead)
+		user.GET("/me/dashboard", dashboardhandler.GetUserDashboard)
 	}
 }

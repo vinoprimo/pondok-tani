@@ -19,6 +19,7 @@ import {
   ShoppingCart,
   Package,
   ClipboardCheck,
+  Briefcase,
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -85,6 +86,7 @@ const adminMenuItems = [
   { id: 'warehouse', label: 'Stok Gudang', icon: Package },
   { id: 'financials', label: 'Keuangan', icon: DollarSign },
   { id: 'reports', label: 'Laporan', icon: FileText },
+  { id: 'investment-packages', label: 'Paket Investasi', icon: Briefcase },
   { id: 'vanili-management', label: 'Harga & Grade Vanili', icon: DollarSign },
   { id: 'article-management', label: 'Artikel', icon: FileText },
   { id: 'notifications', label: 'Notifikasi', icon: Bell },

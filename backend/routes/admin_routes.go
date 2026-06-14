@@ -8,6 +8,7 @@ import (
 	plantbatchhandler "pondok-tani-backend/handlers/plantbatch"
 	pricehandler "pondok-tani-backend/handlers/price"
 	userhandler "pondok-tani-backend/handlers/user"
+	dashboardhandler "pondok-tani-backend/handlers/dashboard"
 	"pondok-tani-backend/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -22,6 +23,7 @@ func AdminRoutes(r *gin.Engine) {
 
 	admin := r.Group("/admin", middleware.AuthMiddleware(), middleware.RequireRoles("admin"))
 	{
+		admin.GET("/dashboard", dashboardhandler.GetAdminDashboard)
 		admin.GET("/users", userhandler.ListUsers)
 		admin.GET("/users/:id", userhandler.GetUser)
 		admin.POST("/users", userhandler.CreateUser)

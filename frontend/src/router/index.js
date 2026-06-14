@@ -163,6 +163,12 @@ const routes = [
         meta: { roles: ["admin"] },
       },
       {
+        path: "investment-packages",
+        name: "dashboard-investment-packages",
+        component: () => import("../views/admin/InvestmentPackageCRUD.vue"),
+        meta: { roles: ["admin"] },
+      },
+      {
         path: "monitoring-schedule",
         name: "dashboard-monitoring-schedule",
         component: () => import("../views/plant-monitoring/MonitoringScheduleAdmin.vue"),
