@@ -3,6 +3,7 @@ package plantmonitoring
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -19,10 +20,10 @@ import (
 
 var phaseProgressMap = map[string]int{
 	"penanaman":        0,
-	"pertumbuhan_awal": 20,
+	"pertumbuhan_awal": 15,
 	"vegetatif":        40,
-	"pra-berbunga":     60,
-	"berbunga":         80,
+	"pembungaan":       70,
+	"pembuahan":        85,
 	"panen":            100,
 }
 
@@ -31,10 +32,12 @@ var phaseLabelToKey = map[string]string{
 	"pertumbuhan awal": "pertumbuhan_awal",
 	"pertumbuhan_awal": "pertumbuhan_awal",
 	"vegetatif":        "vegetatif",
-	"pra-berbunga":     "pra-berbunga",
-	"pra berbunga":     "pra-berbunga",
-	"berbunga":         "berbunga",
+	"pembungaan":       "pembungaan",
+	"pembuahan":        "pembuahan",
 	"panen":            "panen",
+	"pra-berbunga":     "pembungaan",
+	"pra berbunga":     "pembungaan",
+	"berbunga":         "pembuahan",
 }
 
 var healthStatusMap = map[string]string{
@@ -96,6 +99,46 @@ func normalizePhase(input string) (string, int, error) {
 	}
 
 	return phaseKey, progress, nil
+}
+
+func calculateAgeProgress(plantingDate time.Time) int {
+	ageMonths := int(math.Floor(time.Since(plantingDate).Hours() / 24 / 30.4375))
+	if ageMonths < 0 {
+		ageMonths = 0
+	}
+
+	switch {
+	case ageMonths < 3:
+		return int(math.Round(float64(ageMonths) / 3 * 15))
+	case ageMonths < 12:
+		return int(math.Round(15 + float64(ageMonths-3)/9*25))
+	case ageMonths < 24:
+		return int(math.Round(40 + float64(ageMonths-12)/12*30))
+	case ageMonths < 30:
+		return int(math.Round(70 + float64(ageMonths-24)/6*15))
+	case ageMonths < 36:
+		return int(math.Round(85 + float64(ageMonths-30)/6*10))
+	default:
+		return 100
+	}
+}
+
+func calculatePlantProgress(plantingDate time.Time, phaseKey string) int {
+	ageProgress := calculateAgeProgress(plantingDate)
+	phaseBase, exists := phaseProgressMap[phaseKey]
+	if !exists {
+		phaseBase = 0
+	}
+
+	progress := int(math.Max(float64(ageProgress), float64(phaseBase)))
+	if progress < 0 {
+		progress = 0
+	}
+	if progress > 100 {
+		progress = 100
+	}
+
+	return progress
 }
 
 func normalizeHealthStatus(input string) (string, error) {
@@ -227,7 +270,7 @@ func CreatePlantMonitoring(c *gin.Context) {
 		return
 	}
 
-	phaseKey, progress, err := normalizePhase(input.Phase)
+	phaseKey, _, err := normalizePhase(input.Phase)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phase"})
 		return
@@ -280,6 +323,8 @@ func CreatePlantMonitoring(c *gin.Context) {
 	if disease != "lainnya" {
 		diseaseNote = ""
 	}
+
+	progress := calculatePlantProgress(plantBatch.PlantingDate, phaseKey)
 
 	photoURL := ""
 	if isMultipart {
