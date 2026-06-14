@@ -23,8 +23,8 @@ type gradingDetailInput struct {
 }
 
 type createGradingBatchInput struct {
-	DryingProcessID uint                `json:"drying_process_id"`
-	GradingDate     string              `json:"grading_date"`
+	DryingProcessID uint                 `json:"drying_process_id"`
+	GradingDate     string               `json:"grading_date"`
 	Details         []gradingDetailInput `json:"details"`
 }
 
@@ -35,15 +35,15 @@ type gradingDetailResponse struct {
 }
 
 type gradingBatchResponse struct {
-	ID              uint                   `json:"id"`
-	DryingProcessID uint                   `json:"drying_process_id"`
-	BatchCode       string                 `json:"batch_code"`
-	GradingDate     time.Time              `json:"grading_date"`
-	Status          string                 `json:"status"`
-	PlantBatchID    uint                   `json:"plant_batch_id"`
-	BatchCodePlant  string                 `json:"batch_code_plant"`
-	PackageName     string                 `json:"package_name"`
-	TotalQuantity   float64                `json:"total_quantity"`
+	ID              uint                    `json:"id"`
+	DryingProcessID uint                    `json:"drying_process_id"`
+	BatchCode       string                  `json:"batch_code"`
+	GradingDate     time.Time               `json:"grading_date"`
+	Status          string                  `json:"status"`
+	PlantBatchID    uint                    `json:"plant_batch_id"`
+	BatchCodePlant  string                  `json:"batch_code_plant"`
+	PackageName     string                  `json:"package_name"`
+	TotalQuantity   float64                 `json:"total_quantity"`
 	Details         []gradingDetailResponse `json:"details"`
 }
 
@@ -184,8 +184,14 @@ func CreateGradingBatch(c *gin.Context) {
 		total += detail.Quantity
 	}
 
-	if total <= 0 || total-*process.FinalQuantity > 0.01 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Total grading quantity cannot exceed final quantity"})
+	if total <= 0 || absFloat(total-*process.FinalQuantity) > 0.01 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf(
+				"Total grading quantity (%.1f kg) must match final drying quantity (%.1f kg)",
+				total,
+				*process.FinalQuantity,
+			),
+		})
 		return
 	}
 
@@ -257,4 +263,11 @@ func CreateGradingBatch(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Grading batch created"})
+}
+
+func absFloat(value float64) float64 {
+	if value < 0 {
+		return -value
+	}
+	return value
 }

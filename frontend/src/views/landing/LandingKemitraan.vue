@@ -460,7 +460,7 @@ const router = useRouter();
         </p>
         <div class="flex flex-wrap justify-center gap-4">
           <button 
-            @click="router.push('/login?mode=register')"
+            @click="router.push('/login?mode=register&role=mitra')"
             class="bg-white text-green-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-green-50 transition-all shadow-xl flex items-center gap-2 hover:-translate-y-0.5"
           >
             Daftar Jadi Mitra Sekarang

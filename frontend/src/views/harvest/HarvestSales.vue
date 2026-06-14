@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from "vue";
 import { BadgeDollarSign, Calendar, Check, Package, RefreshCcw, ShoppingCart, X } from "lucide-vue-next";
 import { listWarehouseStocks } from "../../services/warehouse/warehouse";
 import { createSalesOrder, listSalesOrders } from "../../services/sales/sales";
+import SearchBar from "../../components/common/SearchBar.vue";
 
 type WarehouseStockRow = {
   id: number;
@@ -68,6 +69,8 @@ const orders = ref<SalesOrderRow[]>([]);
 const loading = ref(false);
 const errorMessage = ref("");
 const infoMessage = ref("");
+const stockSearch = ref("");
+const stockGradeFilter = ref("all");
 
 const saleModalOpen = ref(false);
 const submittingSale = ref(false);
@@ -83,6 +86,37 @@ const saleForm = reactive({
 });
 
 const availableStocks = computed(() => stocks.value.filter((item) => Number(item.total_quantity) > 0));
+
+const availableStockGrades = computed(() => {
+  const grades = new Set<string>();
+  availableStocks.value.forEach((item) => {
+    grades.add(item.grade_name || "Basah");
+  });
+  return Array.from(grades).sort((a, b) => a.localeCompare(b));
+});
+
+const filteredAvailableStocks = computed(() => {
+  const keyword = stockSearch.value.trim().toLowerCase();
+
+  return availableStocks.value.filter((item) => {
+    const gradeName = item.grade_name || "Basah";
+    const matchesGrade = stockGradeFilter.value === "all" || gradeName === stockGradeFilter.value;
+    const searchableText = [
+      item.batch_code,
+      item.package_name,
+      item.user_name,
+      item.user_id,
+      gradeName,
+      item.unit,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    const matchesSearch = !keyword || searchableText.includes(keyword);
+    return matchesGrade && matchesSearch;
+  });
+});
 
 const totalStockCount = computed(() => availableStocks.value.length);
 const totalStockQuantity = computed(() =>
@@ -311,8 +345,30 @@ onMounted(async () => {
 
     <section class="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
-        <h3 class="text-lg font-semibold text-gray-900">Stok gudang siap dijual</h3>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Stok gudang siap dijual</h3>
+          <p class="mt-1 text-sm text-gray-600">
+            Menampilkan {{ filteredAvailableStocks.length }} dari {{ availableStocks.length }} stok siap jual.
+          </p>
+        </div>
         <span v-if="loading" class="text-sm text-gray-500">Memuat data...</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 border-b border-gray-100 px-6 py-4">
+        <div class="min-w-[260px] flex-1">
+          <SearchBar
+            v-model="stockSearch"
+            placeholder="Cari batch, investor, paket, atau mutu..."
+          />
+        </div>
+        <select
+          v-model="stockGradeFilter"
+          class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+        >
+          <option value="all">Semua mutu</option>
+          <option v-for="grade in availableStockGrades" :key="grade" :value="grade">
+            {{ grade }}
+          </option>
+        </select>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full min-w-[900px]">
@@ -327,12 +383,12 @@ onMounted(async () => {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-if="!availableStocks.length">
+            <tr v-if="!filteredAvailableStocks.length">
               <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">
-                Belum ada stok gudang yang siap dijual.
+                {{ availableStocks.length ? "Tidak ada stok yang cocok dengan pencarian atau filter." : "Belum ada stok gudang yang siap dijual." }}
               </td>
             </tr>
-            <tr v-for="stock in availableStocks" :key="stock.id" class="hover:bg-gray-50">
+            <tr v-for="stock in filteredAvailableStocks" :key="stock.id" class="hover:bg-gray-50">
               <td class="px-6 py-4">
                 <p class="font-medium text-gray-900">{{ stock.batch_code }}</p>
                 <p class="text-xs text-gray-500">{{ stock.package_name || "Paket tanpa nama" }}</p>
@@ -341,7 +397,7 @@ onMounted(async () => {
                 {{ stock.user_name || "-" }}
               </td>
               <td class="px-6 py-4 text-sm text-gray-700">
-                {{ stock.grade_name || "Tidak diklasifikasi" }}
+                {{ stock.grade_name || "Basah" }}
               </td>
               <td class="px-6 py-4 text-right font-medium text-gray-900">
                 {{ formatQuantity(stock.total_quantity) }} {{ stock.unit || "kg" }}
@@ -448,7 +504,7 @@ onMounted(async () => {
           </div>
           <div class="mt-3 flex flex-wrap gap-3 text-xs text-gray-600">
             <span class="rounded-full bg-white px-2.5 py-1">Investor: {{ selectedStock.user_name || "-" }}</span>
-            <span class="rounded-full bg-white px-2.5 py-1">Mutu: {{ selectedStock.grade_name || "Tidak diklasifikasi" }}</span>
+            <span class="rounded-full bg-white px-2.5 py-1">Mutu: {{ selectedStock.grade_name || "Basah" }}</span>
           </div>
         </div>
 

@@ -8,3 +8,5 @@
 /backend/uploads
 *.pyc
 *.py
+frontend/.env
+/.gocache
