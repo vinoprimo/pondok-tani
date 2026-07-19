@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import {
   BarChart3,
   BadgeDollarSign,
+  Info,
   Pencil,
   Plus,
   RefreshCcw,
@@ -243,8 +244,10 @@ const costCategoryOptions = [
 
 // Projection modal state
 const projectionModalOpen = ref(false);
+const projectionFormulaModalOpen = ref(false);
 const loadingGradesAndPrices = ref(false);
 const projectingRevenue = ref(false);
+const autoFilledProjectionGradeName = ref("");
 
 const grades = ref<GradeOption[]>([]);
 const nationalPrices = ref<NationalPriceRow[]>([]);
@@ -363,6 +366,18 @@ const availableProvinces = computed(() => {
 
 const filteredPricesByProvince = computed(() => {
   return nationalPrices.value.filter((price) => price.province === projectionInput.selectedProvince);
+});
+
+const projectionGradeTotalPercent = computed(() => {
+  return Object.values(projectionInput.gradePercentages).reduce((total: number, value) => {
+    return total + (Number(value) || 0);
+  }, 0);
+});
+
+const isProjectionGradeTotalValid = computed(() => Math.abs(projectionGradeTotalPercent.value - 100) < 0.01);
+
+const canSubmitProjection = computed(() => {
+  return Boolean(projectionInput.selectedProvince) && projectionInput.plantCount > 0 && isProjectionGradeTotalValid.value;
 });
 
 const projectionChartInnerWidth = computed(
@@ -1055,6 +1070,7 @@ async function openProjectionModal() {
   projectionInput.selectedProvince = availableProvinces.value[0] || "";
   projectionInput.gradePercentages = {};
   projectionResults.value = [];
+  autoFilledProjectionGradeName.value = "";
 
   if (!grades.value.length || !nationalPrices.value.length) {
     await fetchGradesAndNationalPrices();
@@ -1071,6 +1087,45 @@ async function openProjectionModal() {
 
 function closeProjectionModal() {
   projectionModalOpen.value = false;
+  projectionFormulaModalOpen.value = false;
+}
+
+function autofillRemainingGradePercentage(changedGradeName: string) {
+  if (grades.value.length !== 3) return;
+
+  const gradeNames = grades.value.map((grade) => grade.grade_name);
+  if (autoFilledProjectionGradeName.value === changedGradeName) {
+    autoFilledProjectionGradeName.value = "";
+    return;
+  }
+
+  if (autoFilledProjectionGradeName.value) {
+    const manualTotal = gradeNames
+      .filter((gradeName) => gradeName !== autoFilledProjectionGradeName.value)
+      .reduce((total, gradeName) => {
+        return total + (Number(projectionInput.gradePercentages[gradeName]) || 0);
+      }, 0);
+
+    projectionInput.gradePercentages[autoFilledProjectionGradeName.value] = Math.max(0, Number((100 - manualTotal).toFixed(1)));
+    return;
+  }
+
+  const filledGradeNames = gradeNames.filter((gradeName) => {
+    return (Number(projectionInput.gradePercentages[gradeName]) || 0) > 0;
+  });
+  const emptyGradeNames = gradeNames.filter((gradeName) => {
+    return (Number(projectionInput.gradePercentages[gradeName]) || 0) === 0;
+  });
+
+  if (filledGradeNames.length !== 2 || emptyGradeNames.length !== 1) return;
+
+  const filledTotal = filledGradeNames.reduce((total, gradeName) => {
+    return total + (Number(projectionInput.gradePercentages[gradeName]) || 0);
+  }, 0);
+  const remainingPercentage = Math.max(0, Number((100 - filledTotal).toFixed(1)));
+
+  projectionInput.gradePercentages[emptyGradeNames[0]] = remainingPercentage;
+  autoFilledProjectionGradeName.value = emptyGradeNames[0];
 }
 
 function submitProjection() {
@@ -1088,9 +1143,8 @@ function submitProjection() {
   }
 
   // Validasi persentase total = 100%
-  const totalPercent = Object.values(projectionInput.gradePercentages).reduce((a: number, b: number) => a + b, 0);
-  if (Math.abs(totalPercent - 100) > 0.01) {
-    errorMessage.value = `Total persentase grade harus 100% (saat ini ${totalPercent.toFixed(1)}%).`;
+  if (!isProjectionGradeTotalValid.value) {
+    errorMessage.value = `Total persentase grade harus 100% (saat ini ${projectionGradeTotalPercent.value.toFixed(1)}%).`;
     return;
   }
 
@@ -1830,13 +1884,24 @@ onMounted(async () => {
               Masukkan parameter estimasi panen berdasarkan tabel perhitungan yang tersedia (tahun 1-6).
             </p>
           </div>
-          <button
-            type="button"
-            class="rounded-lg border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-100"
-            @click="closeProjectionModal"
-          >
-            <X class="h-4 w-4" />
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-700 transition hover:bg-violet-100"
+              title="Lihat formula perhitungan"
+              @click="projectionFormulaModalOpen = true"
+            >
+              <Info class="h-4 w-4" />
+              Formula
+            </button>
+            <button
+              type="button"
+              class="rounded-lg border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-100"
+              @click="closeProjectionModal"
+            >
+              <X class="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <!-- Form Section -->
@@ -1870,34 +1935,46 @@ onMounted(async () => {
 
           <!-- Grade Percentages -->
           <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <p class="mb-3 text-sm font-medium text-gray-700">Distribusi Hasil Panen per Grade</p>
+            <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p class="text-sm font-medium text-gray-700">Distribusi Hasil Panen per Grade</p>
+                <p class="mt-1 text-xs text-amber-700">
+                  Catatan: rata-rata hasil Grade A biasanya berada di kisaran 20-30% dari total panen.
+                </p>
+              </div>
+              <div class="rounded-lg border border-white bg-white px-4 py-2 text-right shadow-sm">
+                <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Total</p>
+                <p
+                  class="text-2xl font-semibold"
+                  :class="{
+                    'text-emerald-600': isProjectionGradeTotalValid,
+                    'text-red-600': !isProjectionGradeTotalValid,
+                  }"
+                >
+                  {{ projectionGradeTotalPercent.toFixed(1) }}%
+                </p>
+              </div>
+            </div>
             <div v-if="!grades.length" class="text-xs text-gray-500">
               Tidak ada data grade yang tersedia. Silakan refresh data.
             </div>
             <div v-else class="grid gap-3 md:grid-cols-2">
               <label v-for="grade in grades" :key="grade.id" class="space-y-1">
-                <span class="text-xs font-medium text-gray-600">{{ grade.grade_name }} (%)</span>
+                <span class="text-sm font-medium text-gray-600">{{ grade.grade_name }} (%)</span>
                 <input
                   v-model.number="projectionInput.gradePercentages[grade.grade_name]"
                   type="number"
                   min="0"
                   max="100"
                   step="0.1"
-                  class="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-100"
+                  class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-lg font-semibold outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-100"
                   placeholder="0"
+                  @input="autofillRemainingGradePercentage(grade.grade_name)"
                 />
               </label>
             </div>
-            <div class="mt-2 text-xs text-gray-600">
-              Total:
-              <span
-                :class="{
-                  'font-semibold text-emerald-600': Math.abs((Object.values(projectionInput.gradePercentages) as number[]).reduce((a, b) => a + b, 0) - 100) < 0.01,
-                  'font-semibold text-red-600': Math.abs((Object.values(projectionInput.gradePercentages) as number[]).reduce((a, b) => a + b, 0) - 100) >= 0.01,
-                }"
-              >
-                {{ ((Object.values(projectionInput.gradePercentages) as number[]).reduce((a, b) => a + b, 0) || 0).toFixed(1) }}%
-              </span>
+            <div class="mt-3 text-sm font-medium" :class="isProjectionGradeTotalValid ? 'text-emerald-600' : 'text-red-600'">
+              {{ isProjectionGradeTotalValid ? "Distribusi sudah 100%." : "Total distribusi harus tepat 100% sebelum proyeksi dihitung." }}
             </div>
           </div>
 
@@ -1905,8 +1982,8 @@ onMounted(async () => {
           <div class="flex justify-end">
             <button
               type="submit"
-              :disabled="projectingRevenue"
-              class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-70"
+              :disabled="projectingRevenue || !canSubmitProjection"
+              class="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
             >
               <TrendingUp class="h-4 w-4" />
               {{ projectingRevenue ? "Menghitung..." : "Proyeksikan" }}
@@ -2086,6 +2163,71 @@ onMounted(async () => {
           >
             Tutup
           </button>
+        </div>
+      </div>
+
+      <div v-if="projectionFormulaModalOpen" class="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/50 p-4">
+        <div class="w-full max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h4 class="text-lg font-semibold text-gray-900">Formula Proyeksi Pendapatan</h4>
+              <p class="mt-1 text-sm text-gray-600">
+                Perhitungan menggunakan estimasi panen per pohon, distribusi grade, dan range harga nasional pada provinsi terpilih.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="rounded-lg border border-gray-200 p-2 text-gray-600 transition hover:bg-gray-100"
+              @click="projectionFormulaModalOpen = false"
+            >
+              <X class="h-4 w-4" />
+            </button>
+          </div>
+
+          <div class="mt-5 space-y-4 text-sm text-gray-700">
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <p class="font-semibold text-gray-900">1. Estimasi panen per tahun</p>
+              <p class="mt-2">Total panen tahun ke-n = jumlah pohon x estimasi kg per pohon.</p>
+              <div class="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                <div class="rounded-md bg-white px-3 py-2">Tahun 1: 0 kg/pohon</div>
+                <div class="rounded-md bg-white px-3 py-2">Tahun 2: 0 kg/pohon</div>
+                <div class="rounded-md bg-white px-3 py-2">Tahun 3: 0,25 kg/pohon</div>
+                <div class="rounded-md bg-white px-3 py-2">Tahun 4: 0,5 kg/pohon</div>
+                <div class="rounded-md bg-white px-3 py-2">Tahun 5: 1 kg/pohon</div>
+                <div class="rounded-md bg-white px-3 py-2">Tahun 6: 2 kg/pohon</div>
+              </div>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <p class="font-semibold text-gray-900">2. Pembagian hasil panen per grade</p>
+              <p class="mt-2">Panen per grade = total panen x persentase grade.</p>
+              <p class="mt-1 text-xs text-gray-500">Total persentase semua grade harus tepat 100% agar proyeksi dapat dihitung.</p>
+            </div>
+
+            <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <p class="font-semibold text-gray-900">3. Pendapatan minimum dan maksimum</p>
+              <p class="mt-2">Pendapatan minimum = jumlah seluruh panen per grade x harga minimum per kg.</p>
+              <p class="mt-1">Pendapatan maksimum = jumlah seluruh panen per grade x harga maksimum per kg.</p>
+              <p class="mt-1 text-xs text-gray-500">Harga minimum dan maksimum diambil dari data harga nasional untuk provinsi yang dipilih.</p>
+            </div>
+
+            <div class="rounded-lg border border-violet-100 bg-violet-50 p-4 text-violet-900">
+              <p class="font-semibold">Rumus ringkas</p>
+              <p class="mt-2">
+                Revenue per tahun = Σ((jumlah pohon x estimasi kg/pohon tahun ke-n) x persentase grade x harga per kg grade).
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-6 flex justify-end border-t border-gray-200 pt-4">
+            <button
+              type="button"
+              class="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-700"
+              @click="projectionFormulaModalOpen = false"
+            >
+              Mengerti
+            </button>
+          </div>
         </div>
       </div>
     </div>

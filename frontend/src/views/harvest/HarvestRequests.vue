@@ -46,11 +46,61 @@ const validationForm = ref({
   wetQuantity: 0,
   dryQuantity: 0,
 })
+const lastEditedHarvestType = ref<'wet' | 'dry' | null>(null)
 
 const showDetailModal = ref(false)
 const selectedDetail = ref<any | null>(null)
 
 const isAdmin = computed(() => userRole.value === 'admin')
+
+function numericValue(value: unknown) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : 0
+}
+
+function roundQuantity(value: number) {
+  return Math.round(value * 10) / 10
+}
+
+function completeCounterpartQuantity(changedField: 'total' | 'wet' | 'dry') {
+  const totalQty = numericValue(validationForm.value.totalQuantity)
+  const wetQty = numericValue(validationForm.value.wetQuantity)
+  const dryQty = numericValue(validationForm.value.dryQuantity)
+
+  if (changedField === 'wet') {
+    lastEditedHarvestType.value = 'wet'
+    validationForm.value.dryQuantity = roundQuantity(Math.max(totalQty - wetQty, 0))
+    return
+  }
+
+  if (changedField === 'dry') {
+    lastEditedHarvestType.value = 'dry'
+    validationForm.value.wetQuantity = roundQuantity(Math.max(totalQty - dryQty, 0))
+    return
+  }
+
+  if (lastEditedHarvestType.value === 'wet') {
+    validationForm.value.dryQuantity = roundQuantity(Math.max(totalQty - wetQty, 0))
+  } else if (lastEditedHarvestType.value === 'dry') {
+    validationForm.value.wetQuantity = roundQuantity(Math.max(totalQty - dryQty, 0))
+  }
+}
+
+const isValidationFormComplete = computed(() => {
+  const totalQty = numericValue(validationForm.value.totalQuantity)
+  const wetQty = numericValue(validationForm.value.wetQuantity)
+  const dryQty = numericValue(validationForm.value.dryQuantity)
+
+  return Boolean(
+    selectedRequest.value &&
+      validationForm.value.harvestDate &&
+      totalQty > 0 &&
+      wetQty >= 0 &&
+      dryQty >= 0 &&
+      wetQty + dryQty > 0 &&
+      Math.abs(totalQty - (wetQty + dryQty)) <= 0.01
+  )
+})
 
 const pendingRequests = computed(() => harvestRequests.value.filter((item) => item.status === 'pending'))
 const validatedRequests = computed(() => harvestRequests.value.filter((item) => item.status === 'validated'))
@@ -350,19 +400,21 @@ function openValidateModal(item: any) {
   validationForm.value.totalQuantity = Number(item.total_quantity || 0)
   validationForm.value.wetQuantity = Number(item.wet_quantity || 0)
   validationForm.value.dryQuantity = Number(item.dry_quantity || 0)
+  lastEditedHarvestType.value = null
   showValidateModal.value = true
 }
 
 async function confirmValidation() {
   if (!selectedRequest.value) return
+  if (!isValidationFormComplete.value) return
   if (!validationForm.value.harvestDate) {
     errorMessage.value = 'Tanggal panen wajib diisi.'
     return
   }
 
-  const totalQty = Number(validationForm.value.totalQuantity || 0)
-  const wetQty = Number(validationForm.value.wetQuantity || 0)
-  const dryQty = Number(validationForm.value.dryQuantity || 0)
+  const totalQty = numericValue(validationForm.value.totalQuantity)
+  const wetQty = numericValue(validationForm.value.wetQuantity)
+  const dryQty = numericValue(validationForm.value.dryQuantity)
   if (totalQty <= 0 || wetQty + dryQty <= 0) {
     errorMessage.value = 'Kuantitas panen wajib diisi.'
     return
@@ -721,6 +773,7 @@ watch(
                 min="0"
                 step="0.1"
                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                @input="completeCounterpartQuantity('total')"
               />
             </div>
             <div>
@@ -731,6 +784,7 @@ watch(
                 min="0"
                 step="0.1"
                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                @input="completeCounterpartQuantity('wet')"
               />
             </div>
             <div>
@@ -741,6 +795,7 @@ watch(
                 min="0"
                 step="0.1"
                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                @input="completeCounterpartQuantity('dry')"
               />
             </div>
           </div>
@@ -766,8 +821,8 @@ watch(
           </button>
           <button
             type="button"
-            class="flex-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-60"
-            :disabled="validating"
+            class="flex-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:bg-gray-300"
+            :disabled="validating || !isValidationFormComplete"
             @click="confirmValidation"
           >
             <Loader2 v-if="validating" class="h-4 w-4 inline-block mr-1 animate-spin" />
