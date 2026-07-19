@@ -85,7 +85,9 @@ const investorMenuItems = [
   { id: 'notifications', label: 'Notifikasi', icon: Bell },
 ];
 
-const mitraMenuItems = investorMenuItems.filter((item) => item.id !== 'maintenance-group');
+const mitraMenuItems = investorMenuItems.filter(
+  (item) => item.id !== 'maintenance-group' && item.id !== 'plants-group'
+);
 
 // Admin memiliki akses ke semua menu investor plus menu tambahan untuk manajemen
 const adminMenuItems = [
@@ -200,13 +202,14 @@ const roleLabel = computed(() => {
         <span>Kembali ke landing</span>
         <ArrowUpRight class="w-4 h-4" />
       </button>
+<!-- 
       <button
         type="button"
         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
       >
         <Settings class="w-5 h-5" />
         <span class="text-sm font-medium">Pengaturan</span>
-      </button>
+      </button> -->
       <button
         type="button"
         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"

@@ -25,7 +25,7 @@ func GetAllActivityTypes(page, limit int, search string) ([]maintenance.Activity
 		query = query.Offset(offset).Limit(limit)
 	}
 
-	if err := query.Order("name ASC").Find(&activityTypes).Error; err != nil {
+	if err := query.Order("created_at DESC").Find(&activityTypes).Error; err != nil {
 		return nil, 0, err
 	}
 	return activityTypes, total, nil

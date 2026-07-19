@@ -39,7 +39,7 @@ func (p *PaginationData) GetPage() int {
 
 func (p *PaginationData) GetSort() string {
 	if p.Sort == "" {
-		p.Sort = "id desc"
+		p.Sort = "created_at desc"
 	}
 	return p.Sort
 }
@@ -48,7 +48,7 @@ func (p *PaginationData) GetSort() string {
 func GeneratePaginationFromRequest(c *gin.Context) PaginationData {
 	limit := 10
 	page := 1
-	sort := "id desc"
+	sort := "created_at desc"
 	search := ""
 
 	if l, err := strconv.Atoi(c.Query("limit")); err == nil && l > 0 {

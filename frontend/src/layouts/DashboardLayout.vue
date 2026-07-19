@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { Bell } from "lucide-vue-next";
 import Sidebar from "../components/dashboard-layouts/Sidebar.vue";
 import { clearAuthSession } from "../utils/session";
+import { getCurrentUser } from "../services/user/user";
 import {
   fetchSystemNotifications,
   subscribeSystemNotifications,
@@ -18,6 +19,7 @@ const userRole = ref<"investor" | "mitra" | "admin">(
 const unreadNotificationCount = ref(0);
 const recentNotifications = ref<any[]>([]);
 const showNotifications = ref(false);
+const isPendingMitra = ref(localStorage.getItem("userRole") === "mitra");
 let unsubscribeNotifications: (() => void) | null = null;
 
 function getCurrentUserId() {
@@ -44,7 +46,7 @@ async function loadUnreadNotificationCount() {
 
   try {
     const items = await fetchSystemNotifications(userId);
-    unreadNotificationCount.value = items.filter((item) => !item.read).length;
+    unreadNotificationCount.value = items.filter((item: any) => !item.read).length;
   } catch (error) {
     console.error('Failed to load unread notifications:', error);
     unreadNotificationCount.value = 0;
@@ -55,8 +57,8 @@ function startUnreadNotificationListener() {
   const userId = getCurrentUserId();
   if (!userId) return;
 
-  unsubscribeNotifications = subscribeSystemNotifications(userId, (items) => {
-    unreadNotificationCount.value = items.filter((item) => !item.read).length;
+  unsubscribeNotifications = subscribeSystemNotifications(userId, (items: any[]) => {
+    unreadNotificationCount.value = items.filter((item: any) => !item.read).length;
     recentNotifications.value = items.slice(0, 5); // Tampilkan 5 notifikasi terbaru
   });
 }
@@ -90,8 +92,6 @@ const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
     "portfolio",
     "harvest",
     "my-warehouse",
-    "plants-input",
-    "plants-history",
     "reminder-settings",
     "financials",
     "reports",
@@ -200,11 +200,24 @@ function ensureAllowedCurrentRoute() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   const storedRole = localStorage.getItem("userRole") as "investor" | "mitra" | "admin" | null;
   if (storedRole === "investor" || storedRole === "mitra" || storedRole === "admin") {
     userRole.value = storedRole;
   }
+  if (userRole.value === 'mitra') {
+    try {
+      const userRes = await getCurrentUser();
+      if (userRes?.data?.package_status !== 'pending_validation') {
+        isPendingMitra.value = false;
+      }
+    } catch (e) {
+      console.error('Failed to get current user info for layout:', e);
+    }
+  } else {
+    isPendingMitra.value = false;
+  }
+
   ensureAllowedCurrentRoute();
   loadUnreadNotificationCount();
   startUnreadNotificationListener();
@@ -227,6 +240,7 @@ watch(
 <template>
   <div class="flex h-dvh overflow-hidden bg-gray-50">
     <Sidebar
+      v-if="!isPendingMitra"
       :active-view="activeView"
       :user-role="userRole"
       @set-active-view="handleSetActiveView"
@@ -242,12 +256,30 @@ watch(
               Selamat datang kembali! Berikut perkembangan terkini perkebunan vanili Anda.
             </p>
           </div>
-          <div class="relative">
-            <button
-              type="button"
-              class="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              @click="toggleNotifications"
-            >
+          <div class="flex items-center gap-3">
+            <template v-if="isPendingMitra">
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                @click="router.push('/')"
+              >
+                Kembali ke landing
+              </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                @click="handleLogout"
+              >
+                Keluar
+              </button>
+            </template>
+
+            <div class="relative" v-if="!isPendingMitra">
+              <button
+                type="button"
+                class="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                @click="toggleNotifications"
+              >
               <Bell class="w-6 h-6 text-gray-600" />
               <span
                 v-if="unreadNotificationCount > 0"
@@ -285,7 +317,8 @@ watch(
             </div>
           </div>
         </div>
-      </header>
+      </div>
+    </header>
 
       <main class="flex-1 overflow-auto bg-gray-50">
         <div class="mx-auto w-full max-w-[1400px] px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-8">
