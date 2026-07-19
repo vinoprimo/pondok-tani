@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
-import { BadgeDollarSign, Calendar, Check, Package, RefreshCcw, ShoppingCart, X } from "lucide-vue-next";
+import { BadgeDollarSign, Calendar, Check, Package, Pencil, RefreshCcw, ShoppingCart, Trash2, X } from "lucide-vue-next";
 import { listWarehouseStocks } from "../../services/warehouse/warehouse";
-import { createSalesOrder, listSalesOrders } from "../../services/sales/sales";
+import { createSalesOrder, deleteSalesOrder, listSalesOrders, updateSalesOrder } from "../../services/sales/sales";
 import SearchBar from "../../components/common/SearchBar.vue";
 
 type WarehouseStockRow = {
@@ -45,6 +45,7 @@ type SalesOrderApiRow = {
 
 type SalesDetailRow = {
   id: number;
+  warehouseStockId: number;
   batchCode: string;
   packageName: string;
   gradeName: string;
@@ -74,7 +75,9 @@ const stockGradeFilter = ref("all");
 
 const saleModalOpen = ref(false);
 const submittingSale = ref(false);
+const deletingOrderId = ref<number | null>(null);
 const selectedStock = ref<WarehouseStockRow | null>(null);
+const selectedOrder = ref<SalesOrderRow | null>(null);
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -86,6 +89,7 @@ const saleForm = reactive({
 });
 
 const availableStocks = computed(() => stocks.value.filter((item) => Number(item.total_quantity) > 0));
+const isEditingSale = computed(() => Boolean(selectedOrder.value));
 
 const availableStockGrades = computed(() => {
   const grades = new Set<string>();
@@ -155,6 +159,12 @@ const formatQuantity = (value: number) =>
     maximumFractionDigits: 2,
   }).format(value || 0);
 
+function statusBadgeClass(status: string) {
+  return status === "corrected"
+    ? "bg-amber-100 text-amber-700"
+    : "bg-emerald-100 text-emerald-700";
+}
+
 function resetSaleForm(stock: WarehouseStockRow) {
   saleForm.buyer = "";
   saleForm.salesDate = today;
@@ -162,9 +172,37 @@ function resetSaleForm(stock: WarehouseStockRow) {
   saleForm.unitPrice = 0;
 }
 
+function formatDateInput(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return today;
+  return date.toISOString().slice(0, 10);
+}
+
 function openSaleModal(stock: WarehouseStockRow) {
   selectedStock.value = stock;
+  selectedOrder.value = null;
   resetSaleForm(stock);
+  errorMessage.value = "";
+  infoMessage.value = "";
+  saleModalOpen.value = true;
+}
+
+function openEditModal(order: SalesOrderRow) {
+  const detail = order.details[0];
+  if (!detail) return;
+
+  const stock = stocks.value.find((item) => item.id === detail.warehouseStockId);
+  if (!stock) {
+    errorMessage.value = "Stok asal transaksi tidak ditemukan.";
+    return;
+  }
+
+  selectedStock.value = stock;
+  selectedOrder.value = order;
+  saleForm.buyer = order.buyer;
+  saleForm.salesDate = formatDateInput(order.salesDate);
+  saleForm.quantity = Number(detail.quantity) || 0;
+  saleForm.unitPrice = Number(detail.unitPrice) || 0;
   errorMessage.value = "";
   infoMessage.value = "";
   saleModalOpen.value = true;
@@ -174,6 +212,7 @@ function closeSaleModal() {
   if (submittingSale.value) return;
   saleModalOpen.value = false;
   selectedStock.value = null;
+  selectedOrder.value = null;
 }
 
 async function fetchStocks() {
@@ -196,6 +235,7 @@ async function fetchOrders() {
     details: Array.isArray(item.details)
       ? item.details.map((detail) => ({
           id: detail.id,
+          warehouseStockId: detail.warehouse_stock_id,
           batchCode: detail.batch_code,
           packageName: detail.package_name,
           gradeName: detail.grade_name,
@@ -242,7 +282,9 @@ async function submitSale() {
     return;
   }
 
-  if (saleForm.quantity > Number(selectedStock.value.total_quantity || 0)) {
+  const editableQuantity = isEditingSale.value ? Number(selectedOrder.value?.details[0]?.quantity || 0) : 0;
+  const maximumQuantity = Number(selectedStock.value.total_quantity || 0) + editableQuantity;
+  if (saleForm.quantity > maximumQuantity) {
     errorMessage.value = "Kuantitas melebihi stok yang tersedia.";
     return;
   }
@@ -254,7 +296,7 @@ async function submitSale() {
 
   submittingSale.value = true;
   try {
-    await createSalesOrder({
+    const payload = {
       sales_date: saleForm.salesDate,
       buyer: saleForm.buyer.trim(),
       details: [
@@ -264,21 +306,64 @@ async function submitSale() {
           unit_price: Number(saleForm.unitPrice),
         },
       ],
-    });
+    };
+
+    if (selectedOrder.value) {
+      await updateSalesOrder(selectedOrder.value.id, payload);
+    } else {
+      await createSalesOrder(payload);
+    }
 
     await refreshData();
 
-    infoMessage.value = "Penjualan berhasil diproses.";
-    closeSaleModal();
+    infoMessage.value = selectedOrder.value
+      ? "Penjualan berhasil diperbaiki. Status berubah menjadi corrected."
+      : "Penjualan berhasil diproses.";
   } catch (error) {
     console.error("Failed to create sales order", error);
     errorMessage.value = "Gagal memproses penjualan.";
   } finally {
     submittingSale.value = false;
+    closeSaleModal();
+  }
+}
+
+async function removeOrder(order: SalesOrderRow) {
+  if (!window.confirm(`Hapus penjualan ${order.orderNumber}? Stok akan dikembalikan ke gudang.`)) return;
+
+  errorMessage.value = "";
+  infoMessage.value = "";
+  deletingOrderId.value = order.id;
+  try {
+    await deleteSalesOrder(order.id);
+    await refreshData();
+    infoMessage.value = "Penjualan berhasil dihapus dan stok dikembalikan.";
+  } catch (error) {
+    console.error("Failed to delete sales order", error);
+    errorMessage.value = "Gagal menghapus penjualan.";
+  } finally {
+    deletingOrderId.value = null;
   }
 }
 
 const orderTotalForForm = computed(() => (Number(saleForm.quantity) || 0) * (Number(saleForm.unitPrice) || 0));
+
+const isSaleFormValid = computed(() => {
+  if (!selectedStock.value) return false;
+
+  const editableQuantity = isEditingSale.value ? Number(selectedOrder.value?.details[0]?.quantity || 0) : 0;
+  const maximumQuantity = Number(selectedStock.value.total_quantity || 0) + editableQuantity;
+
+  return Boolean(
+    saleForm.buyer.trim() &&
+      saleForm.salesDate &&
+      Number.isFinite(saleForm.quantity) &&
+      saleForm.quantity > 0 &&
+      saleForm.quantity <= maximumQuantity &&
+      Number.isFinite(saleForm.unitPrice) &&
+      saleForm.unitPrice > 0
+  );
+});
 
 onMounted(async () => {
   await refreshData();
@@ -302,10 +387,10 @@ onMounted(async () => {
       </button>
     </div>
 
-    <div v-if="errorMessage" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    <div v-if="errorMessage" role="alert" class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
       {{ errorMessage }}
     </div>
-    <div v-if="infoMessage" class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+    <div v-if="infoMessage" role="status" class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
       {{ infoMessage }}
     </div>
 
@@ -427,7 +512,7 @@ onMounted(async () => {
         <p class="text-sm text-gray-600 mt-1">Rekap transaksi yang sudah tercatat di sistem.</p>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[980px]">
+        <table class="w-full min-w-[1080px]">
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
               <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Order</th>
@@ -436,11 +521,12 @@ onMounted(async () => {
               <th class="text-left px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Detail</th>
               <th class="text-right px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Total</th>
               <th class="text-center px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Status</th>
+              <th class="text-center px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-600">Aksi</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
             <tr v-if="!orders.length">
-              <td colspan="6" class="px-6 py-6 text-center text-sm text-gray-500">
+              <td colspan="7" class="px-6 py-6 text-center text-sm text-gray-500">
                 Belum ada transaksi penjualan yang tercatat.
               </td>
             </tr>
@@ -463,9 +549,30 @@ onMounted(async () => {
               </td>
               <td class="px-6 py-4 text-right font-semibold text-emerald-600">{{ formatRupiah(order.totalAmount) }}</td>
               <td class="px-6 py-4 text-center">
-                <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                <span :class="['inline-flex rounded-full px-2.5 py-1 text-xs font-semibold', statusBadgeClass(order.status)]">
                   {{ order.status || "completed" }}
                 </span>
+              </td>
+              <td class="px-6 py-4">
+                <div class="flex justify-center gap-2">
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+                    @click="openEditModal(order)"
+                  >
+                    <Pencil class="h-3.5 w-3.5" />
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    :disabled="deletingOrderId === order.id"
+                    @click="removeOrder(order)"
+                  >
+                    <Trash2 class="h-3.5 w-3.5" />
+                    {{ deletingOrderId === order.id ? "Menghapus" : "Hapus" }}
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -477,8 +584,10 @@ onMounted(async () => {
       <div class="mx-auto mt-10 w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
         <div class="flex items-start justify-between gap-4">
           <div>
-            <h3 class="text-xl font-semibold text-gray-900">Proses penjualan</h3>
-            <p class="mt-1 text-sm text-gray-600">Masukkan detail transaksi sebelum konfirmasi penjualan.</p>
+            <h3 class="text-xl font-semibold text-gray-900">{{ isEditingSale ? "Edit penjualan" : "Proses penjualan" }}</h3>
+            <p class="mt-1 text-sm text-gray-600">
+              {{ isEditingSale ? "Perbaiki data transaksi yang salah." : "Masukkan detail transaksi sebelum konfirmasi penjualan." }}
+            </p>
           </div>
           <button
             type="button"
@@ -496,9 +605,9 @@ onMounted(async () => {
               <p class="text-xs text-gray-500">{{ selectedStock.package_name }}</p>
             </div>
             <div class="text-right">
-              <p class="text-xs text-gray-500">Stok tersedia</p>
+              <p class="text-xs text-gray-500">{{ isEditingSale ? "Stok tersedia untuk koreksi" : "Stok tersedia" }}</p>
               <p class="font-semibold text-gray-900">
-                {{ formatQuantity(selectedStock.total_quantity) }} {{ selectedStock.unit || "kg" }}
+                {{ formatQuantity(Number(selectedStock.total_quantity || 0) + (isEditingSale ? Number(selectedOrder?.details[0]?.quantity || 0) : 0)) }} {{ selectedStock.unit || "kg" }}
               </p>
             </div>
           </div>
@@ -566,11 +675,11 @@ onMounted(async () => {
             </button>
             <button
               type="submit"
-              :disabled="submittingSale"
-              class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-70"
+              :disabled="submittingSale || !isSaleFormValid"
+              class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:hover:bg-gray-300"
             >
               <Check class="h-4 w-4" />
-              {{ submittingSale ? "Menyimpan..." : "Konfirmasi penjualan" }}
+              {{ submittingSale ? "Menyimpan..." : isEditingSale ? "Simpan koreksi" : "Konfirmasi penjualan" }}
             </button>
           </div>
         </form>

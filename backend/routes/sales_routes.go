@@ -12,5 +12,7 @@ func SalesRoutes(r *gin.Engine) {
 	{
 		group.GET("/orders", saleshandler.ListSalesOrders)
 		group.POST("/orders", middleware.RequireRoles("admin"), saleshandler.CreateSalesOrder)
+		group.PUT("/orders/:id", middleware.RequireRoles("admin"), saleshandler.UpdateSalesOrder)
+		group.DELETE("/orders/:id", middleware.RequireRoles("admin"), saleshandler.DeleteSalesOrder)
 	}
 }
