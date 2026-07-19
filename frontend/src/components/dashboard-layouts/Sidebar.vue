@@ -34,20 +34,28 @@ const emit = defineEmits<{
   logout: [];
 }>();
 
-const maintenanceOpen = ref(props.activeView.startsWith('maintenance'));
-const plantsOpen = ref(props.activeView.startsWith('plants'));
+const openGroups = ref<Record<string, boolean>>({
+  'maintenance-group': props.activeView.startsWith('maintenance'),
+  'plants-group': props.activeView.startsWith('plants'),
+  'monitoring-group': props.activeView === 'monitoring-schedule' || props.activeView === 'activity-type',
+});
 
 watch(
   () => props.activeView,
   (value) => {
-    if (value.startsWith('maintenance')) {
-      maintenanceOpen.value = true;
-    }
-    if (value.startsWith('plants')) {
-      plantsOpen.value = true;
-    }
+    if (value.startsWith('maintenance')) openGroups.value['maintenance-group'] = true;
+    if (value.startsWith('plants')) openGroups.value['plants-group'] = true;
+    if (value === 'monitoring-schedule' || value === 'activity-type') openGroups.value['monitoring-group'] = true;
   }
 );
+
+function toggleGroup(id: string) {
+  openGroups.value[id] = !openGroups.value[id];
+}
+
+function isGroupOpen(id: string) {
+  return openGroups.value[id] || false;
+}
 
 const investorMenuItems = [
   { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
@@ -77,18 +85,28 @@ const investorMenuItems = [
   { id: 'notifications', label: 'Notifikasi', icon: Bell },
 ];
 
-const mitraMenuItems = investorMenuItems.filter((item) => item.id !== 'maintenance-group');
+const mitraMenuItems = investorMenuItems.filter(
+  (item) => item.id !== 'maintenance-group' && item.id !== 'plants-group'
+);
 
 // Admin memiliki akses ke semua menu investor plus menu tambahan untuk manajemen
 const adminMenuItems = [
   { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
   { id: 'investors', label: 'Investor', icon: Users },
   { id: 'maintenance-validation', label: 'Validasi Perawatan', icon: ClipboardCheck },
-  { id: 'monitoring-schedule', label: 'Jadwal Monitoring', icon: CalendarDays },
+  {
+    id: 'monitoring-group',
+    label: 'Monitoring Aktivitas',
+    icon: CalendarDays,
+    children: [
+      { id: 'monitoring-schedule', label: 'Jadwal Monitoring', icon: CalendarDays },
+      { id: 'activity-type', label: 'Jenis Aktivitas', icon: ClipboardCheck },
+    ]
+  },
   { id: 'harvest', label: 'Panen', icon: Sprout },
   { id: 'harvest-sales', label: 'Penjualan Panen', icon: ShoppingCart },
   { id: 'warehouse', label: 'Stok Gudang', icon: Package },
-  { id: 'financials', label: 'Keuangan', icon: DollarSign },
+  // { id: 'financials', label: 'Keuangan', icon: DollarSign }, // Hide temporarily
   { id: 'reports', label: 'Laporan', icon: FileText },
   { id: 'investment-packages', label: 'Paket Investasi', icon: Briefcase },
   { id: 'vanili-management', label: 'Harga & Grade Vanili', icon: DollarSign },
@@ -141,24 +159,20 @@ const roleLabel = computed(() => {
             type="button"
             class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
             :class="
-              item.id === 'maintenance-group'
-                ? (activeView === 'maintenance-schedule' || activeView === 'maintenance-history')
-                  ? 'bg-green-50 text-green-700'
-                  : 'text-gray-600 hover:bg-gray-50'
-                : (activeView === 'plants-input' || activeView === 'plants-history')
-                  ? 'bg-green-50 text-green-700'
-                  : 'text-gray-600 hover:bg-gray-50'
+              item.children && item.children.some(child => child.id === activeView)
+                ? 'bg-green-50 text-green-700'
+                : 'text-gray-600 hover:bg-gray-50'
             "
-            @click="item.id === 'maintenance-group' ? maintenanceOpen = !maintenanceOpen : plantsOpen = !plantsOpen"
+            @click="toggleGroup(item.id)"
           >
             <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
             <span class="text-sm font-medium text-left">{{ item.label }}</span>
             <ChevronDown
               class="w-4 h-4 ml-auto transition-transform"
-              :class="item.id === 'maintenance-group' ? (maintenanceOpen ? 'rotate-180' : '') : (plantsOpen ? 'rotate-180' : '')"
+              :class="isGroupOpen(item.id) ? 'rotate-180' : ''"
             />
           </button>
-          <div v-show="item.id === 'maintenance-group' ? maintenanceOpen : plantsOpen" class="space-y-1 pl-9 mt-1">
+          <div v-show="isGroupOpen(item.id)" class="space-y-1 pl-9 mt-1">
             <button
               v-for="child in item.children"
               :key="child.id"
@@ -188,13 +202,14 @@ const roleLabel = computed(() => {
         <span>Kembali ke landing</span>
         <ArrowUpRight class="w-4 h-4" />
       </button>
+<!-- 
       <button
         type="button"
         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
       >
         <Settings class="w-5 h-5" />
         <span class="text-sm font-medium">Pengaturan</span>
-      </button>
+      </button> -->
       <button
         type="button"
         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"

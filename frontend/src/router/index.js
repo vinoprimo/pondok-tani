@@ -181,6 +181,12 @@ const routes = [
         meta: { roles: ["admin"] },
       },
       {
+        path: "activity-type",
+        name: "dashboard-activity-type",
+        component: () => import("../views/plant-monitoring/ActivityTypeAdmin.vue"),
+        meta: { roles: ["admin"] },
+      },
+      {
         path: "harvest-sales",
         name: "dashboard-harvest-sales",
         component: () => import("../views/harvest/HarvestSales.vue"),

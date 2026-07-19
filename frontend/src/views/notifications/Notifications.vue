@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { Bell, CheckCircle2, AlertCircle, Info, TrendingUp } from 'lucide-vue-next';
+import { Bell, CheckCircle2, AlertCircle, Info, TrendingUp, Check } from 'lucide-vue-next';
 import {
   fetchSystemNotifications,
   subscribeSystemNotifications,
@@ -8,7 +8,7 @@ import {
 } from '../../services/firebase/systemNotification';
 
 const filter = ref('all');
-const notifications = ref([]);
+const notifications = ref<any[]>([]);
 
 function getCurrentUserId() {
   const storedUserId = localStorage.getItem('userId');
@@ -42,7 +42,7 @@ const plantCount = computed(() => notifications.value.filter((n) => n.category =
 const alertCount = computed(() => notifications.value.filter((n) => n.category === 'alert').length);
 const paymentCount = computed(() => notifications.value.filter((n) => n.category === 'payment').length);
 
-let unsubscribeNotifications = null;
+let unsubscribeNotifications: (() => void) | null = null;
 
 async function markAllAsRead() {
   const unreadItems = notifications.value.filter((n) => !n.read);
@@ -62,7 +62,7 @@ async function markAllAsRead() {
   }));
 }
 
-async function markAsRead(notification) {
+async function markAsRead(notification: any) {
   if (notification.read || !notification.id) return;
 
   try {
@@ -75,10 +75,10 @@ async function markAsRead(notification) {
   }
 }
 
-function normalizeNotification(doc) {
+function normalizeNotification(doc: any) {
   const rawTimestamp = doc.created_at || doc.createdAt || doc.sentAt || doc.time || null;
 
-  const formatTimestamp = (value) => {
+  const formatTimestamp = (value: any) => {
     if (!value) return 'Baru saja';
 
     let dateValue = value;
@@ -123,7 +123,7 @@ function startNotificationListener() {
   const userId = getCurrentUserId();
   if (!userId) return;
 
-  unsubscribeNotifications = subscribeSystemNotifications(userId, (items) => {
+  unsubscribeNotifications = subscribeSystemNotifications(userId, (items: any[]) => {
     notifications.value = items.map(normalizeNotification);
   });
 }
@@ -248,43 +248,43 @@ function getIconBg(type: string) {
             : 'bg-green-100/80 border-green-300 text-gray-900',
         ]"
       >
-        <div class="flex items-start gap-4">
-          <div
-            class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-            :class="notification.type === 'info' ? '' : getIconBg(notification.type)"
-          >
-            <CheckCircle2
-              v-if="notification.type === 'success'"
-              class="w-5 h-5 text-green-600"
-            />
-            <AlertCircle
-              v-else-if="notification.type === 'alert'"
-              class="w-5 h-5 text-yellow-600"
-            />
-            <Info v-else class="w-5 h-5 text-blue-600" />
-          </div>
-
-          <div class="flex-1 min-w-0">
-            <div class="flex items-start justify-between gap-4 mb-2">
-              <h3 class="font-semibold" :class="notification.read ? 'text-gray-700' : 'text-gray-900'">{{ notification.title }}</h3>
-              <span
-                v-if="!notification.read"
-                class="w-2 h-2 bg-green-600 rounded-full flex-shrink-0"
+        <div class="flex items-center gap-4">
+          <div class="flex items-start gap-4 flex-1 min-w-0">
+            <div
+              class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+              :class="notification.type === 'info' ? '' : getIconBg(notification.type)"
+            >
+              <CheckCircle2
+                v-if="notification.type === 'success'"
+                class="w-5 h-5 text-green-600"
               />
+              <AlertCircle
+                v-else-if="notification.type === 'alert'"
+                class="w-5 h-5 text-yellow-600"
+              />
+              <Info v-else class="w-5 h-5 text-blue-600" />
             </div>
-            <p class="text-gray-700 leading-relaxed whitespace-pre-line break-words mb-2">{{ notification.message }}</p>
-            <div class="flex items-center gap-4">
-              <span class="text-sm text-gray-500">{{ notification.time }}</span>
-              <button
-                v-if="!notification.read"
-                type="button"
-                class="text-sm text-green-600 hover:text-green-700 font-medium"
-                @click.prevent="markAsRead(notification)"
-              >
-                Tandai dibaca
-              </button>
+
+            <div class="flex-1 min-w-0">
+              <div class="mb-2">
+                <h3 class="font-semibold" :class="notification.read ? 'text-gray-700' : 'text-gray-900'">{{ notification.title }}</h3>
+              </div>
+              <p class="text-gray-700 leading-relaxed whitespace-pre-line break-words mb-2">{{ notification.message }}</p>
+              <div class="flex items-center gap-4">
+                <span class="text-sm text-gray-500">{{ notification.time }}</span>
+              </div>
             </div>
           </div>
+          
+          <button
+            v-if="!notification.read"
+            type="button"
+            class="text-green-600 hover:text-green-700 p-2 hover:bg-green-200/50 rounded-full transition-colors flex-shrink-0 ml-2"
+            @click.prevent="markAsRead(notification)"
+            title="Tandai dibaca"
+          >
+            <Check class="w-6 h-6" />
+          </button>
         </div>
       </div>
     </div>

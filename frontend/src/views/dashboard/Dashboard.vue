@@ -12,6 +12,7 @@ import {
   Calculator,
 } from "lucide-vue-next";
 import { getAdminDashboard, getUserDashboard } from "../../services/dashboard/dashboard";
+import { getCurrentUser } from "../../services/user/user";
 import { Bar, Doughnut, Line } from "vue-chartjs";
 import {
   Chart as ChartJS,
@@ -103,25 +104,30 @@ onMounted(() => {
         isWaitingMitraValidation.value = false;
       });
   }
-
-  loadAdminPackages();
 });
 
-const monthlyChartData = computed(() => ({
-  labels: monthlyData.value.map(d => d.month),
-  datasets: [
+const monthlyChartData = computed(() => {
+  const datasets: any[] = [
     {
       label: 'Investasi',
       backgroundColor: '#10b981',
       data: monthlyData.value.map(d => d.revenue)
-    },
-    {
+    }
+  ];
+
+  if (!isAdmin.value) {
+    datasets.push({
       label: 'Biaya',
       backgroundColor: '#3b82f6',
       data: monthlyData.value.map(d => d.costs)
-    }
-  ]
-}));
+    });
+  }
+
+  return {
+    labels: monthlyData.value.map(d => d.month),
+    datasets
+  };
+});
 
 const monthlyChartOptions = {
   responsive: true,
