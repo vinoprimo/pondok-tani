@@ -104,6 +104,7 @@ const roleAllowedViews: Record<"investor" | "mitra" | "admin", string[]> = {
     "article-management",
     "maintenance-validation",
     "monitoring-schedule",
+    "activity-type",
     "harvest",
     "harvest-sales",
     "warehouse",
@@ -137,6 +138,7 @@ const activeView = computed(() => {
     "/dashboard/harvest-sales": "harvest-sales",
     "/dashboard/warehouse": "warehouse",
     "/dashboard/investment-packages": "investment-packages",
+    "/dashboard/activity-type": "activity-type",
   };
 
   return matchMap[route.path] || "dashboard";
@@ -170,6 +172,7 @@ function handleSetActiveView(view: string) {
     investors: "/dashboard/investors",
     "maintenance-validation": "/dashboard/maintenance-validation",
     "monitoring-schedule": "/dashboard/monitoring-schedule",
+    "activity-type": "/dashboard/activity-type",
     "harvest-sales": "/dashboard/harvest-sales",
     warehouse: "/dashboard/warehouse",
     "investment-packages": "/dashboard/investment-packages",

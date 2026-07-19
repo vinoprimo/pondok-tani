@@ -45,6 +45,12 @@ func AdminRoutes(r *gin.Engine) {
 		admin.GET("/maintenance-schedules/summary", maintenancehandler.GetMaintenanceScheduleSummary)
 		admin.GET("/maintenance-schedules", maintenancehandler.ListMaintenanceSchedules)
 		admin.POST("/maintenance-schedules", maintenancehandler.CreateMaintenanceSchedule)
+		
+		admin.GET("/activity-types", maintenancehandler.GetAllActivityTypes)
+		admin.GET("/activity-types/:id", maintenancehandler.GetActivityTypeByID)
+		admin.POST("/activity-types", maintenancehandler.CreateActivityType)
+		admin.PUT("/activity-types/:id", maintenancehandler.UpdateActivityType)
+		admin.DELETE("/activity-types/:id", maintenancehandler.DeleteActivityType)
 		admin.GET("/maintenance-activities/summary", maintenancehandler.GetAdminMaintenanceActivitySummary)
 		admin.GET("/maintenance-activities", maintenancehandler.ListAdminMaintenanceActivities)
 		admin.PUT("/maintenance-activities/:id/review", maintenancehandler.ReviewMaintenanceActivity)

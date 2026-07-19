@@ -16,6 +16,7 @@ import {
   createAdminMaintenanceSchedule,
   getAdminMaintenanceSchedules,
 } from "../../services/maintenance/schedule";
+import { getActivityTypes, ActivityType } from "../../services/maintenance/activityType";
 import SearchBar from "../../components/common/SearchBar.vue";
 import Pagination from "../../components/common/Pagination.vue";
 
@@ -51,6 +52,7 @@ const userId = computed(() => String(route.params.userId || ""));
 const user = ref<UserItem | null>(null);
 const schedules = ref<ScheduleItem[]>([]);
 const plantBatches = ref<PlantBatchItem[]>([]);
+const activityTypes = ref<ActivityType[]>([]);
 
 const isLoading = ref(false);
 const isSaving = ref(false);
@@ -306,14 +308,28 @@ async function openAddModal() {
   form.value.frequency_days = 7;
   form.value.next_due_date = selectedDateKey.value;
 
-  const res = await getAdminUserPlantBatches(userId.value);
-  plantBatches.value = Array.isArray(res.data)
-    ? res.data.map((item: any) => ({
+  const [resBatches, resActivities] = await Promise.all([
+    getAdminUserPlantBatches(userId.value),
+    getActivityTypes({ limit: 100 })
+  ]);
+  
+  plantBatches.value = Array.isArray(resBatches.data)
+    ? resBatches.data.map((item: any) => ({
         id: item.id,
         batch_code: item.batch_code,
         location: item.location,
       }))
     : [];
+    
+  if (resActivities.data && resActivities.data.data) {
+    activityTypes.value = resActivities.data.data;
+  } else {
+    activityTypes.value = Array.isArray(resActivities.data) ? resActivities.data : [];
+  }
+
+  if (activityTypes.value.length > 0) {
+    form.value.activity_type = activityTypes.value[0].name;
+  }
 
   isAddModalOpen.value = true;
 }
@@ -646,13 +662,16 @@ onMounted(async () => {
 
           <div>
             <label class="mb-1 block text-sm font-medium text-gray-700">Jenis Aktivitas</label>
-            <input
+            <select
               v-model="form.activity_type"
-              type="text"
               class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none"
-              placeholder="Contoh: Pemupukan"
               required
-            />
+            >
+              <option v-if="activityTypes.length === 0" value="">Belum ada jenis aktivitas</option>
+              <option v-for="type in activityTypes" :key="type.id" :value="type.name">
+                {{ type.name }}
+              </option>
+            </select>
           </div>
 
           <div>
