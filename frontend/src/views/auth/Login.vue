@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue';
-import { Sprout, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-vue-next';
+import { Sprout, Mail, Lock, Eye, EyeOff, ArrowLeft, ArrowRight, Upload } from 'lucide-vue-next';
 import { useRoute, useRouter } from "vue-router";
-import { login, register } from "../../services/auth/auth";
+import { login, register, registerMitra } from "../../services/auth/auth";
 import { getCurrentUser } from '../../services/user/user';
 import { registerFCMToken } from '../../services/firebase/fcm';
 import { touchSession } from '../../utils/session';
@@ -26,17 +26,32 @@ const emit = defineEmits<{
 const role = ref<'investor' | 'mitra' | 'admin'>(props.initialRole);
 const showPassword = ref(false);
 const isRegistering = ref(false);
+const registerStep = ref<'account' | 'mitra-detail'>('account');
+const mitraPhotoPreview = ref('');
 const formData = reactive({
   email: '',
   password: '',
   confirmPassword: '',
   fullName: '',
 });
+const mitraForm = reactive({
+  batchCode: '',
+  plantingDate: new Date().toISOString().slice(0, 10),
+  location: '',
+  seedCount: '',
+  landArea: '',
+  healthStatus: 'sehat',
+  affectedCount: '0',
+  disease: '',
+  summary: '',
+  photo: null as File | null,
+});
 const errors = reactive({
   email: '',
   password: '',
   confirmPassword: '',
   fullName: '',
+  mitra: '',
 });
 
 function extractRoleFromToken(token: string): 'investor' | 'mitra' | 'admin' {
@@ -60,6 +75,7 @@ function resetErrors() {
   errors.password = '';
   errors.confirmPassword = '';
   errors.fullName = '';
+  errors.mitra = '';
 }
 
 function syncRegisterModeFromQuery() {
@@ -68,11 +84,108 @@ function syncRegisterModeFromQuery() {
   if (shouldRegister) {
     isRegistering.value = true;
   }
+  if (String(route.query.role || '').toLowerCase() === 'mitra') {
+    role.value = 'mitra';
+  }
+}
+
+function validateAccountFields() {
+  resetErrors();
+
+  let hasError = false;
+  if (!formData.email) {
+    errors.email = 'Email harus diisi';
+    hasError = true;
+  } else if (!validateEmail(formData.email)) {
+    errors.email = 'Format email tidak valid';
+    hasError = true;
+  }
+
+  if (!formData.password) {
+    errors.password = 'Password harus diisi';
+    hasError = true;
+  } else if (formData.password.length < 6) {
+    errors.password = 'Password minimal 6 karakter';
+    hasError = true;
+  }
+
+  if (!formData.fullName) {
+    errors.fullName = 'Nama lengkap harus diisi';
+    hasError = true;
+  }
+
+  if (!formData.confirmPassword) {
+    errors.confirmPassword = 'Konfirmasi password harus diisi';
+    hasError = true;
+  } else if (formData.password !== formData.confirmPassword) {
+    errors.confirmPassword = 'Password tidak cocok';
+    hasError = true;
+  }
+
+  return !hasError;
+}
+
+function validateMitraFields() {
+  const seedCount = Number(mitraForm.seedCount);
+  const landArea = Number(mitraForm.landArea);
+  const affectedCount = Number(mitraForm.affectedCount || 0);
+
+  if (!mitraForm.batchCode.trim()) {
+    errors.mitra = 'Batch code wajib diisi';
+    return false;
+  }
+  if (!mitraForm.plantingDate) {
+    errors.mitra = 'Tanggal tanam wajib diisi';
+    return false;
+  }
+  if (!mitraForm.location.trim()) {
+    errors.mitra = 'Lokasi penanaman wajib diisi';
+    return false;
+  }
+  if (!Number.isFinite(seedCount) || seedCount <= 0) {
+    errors.mitra = 'Jumlah bibit harus lebih dari 0';
+    return false;
+  }
+  if (!Number.isFinite(landArea) || landArea <= 0) {
+    errors.mitra = 'Luas lahan harus lebih dari 0';
+    return false;
+  }
+  if (!Number.isFinite(affectedCount) || affectedCount < 0 || affectedCount > seedCount) {
+    errors.mitra = 'Tanaman terdampak tidak boleh melebihi jumlah bibit';
+    return false;
+  }
+  if (!mitraForm.photo) {
+    errors.mitra = 'Foto batch wajib diunggah';
+    return false;
+  }
+
+  errors.mitra = '';
+  return true;
+}
+
+function goToMitraDetail() {
+  if (!validateAccountFields()) return;
+  registerStep.value = 'mitra-detail';
+}
+
+function handleMitraPhotoChange(event: Event) {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0] ?? null;
+  if (mitraPhotoPreview.value) {
+    URL.revokeObjectURL(mitraPhotoPreview.value);
+  }
+  mitraForm.photo = file;
+  mitraPhotoPreview.value = file ? URL.createObjectURL(file) : '';
 }
 
 async function handleSubmit(e: Event) {
   e.preventDefault();
   resetErrors();
+
+  if (isRegistering.value && role.value === 'mitra' && registerStep.value === 'account') {
+    goToMitraDetail();
+    return;
+  }
 
   let hasError = false;
   const newErrors = {
@@ -111,6 +224,10 @@ async function handleSubmit(e: Event) {
       newErrors.confirmPassword = 'Password tidak cocok';
       hasError = true;
     }
+  }
+
+  if (isRegistering.value && role.value === 'mitra' && !validateMitraFields()) {
+    return;
   }
 
   if (hasError) {
@@ -165,6 +282,10 @@ async function handleLogin() {
   if (detectedRole === 'investor' || detectedRole === 'mitra') {
     try {
       const userRes = await getCurrentUser();
+      if (detectedRole === 'mitra' && userRes?.data?.package_status === 'pending_validation') {
+        router.push('/dashboard');
+        return;
+      }
       const hasSelectedPackage = Boolean(userRes?.data?.investments?.length || userRes?.data?.selected_package_id);
       if (!hasSelectedPackage) {
         router.push('/pilih-paket');
@@ -183,12 +304,14 @@ async function handleLogin() {
 async function handleRegister() {
   console.log("REGISTER REQUEST...");
 
-  const res = await register({
-    name: formData.fullName,
-    email: formData.email,
-    password: formData.password,
-    role: role.value,
-  });
+  const res = role.value === 'mitra'
+    ? await registerMitra(buildMitraRegistrationPayload())
+    : await register({
+        name: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+        role: role.value,
+      });
 
   console.log("REGISTER SUCCESS:", res);
 
@@ -218,6 +341,11 @@ async function handleRegister() {
     return;
   }
 
+  if (detectedRole === 'mitra') {
+    router.push('/dashboard');
+    return;
+  }
+
   if (detectedRole === 'investor' || detectedRole === 'mitra') {
     try {
       const userRes = await getCurrentUser();
@@ -236,15 +364,50 @@ async function handleRegister() {
   router.push("/dashboard");
 }
 
+function buildMitraRegistrationPayload() {
+  const payload = new FormData();
+  payload.append('name', formData.fullName);
+  payload.append('email', formData.email);
+  payload.append('password', formData.password);
+  payload.append('batch_code', mitraForm.batchCode.trim());
+  payload.append('planting_date', mitraForm.plantingDate);
+  payload.append('location', mitraForm.location.trim());
+  payload.append('seed_count', String(Math.floor(Number(mitraForm.seedCount))));
+  payload.append('land_area', String(Number(mitraForm.landArea)));
+  payload.append('health_status', mitraForm.healthStatus);
+  payload.append('affected_count', String(Math.floor(Number(mitraForm.affectedCount || 0))));
+  payload.append('disease', mitraForm.disease);
+  payload.append('summary', mitraForm.summary.trim());
+  if (mitraForm.photo) {
+    payload.append('photo', mitraForm.photo);
+  }
+  return payload;
+}
+
 function toggleRegistering() {
   isRegistering.value = !isRegistering.value;
   resetErrors();
   role.value = 'investor';
+  registerStep.value = 'account';
   // Reset form data saat toggle
   formData.email = '';
   formData.password = '';
   formData.confirmPassword = '';
   formData.fullName = '';
+  mitraForm.batchCode = '';
+  mitraForm.plantingDate = new Date().toISOString().slice(0, 10);
+  mitraForm.location = '';
+  mitraForm.seedCount = '';
+  mitraForm.landArea = '';
+  mitraForm.healthStatus = 'sehat';
+  mitraForm.affectedCount = '0';
+  mitraForm.disease = '';
+  mitraForm.summary = '';
+  mitraForm.photo = null;
+  if (mitraPhotoPreview.value) {
+    URL.revokeObjectURL(mitraPhotoPreview.value);
+    mitraPhotoPreview.value = '';
+  }
 }
 
 onMounted(() => {
@@ -294,11 +457,13 @@ watch(
                 <span class="text-sm">Kembali</span>
               </button>
               <h3 class="text-2xl font-bold text-slate-900">
-                {{ isRegistering ? 'Daftar Akun Baru' : 'Masuk ke Akun' }}
+                {{ isRegistering && role === 'mitra' && registerStep === 'mitra-detail' ? 'Data Awal Mitra' : isRegistering ? 'Daftar Akun Baru' : 'Masuk ke Akun' }}
               </h3>
               <p class="text-slate-600 mt-1">
                 {{
-                  isRegistering
+                  isRegistering && role === 'mitra' && registerStep === 'mitra-detail'
+                    ? 'Lengkapi data penanaman dan kondisi tanaman awal'
+                    : isRegistering
                     ? 'Buat akun untuk memulai investasi vanili'
                     : 'Selamat datang kembali! Silakan login untuk melanjutkan'
                 }}
@@ -306,7 +471,7 @@ watch(
             </div>
 
             <div class="p-8 flex flex-col h-full">
-              <div v-if="isRegistering" class="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
+              <div v-if="isRegistering && registerStep === 'account'" class="flex gap-2 mb-6 bg-gray-100 p-1 rounded-lg">
                 <button
                   type="button"
                   class="flex-1 py-2.5 rounded-lg font-medium transition-all"
@@ -315,7 +480,7 @@ watch(
                       ? 'bg-white text-green-700 shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
                   "
-                  @click="role = 'investor'"
+                  @click="role = 'investor'; registerStep = 'account'"
                 >
                   Investor
                 </button>
@@ -325,17 +490,28 @@ watch(
                   :class="
                     role === 'mitra' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
                   "
-                  @click="role = 'mitra'"
+                  @click="role = 'mitra'; registerStep = 'account'"
                 >
                   Mitra
                 </button>
               </div>
+
+              <button
+                v-if="isRegistering && role === 'mitra' && registerStep === 'mitra-detail'"
+                type="button"
+                class="mb-4 inline-flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800"
+                @click="registerStep = 'account'"
+              >
+                <ArrowLeft class="h-4 w-4" />
+                Kembali ke data akun
+              </button>
 
               <p v-else class="mb-6 text-sm text-gray-500">
               </p>
 
               <form class="flex flex-col flex-1 gap-4" @submit="handleSubmit">
                 <div class="space-y-4">
+                  <template v-if="!isRegistering || role !== 'mitra' || registerStep === 'account'">
                   <div v-if="isRegistering">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                       Nama Lengkap <span class="text-red-500">*</span>
@@ -410,6 +586,124 @@ watch(
                       {{ errors.confirmPassword }}
                     </p>
                   </div>
+                  </template>
+
+                  <template v-if="isRegistering && role === 'mitra' && registerStep === 'mitra-detail'">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Batch Code <span class="text-red-500">*</span></label>
+                        <input
+                          v-model="mitraForm.batchCode"
+                          type="text"
+                          class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-green-500"
+                          placeholder="Contoh: MITRA-001"
+                        />
+                      </div>
+
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Tanam <span class="text-red-500">*</span></label>
+                        <input
+                          v-model="mitraForm.plantingDate"
+                          type="date"
+                          class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-green-500"
+                        />
+                      </div>
+
+                      <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Lokasi Penanaman <span class="text-red-500">*</span></label>
+                        <input
+                          v-model="mitraForm.location"
+                          type="text"
+                          class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-green-500"
+                          placeholder="Contoh: Blok A - Kebun Timur"
+                        />
+                      </div>
+
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Jumlah Bibit <span class="text-red-500">*</span></label>
+                        <input
+                          v-model="mitraForm.seedCount"
+                          type="number"
+                          min="1"
+                          step="1"
+                          class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-green-500"
+                          placeholder="Contoh: 120"
+                        />
+                      </div>
+
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Luas Lahan (m2) <span class="text-red-500">*</span></label>
+                        <input
+                          v-model="mitraForm.landArea"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-green-500"
+                          placeholder="Contoh: 250"
+                        />
+                      </div>
+
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Status Kesehatan <span class="text-red-500">*</span></label>
+                        <select
+                          v-model="mitraForm.healthStatus"
+                          class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-green-500"
+                        >
+                          <option value="sehat">Sehat</option>
+                          <option value="sebagian_terdampak">Sebagian terdampak</option>
+                          <option value="mati">Mati</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tanaman Terdampak</label>
+                        <input
+                          v-model="mitraForm.affectedCount"
+                          type="number"
+                          min="0"
+                          step="1"
+                          class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-green-500"
+                          placeholder="0"
+                        />
+                      </div>
+
+                      <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Disease</label>
+                        <select
+                          v-model="mitraForm.disease"
+                          class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-green-500"
+                        >
+                          <option value="">Tidak ada</option>
+                          <option value="batang_busuk">Batang busuk</option>
+                          <option value="lainnya">Lainnya</option>
+                        </select>
+                      </div>
+
+                      <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Catatan</label>
+                        <textarea
+                          v-model="mitraForm.summary"
+                          rows="3"
+                          class="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-green-500"
+                          placeholder="Tambahkan ringkasan kondisi tanaman atau catatan panen awal..."
+                        />
+                      </div>
+
+                      <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Foto Batch <span class="text-red-500">*</span></label>
+                        <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-4 text-sm font-medium text-gray-600 hover:border-green-400 hover:bg-green-50">
+                          <Upload class="h-5 w-5" />
+                          <span>{{ mitraForm.photo ? mitraForm.photo.name : 'Unggah foto batch' }}</span>
+                          <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" class="hidden" @change="handleMitraPhotoChange" />
+                        </label>
+                        <div v-if="mitraPhotoPreview" class="mt-3 overflow-hidden rounded-lg border border-gray-200">
+                          <img :src="mitraPhotoPreview" alt="Preview foto batch" class="h-40 w-full object-cover" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <p v-if="errors.mitra" class="text-sm text-red-600">{{ errors.mitra }}</p>
+                  </template>
                 </div>
 
                 <div class="flex flex-col gap-4 mt-auto">
@@ -417,7 +711,11 @@ watch(
                     type="submit"
                     class="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold text-lg shadow-lg hover:shadow-xl"
                   >
-                    {{ isRegistering ? 'Daftar Sekarang' : 'Masuk' }}
+                    <span v-if="isRegistering && role === 'mitra' && registerStep === 'account'" class="inline-flex items-center justify-center gap-2">
+                      Lanjutkan
+                      <ArrowRight class="h-5 w-5" />
+                    </span>
+                    <span v-else>{{ isRegistering ? 'Daftar Sekarang' : 'Masuk' }}</span>
                   </button>
 
                   <div v-if="!isRegistering" class="flex items-center justify-between rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3">

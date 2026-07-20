@@ -11,6 +11,7 @@ import (
 	warehousemodels "pondok-tani-backend/models/warehouse"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type warehouseStockResponse struct {
@@ -28,18 +29,18 @@ type warehouseStockResponse struct {
 }
 
 type stockMovementResponse struct {
-	ID           uint      `json:"id"`
-	ReferenceType string   `json:"reference_type"`
-	ReferenceID  uint      `json:"reference_id"`
-	MovementType string    `json:"movement_type"`
-	Quantity     float64   `json:"quantity"`
-	MovementDate time.Time `json:"movement_date"`
-	Notes        *string   `json:"notes,omitempty"`
-	PlantBatchID uint      `json:"plant_batch_id"`
-	BatchCode    string    `json:"batch_code"`
-	PackageName  string    `json:"package_name"`
-	GradeID      *uint     `json:"grade_id,omitempty"`
-	GradeName    string    `json:"grade_name"`
+	ID            uint      `json:"id"`
+	ReferenceType string    `json:"reference_type"`
+	ReferenceID   uint      `json:"reference_id"`
+	MovementType  string    `json:"movement_type"`
+	Quantity      float64   `json:"quantity"`
+	MovementDate  time.Time `json:"movement_date"`
+	Notes         *string   `json:"notes,omitempty"`
+	PlantBatchID  uint      `json:"plant_batch_id"`
+	BatchCode     string    `json:"batch_code"`
+	PackageName   string    `json:"package_name"`
+	GradeID       *uint     `json:"grade_id,omitempty"`
+	GradeName     string    `json:"grade_name"`
 }
 
 type gradeBreakdownRow struct {
@@ -49,16 +50,16 @@ type gradeBreakdownRow struct {
 }
 
 type monthlyMovementRow struct {
-	Month   string  `json:"month"`
-	StockIn float64 `json:"stock_in"`
+	Month    string  `json:"month"`
+	StockIn  float64 `json:"stock_in"`
 	StockOut float64 `json:"stock_out"`
 }
 
 type warehouseSummaryResponse struct {
-	TotalQuantity   float64              `json:"total_quantity"`
-	TotalBatches    int                  `json:"total_batches"`
-	TotalGrades     int                  `json:"total_grades"`
-	GradeBreakdown  []gradeBreakdownRow  `json:"grade_breakdown"`
+	TotalQuantity    float64              `json:"total_quantity"`
+	TotalBatches     int                  `json:"total_batches"`
+	TotalGrades      int                  `json:"total_grades"`
+	GradeBreakdown   []gradeBreakdownRow  `json:"grade_breakdown"`
 	MonthlyMovements []monthlyMovementRow `json:"monthly_movements"`
 }
 
@@ -136,7 +137,7 @@ func ListWarehouseStocks(c *gin.Context) {
 
 	response := make([]warehouseStockResponse, 0, len(stocks))
 	for _, item := range stocks {
-		gradeName := "Tidak diklasifikasi"
+		gradeName := "Basah"
 		if item.Grade != nil {
 			gradeName = item.Grade.GradeName
 		}
@@ -240,7 +241,7 @@ func ListStockMovements(c *gin.Context) {
 
 	response := make([]stockMovementResponse, 0, len(movements))
 	for _, item := range movements {
-		gradeName := "-"
+		gradeName := "Basah"
 		if item.WarehouseStock.Grade != nil {
 			gradeName = item.WarehouseStock.Grade.GradeName
 		}
@@ -264,38 +265,51 @@ func ListStockMovements(c *gin.Context) {
 }
 
 func GetWarehouseSummary(c *gin.Context) {
-	baseStocks := config.DB.Model(&warehousemodels.WarehouseStock{})
-	baseMovements := config.DB.Model(&warehousemodels.StockMovement{})
+	userID := ""
 
 	if roleValue, ok := c.Get("role"); ok {
 		role, _ := roleValue.(string)
 		if role == "investor" || role == "mitra" {
 			userIDValue, _ := c.Get("user_id")
-			userID, _ := userIDValue.(string)
-			baseStocks = baseStocks.
+			userID, _ = userIDValue.(string)
+		}
+	}
+
+	scopedStocks := func() *gorm.DB {
+		query := config.DB.Model(&warehousemodels.WarehouseStock{})
+		if strings.TrimSpace(userID) != "" {
+			query = query.
 				Joins("JOIN plant_batches ON plant_batches.id = warehouse_stocks.plant_batch_id").
 				Joins("JOIN investments ON investments.id = plant_batches.investment_id").
 				Where("investments.user_id = ?", userID)
-			baseMovements = baseMovements.
+		}
+		return query
+	}
+
+	scopedMovements := func() *gorm.DB {
+		query := config.DB.Model(&warehousemodels.StockMovement{})
+		if strings.TrimSpace(userID) != "" {
+			query = query.
 				Joins("JOIN warehouse_stocks ON warehouse_stocks.id = stock_movements.warehouse_stock_id").
 				Joins("JOIN plant_batches ON plant_batches.id = warehouse_stocks.plant_batch_id").
 				Joins("JOIN investments ON investments.id = plant_batches.investment_id").
 				Where("investments.user_id = ?", userID)
 		}
+		return query
 	}
 
 	var totalQuantity float64
-	_ = baseStocks.Select("COALESCE(SUM(total_quantity), 0)").Scan(&totalQuantity).Error
+	_ = scopedStocks().Select("COALESCE(SUM(total_quantity), 0)").Scan(&totalQuantity).Error
 
 	var totalBatches int
-	_ = baseStocks.Select("COUNT(DISTINCT plant_batch_id)").Scan(&totalBatches).Error
+	_ = scopedStocks().Select("COUNT(DISTINCT plant_batch_id)").Scan(&totalBatches).Error
 
 	var totalGrades int
-	_ = baseStocks.Select("COUNT(DISTINCT grade_id)").Scan(&totalGrades).Error
+	_ = scopedStocks().Select("COUNT(DISTINCT grade_id)").Scan(&totalGrades).Error
 
 	var gradeBreakdown []gradeBreakdownRow
-	gradeQuery := baseStocks.
-		Select("warehouse_stocks.grade_id, COALESCE(grades.grade_name, 'Tidak diklasifikasi') as grade_name, COALESCE(SUM(warehouse_stocks.total_quantity), 0) as quantity").
+	gradeQuery := scopedStocks().
+		Select("warehouse_stocks.grade_id, COALESCE(grades.grade_name, 'Basah') as grade_name, COALESCE(SUM(warehouse_stocks.total_quantity), 0) as quantity").
 		Joins("LEFT JOIN grades ON grades.id = warehouse_stocks.grade_id").
 		Group("warehouse_stocks.grade_id, grades.grade_name")
 	_ = gradeQuery.Scan(&gradeBreakdown).Error
@@ -308,7 +322,7 @@ func GetWarehouseSummary(c *gin.Context) {
 		MovementDate time.Time
 		Quantity     float64
 	}
-	_ = baseMovements.
+	_ = scopedMovements().
 		Select("movement_type, movement_date, quantity").
 		Where("movement_date >= ?", startMonth).
 		Find(&movementRows).Error
@@ -318,8 +332,8 @@ func GetWarehouseSummary(c *gin.Context) {
 		month := startMonth.AddDate(0, i, 0)
 		key := month.Format("2006-01")
 		monthMap[key] = &monthlyMovementRow{
-			Month:   month.Format("Jan"),
-			StockIn: 0,
+			Month:    month.Format("Jan"),
+			StockIn:  0,
 			StockOut: 0,
 		}
 	}
@@ -347,10 +361,10 @@ func GetWarehouseSummary(c *gin.Context) {
 	}
 
 	response := warehouseSummaryResponse{
-		TotalQuantity:   totalQuantity,
-		TotalBatches:    totalBatches,
-		TotalGrades:     totalGrades,
-		GradeBreakdown:  gradeBreakdown,
+		TotalQuantity:    totalQuantity,
+		TotalBatches:     totalBatches,
+		TotalGrades:      totalGrades,
+		GradeBreakdown:   gradeBreakdown,
 		MonthlyMovements: monthlyMovements,
 	}
 

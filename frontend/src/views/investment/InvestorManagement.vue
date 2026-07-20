@@ -27,6 +27,7 @@ import {
   createAdminUser,
   updateAdminUser,
   deleteAdminUser,
+  validateMitra,
 } from '../../services/user/user';
 import SearchBar from '../../components/common/SearchBar.vue';
 import Pagination from '../../components/common/Pagination.vue';
@@ -35,6 +36,7 @@ const users = ref<any[]>([]);
 const loading = ref(false);
 const activatingUserId = ref<string | null>(null);
 const updatingUserId = ref<string | null>(null);
+const validatingMitraId = ref<string | null>(null);
 const activationFormUser = ref<any | null>(null);
 const activationFormError = ref('');
 const activationForms = ref<any[]>([]);
@@ -112,6 +114,7 @@ function investorInitials(name: string) {
 function statusBadgeClass(status: string) {
   if (status === 'active') return 'bg-green-100 text-green-700';
   if (status === 'on_process') return 'bg-blue-100 text-blue-700';
+  if (status === 'pending_validation') return 'bg-amber-100 text-amber-700';
   if (status === 'pending') return 'bg-yellow-100 text-yellow-700';
   return 'bg-gray-100 text-gray-700';
 }
@@ -119,11 +122,13 @@ function statusBadgeClass(status: string) {
 function investorStatusLabel(status: string) {
   if (status === 'active') return 'Aktif';
   if (status === 'on_process') return 'Proses';
+  if (status === 'pending_validation') return 'Menunggu validasi';
   if (status === 'pending') return 'Menunggu';
   return 'Belum memilih';
 }
 
 function getActionState(user: any) {
+  if (user.role === 'mitra' && user.package_status === 'pending_validation') return 'validate-mitra';
   if (getUserInvestmentItems(user).length && user.package_status === 'pending') return 'mark-paid';
   if (getUserInvestmentItems(user).length && user.package_status === 'on_process') return 'activate';
   if (getUserInvestmentItems(user).length && user.package_status === 'active') return 'review';
@@ -188,6 +193,18 @@ async function handleMarkAsPaid(userId: string) {
     console.error('Failed to mark as paid:', error);
   } finally {
     updatingUserId.value = null;
+  }
+}
+
+async function handleValidateMitra(userId: string) {
+  validatingMitraId.value = userId;
+  try {
+    await validateMitra(userId);
+    await loadUsers();
+  } catch (error) {
+    console.error('Failed to validate mitra:', error);
+  } finally {
+    validatingMitraId.value = null;
   }
 }
 
@@ -426,17 +443,10 @@ onMounted(() => {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-2xl font-semibold text-gray-900">Manajemen investor</h2>
-        <p class="text-gray-600 mt-1">Kelola pilihan paket dan aktivasi akun investor</p>
+        <h2 class="text-2xl font-semibold text-gray-900">Manajemen user</h2>
+        <p class="text-gray-600 mt-1">Kelola investor, mitra, dan validasi akun</p>
       </div>
-      <button
-        type="button"
-        class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-        @click="loadUsers"
-      >
-        <UserCheck class="w-4 h-4" />
-        Refresh data
-      </button>
+
       <button
         type="button"
         class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -516,6 +526,7 @@ onMounted(() => {
           <option value="all">Semua status</option>
           <option value="active">Aktif</option>
           <option value="on_process">Proses</option>
+          <option value="pending_validation">Menunggu validasi</option>
           <option value="pending">Menunggu</option>
           <option value="none">Belum memilih</option>
         </select>
@@ -532,7 +543,7 @@ onMounted(() => {
           <thead class="bg-gray-50 border-b border-gray-200">
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User / ID
+                User
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Kontak
@@ -560,7 +571,7 @@ onMounted(() => {
                   </div>
                   <div>
                     <p class="font-medium text-gray-900">{{ user.name }}</p>
-                    <p class="text-xs text-gray-500 font-mono mt-0.5">ID: {{ user.id }}</p>
+
                   </div>
                 </div>
               </td>
@@ -608,7 +619,18 @@ onMounted(() => {
                 <div class="space-y-2">
                   <div class="flex items-center">
                   <button
-                    v-if="getActionState(user) === 'mark-paid'"
+                    v-if="getActionState(user) === 'validate-mitra'"
+                    type="button"
+                    class="inline-flex min-w-[210px] items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    :disabled="validatingMitraId === user.id"
+                    @click="handleValidateMitra(user.id)"
+                  >
+                    <Loader2 v-if="validatingMitraId === user.id" class="h-4 w-4 animate-spin" />
+                    <span>{{ validatingMitraId === user.id ? 'Memvalidasi...' : 'Validasi Mitra' }}</span>
+                  </button>
+
+                  <button
+                    v-else-if="getActionState(user) === 'mark-paid'"
                     type="button"
                     class="inline-flex min-w-[210px] items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                     :disabled="updatingUserId === user.id"

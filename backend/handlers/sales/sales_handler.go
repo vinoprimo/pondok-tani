@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,10 +24,12 @@ type createSalesDetailInput struct {
 }
 
 type createSalesOrderInput struct {
-	SalesDate string                 `json:"sales_date"`
-	Buyer     string                 `json:"buyer"`
+	SalesDate string                   `json:"sales_date"`
+	Buyer     string                   `json:"buyer"`
 	Details   []createSalesDetailInput `json:"details"`
 }
+
+type updateSalesOrderInput = createSalesOrderInput
 
 type salesDetailResponse struct {
 	ID               uint    `json:"id"`
@@ -41,14 +44,14 @@ type salesDetailResponse struct {
 }
 
 type salesOrderResponse struct {
-	ID          uint                 `json:"id"`
-	OrderNumber string               `json:"order_number"`
-	SalesDate   time.Time            `json:"sales_date"`
-	Buyer       string               `json:"buyer"`
-	TotalAmount float64              `json:"total_amount"`
-	Status      string               `json:"status"`
-	CreatedBy   string               `json:"created_by"`
-	CreatedAt   time.Time            `json:"created_at"`
+	ID          uint                  `json:"id"`
+	OrderNumber string                `json:"order_number"`
+	SalesDate   time.Time             `json:"sales_date"`
+	Buyer       string                `json:"buyer"`
+	TotalAmount float64               `json:"total_amount"`
+	Status      string                `json:"status"`
+	CreatedBy   string                `json:"created_by"`
+	CreatedAt   time.Time             `json:"created_at"`
 	Details     []salesDetailResponse `json:"details"`
 }
 
@@ -104,7 +107,7 @@ func ListSalesOrders(c *gin.Context) {
 			orderMap[order.ID] = orderRow
 		}
 
-		gradeName := "Tidak diklasifikasi"
+		gradeName := "Basah"
 		if detail.WarehouseStock.Grade != nil {
 			gradeName = detail.WarehouseStock.Grade.GradeName
 		}
@@ -245,4 +248,206 @@ func CreateSalesOrder(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Sales order created"})
+}
+
+func UpdateSalesOrder(c *gin.Context) {
+	orderID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || orderID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sales order id"})
+		return
+	}
+
+	var input updateSalesOrderInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	buyer := strings.TrimSpace(input.Buyer)
+	if buyer == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "buyer is required"})
+		return
+	}
+	if len(input.Details) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "details are required"})
+		return
+	}
+
+	salesDate, err := time.Parse("2006-01-02", input.SalesDate)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sales_date format. Use YYYY-MM-DD"})
+		return
+	}
+
+	totalAmount := 0.0
+	for _, detail := range input.Details {
+		if detail.WarehouseStockID == 0 || detail.Quantity <= 0 || detail.UnitPrice <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sales detail"})
+			return
+		}
+		totalAmount += detail.Quantity * detail.UnitPrice
+	}
+
+	if err := config.DB.Transaction(func(tx *gorm.DB) error {
+		var order salesmodels.SalesOrder
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&order, "id = ?", uint(orderID)).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("order not found")
+			}
+			return err
+		}
+
+		var oldDetails []salesmodels.SalesDetail
+		if err := tx.Where("sales_order_id = ?", order.ID).Find(&oldDetails).Error; err != nil {
+			return err
+		}
+
+		oldDetailIDs := make([]uint, 0, len(oldDetails))
+		for _, detail := range oldDetails {
+			var stock warehousemodels.WarehouseStock
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&stock, "id = ?", detail.WarehouseStockID).Error; err != nil {
+				return err
+			}
+			stock.TotalQuantity += detail.Quantity
+			if err := tx.Save(&stock).Error; err != nil {
+				return err
+			}
+			oldDetailIDs = append(oldDetailIDs, detail.ID)
+		}
+
+		if len(oldDetailIDs) > 0 {
+			if err := tx.Where("reference_type = ? AND reference_id IN ?", "sales_detail", oldDetailIDs).Delete(&warehousemodels.StockMovement{}).Error; err != nil {
+				return err
+			}
+			if err := tx.Where("id IN ?", oldDetailIDs).Delete(&salesmodels.SalesDetail{}).Error; err != nil {
+				return err
+			}
+		}
+
+		order.SalesDate = salesDate
+		order.Buyer = buyer
+		order.TotalAmount = totalAmount
+		order.Status = "corrected"
+		if err := tx.Save(&order).Error; err != nil {
+			return err
+		}
+
+		for _, detail := range input.Details {
+			var stock warehousemodels.WarehouseStock
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&stock, "id = ?", detail.WarehouseStockID).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return errors.New("stock not found")
+				}
+				return err
+			}
+
+			if stock.TotalQuantity < detail.Quantity {
+				return errors.New("insufficient stock")
+			}
+
+			stock.TotalQuantity -= detail.Quantity
+			if err := tx.Save(&stock).Error; err != nil {
+				return err
+			}
+
+			entity := salesmodels.SalesDetail{
+				SalesOrderID:     order.ID,
+				WarehouseStockID: detail.WarehouseStockID,
+				Quantity:         detail.Quantity,
+				UnitPrice:        detail.UnitPrice,
+				TotalPrice:       detail.Quantity * detail.UnitPrice,
+			}
+			if err := tx.Create(&entity).Error; err != nil {
+				return err
+			}
+
+			movement := warehousemodels.StockMovement{
+				WarehouseStockID: stock.ID,
+				ReferenceType:    "sales_detail",
+				ReferenceID:      entity.ID,
+				MovementType:     "out",
+				Quantity:         detail.Quantity,
+				MovementDate:     time.Now(),
+			}
+			if err := tx.Create(&movement).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}); err != nil {
+		if err.Error() == "order not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Sales order not found"})
+			return
+		}
+		if err.Error() == "stock not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Warehouse stock not found"})
+			return
+		}
+		if err.Error() == "insufficient stock" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Insufficient stock"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update sales order"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Sales order corrected"})
+}
+
+func DeleteSalesOrder(c *gin.Context) {
+	orderID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || orderID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sales order id"})
+		return
+	}
+
+	if err := config.DB.Transaction(func(tx *gorm.DB) error {
+		var order salesmodels.SalesOrder
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&order, "id = ?", uint(orderID)).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("order not found")
+			}
+			return err
+		}
+
+		var details []salesmodels.SalesDetail
+		if err := tx.Where("sales_order_id = ?", order.ID).Find(&details).Error; err != nil {
+			return err
+		}
+
+		detailIDs := make([]uint, 0, len(details))
+		for _, detail := range details {
+			var stock warehousemodels.WarehouseStock
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&stock, "id = ?", detail.WarehouseStockID).Error; err != nil {
+				return err
+			}
+			stock.TotalQuantity += detail.Quantity
+			if err := tx.Save(&stock).Error; err != nil {
+				return err
+			}
+			detailIDs = append(detailIDs, detail.ID)
+		}
+
+		if len(detailIDs) > 0 {
+			if err := tx.Where("reference_type = ? AND reference_id IN ?", "sales_detail", detailIDs).Delete(&warehousemodels.StockMovement{}).Error; err != nil {
+				return err
+			}
+		}
+
+		if err := tx.Delete(&order).Error; err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		if err.Error() == "order not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Sales order not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete sales order"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Sales order deleted"})
 }

@@ -1,12 +1,14 @@
 package routes
 
 import (
+	contenthandler "pondok-tani-backend/handlers/content"
 	investmenthandler "pondok-tani-backend/handlers/investment"
 	maintenancehandler "pondok-tani-backend/handlers/maintenance"
 	notificationhandler "pondok-tani-backend/handlers/notification"
 	plantbatchhandler "pondok-tani-backend/handlers/plantbatch"
 	pricehandler "pondok-tani-backend/handlers/price"
 	userhandler "pondok-tani-backend/handlers/user"
+	dashboardhandler "pondok-tani-backend/handlers/dashboard"
 	"pondok-tani-backend/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -21,6 +23,7 @@ func AdminRoutes(r *gin.Engine) {
 
 	admin := r.Group("/admin", middleware.AuthMiddleware(), middleware.RequireRoles("admin"))
 	{
+		admin.GET("/dashboard", dashboardhandler.GetAdminDashboard)
 		admin.GET("/users", userhandler.ListUsers)
 		admin.GET("/users/:id", userhandler.GetUser)
 		admin.POST("/users", userhandler.CreateUser)
@@ -28,6 +31,7 @@ func AdminRoutes(r *gin.Engine) {
 		admin.DELETE("/users/:id", userhandler.DeleteUser)
 		admin.GET("/users/:id/plant-batches", plantbatchhandler.ListUserPlantBatches)
 		admin.PUT("/users/:id/activate-package", plantbatchhandler.ActivateUserPackage)
+		admin.PUT("/users/:id/validate-mitra", userhandler.ValidateMitra)
 		admin.PUT("/users/:id/investment-status", investmenthandler.UpdateInvestmentStatus)
 		admin.POST("/notifications/push", notificationhandler.SendPushNotification)
 		admin.GET("/emails/templates", notificationhandler.ListEmailTemplates)
@@ -41,9 +45,20 @@ func AdminRoutes(r *gin.Engine) {
 		admin.GET("/maintenance-schedules/summary", maintenancehandler.GetMaintenanceScheduleSummary)
 		admin.GET("/maintenance-schedules", maintenancehandler.ListMaintenanceSchedules)
 		admin.POST("/maintenance-schedules", maintenancehandler.CreateMaintenanceSchedule)
+		
+		admin.GET("/activity-types", maintenancehandler.GetAllActivityTypes)
+		admin.GET("/activity-types/:id", maintenancehandler.GetActivityTypeByID)
+		admin.POST("/activity-types", maintenancehandler.CreateActivityType)
+		admin.PUT("/activity-types/:id", maintenancehandler.UpdateActivityType)
+		admin.DELETE("/activity-types/:id", maintenancehandler.DeleteActivityType)
 		admin.GET("/maintenance-activities/summary", maintenancehandler.GetAdminMaintenanceActivitySummary)
 		admin.GET("/maintenance-activities", maintenancehandler.ListAdminMaintenanceActivities)
 		admin.PUT("/maintenance-activities/:id/review", maintenancehandler.ReviewMaintenanceActivity)
+		admin.GET("/articles", contenthandler.ListArticles)
+		admin.GET("/articles/:id", contenthandler.GetArticle)
+		admin.POST("/articles", contenthandler.CreateArticle)
+		admin.PUT("/articles/:id", contenthandler.UpdateArticle)
+		admin.DELETE("/articles/:id", contenthandler.DeleteArticle)
 
 		admin.POST("/vanili/grades", pricehandler.CreateGrade)
 		admin.PUT("/vanili/grades/:id", pricehandler.UpdateGrade)

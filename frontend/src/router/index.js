@@ -14,7 +14,7 @@ import { clearAuthSession, isSessionExpired, touchSession } from "../utils/sessi
  *   views/notifications/{Notifications,ReminderSettings}.vue
  *   views/plant-monitoring/{MaintenanceActivities,MaintenanceValidation,PlantMonitoring}.vue
  *   views/reporting/Reports.vue
- *   views/warehouse/WarehouseStock.vue
+ *   views/warehouse/{UserWarehouseStock,WarehouseStock}.vue
  * Layout: layouts/DashboardLayout.vue
  */
 
@@ -38,6 +38,11 @@ const routes = [
     path: "/kontak-kami",
     name: "landing-contact",
     component: () => import("../views/landing/ContactUs.vue"),
+  },
+  {
+    path: "/artikel/:id",
+    name: "article-detail",
+    component: () => import("../views/landing/ArticleDetail.vue"),
   },
   {
     path: "/login",
@@ -98,22 +103,28 @@ const routes = [
         meta: { roles: ["admin"] },
       },
       {
+        path: "article-management",
+        name: "dashboard-article-management",
+        component: () => import("../views/admin/ArticleManagement.vue"),
+        meta: { roles: ["admin"] },
+      },
+      {
         path: "maintenance",
         name: "dashboard-maintenance",
         component: () => import("../views/plant-monitoring/MaintenanceActivities.vue"),
-        meta: { roles: ["investor", "mitra"] },
+        meta: { roles: ["investor"] },
       },
       {
         path: "maintenance/schedule",
         name: "dashboard-maintenance-schedule",
         component: () => import("../views/plant-monitoring/MaintenanceActivities.vue"),
-        meta: { roles: ["investor", "mitra"] },
+        meta: { roles: ["investor"] },
       },
       {
         path: "maintenance/history",
         name: "dashboard-maintenance-history",
         component: () => import("../views/plant-monitoring/MaintenanceActivities.vue"),
-        meta: { roles: ["investor", "mitra"] },
+        meta: { roles: ["investor"] },
       },
       {
         path: "reminder-settings",
@@ -152,6 +163,12 @@ const routes = [
         meta: { roles: ["admin"] },
       },
       {
+        path: "investment-packages",
+        name: "dashboard-investment-packages",
+        component: () => import("../views/admin/InvestmentPackageCRUD.vue"),
+        meta: { roles: ["admin"] },
+      },
+      {
         path: "monitoring-schedule",
         name: "dashboard-monitoring-schedule",
         component: () => import("../views/plant-monitoring/MonitoringScheduleAdmin.vue"),
@@ -161,6 +178,12 @@ const routes = [
         path: "monitoring-schedule/:userId",
         name: "dashboard-monitoring-schedule-detail",
         component: () => import("../views/plant-monitoring/MonitoringScheduleAdminDetail.vue"),
+        meta: { roles: ["admin"] },
+      },
+      {
+        path: "activity-type",
+        name: "dashboard-activity-type",
+        component: () => import("../views/plant-monitoring/ActivityTypeAdmin.vue"),
         meta: { roles: ["admin"] },
       },
       {
@@ -174,6 +197,12 @@ const routes = [
         name: "dashboard-harvest",
         component: () => import("../views/harvest/HarvestRequests.vue"),
         meta: { roles: ["investor", "mitra", "admin"] },
+      },
+      {
+        path: "my-warehouse",
+        name: "dashboard-my-warehouse",
+        component: () => import("../views/warehouse/UserWarehouseStock.vue"),
+        meta: { roles: ["investor", "mitra"] },
       },
       {
         path: "warehouse",
@@ -217,11 +246,35 @@ router.beforeEach(async (to, from, next) => {
   if (
     requiresAuthRoute &&
     isAuth &&
+    normalizedRole === "mitra" &&
+    packageFlowRouteNames.includes(String(to.name || ""))
+  ) {
+    try {
+      const userRes = await getCurrentUser();
+      if (userRes?.data?.package_status === "pending_validation") {
+        return next({ name: "dashboard" });
+      }
+    } catch (err) {
+      clearAuthSession();
+      return next({ name: "login" });
+    }
+  }
+
+  if (
+    requiresAuthRoute &&
+    isAuth &&
     (normalizedRole === "investor" || normalizedRole === "mitra") &&
     !packageFlowRouteNames.includes(String(to.name || ""))
   ) {
     try {
       const userRes = await getCurrentUser();
+      const packageStatus = userRes?.data?.package_status;
+      if (normalizedRole === "mitra" && packageStatus === "pending_validation") {
+        if (to.name !== "dashboard") {
+          return next({ name: "dashboard" });
+        }
+        return next();
+      }
       const hasActivePackage = userRes?.data?.package_status === "active";
       if (!hasActivePackage) {
         return next({ name: "package-selection" });

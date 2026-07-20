@@ -6,6 +6,7 @@ import (
 
 	"pondok-tani-backend/config"
 	authmodels "pondok-tani-backend/models/auth"
+	contentmodels "pondok-tani-backend/models/content"
 	coremodels "pondok-tani-backend/models/core"
 	financemodels "pondok-tani-backend/models/finance"
 	harvestmodels "pondok-tani-backend/models/harvest"
@@ -96,6 +97,7 @@ func migrateDB() {
 		&coremodels.PlantBatch{},
 		&maintenancemodels.MaintenanceSchedule{},
 		&maintenancemodels.MaintenanceActivity{},
+		&maintenancemodels.ActivityType{},
 		&maintenancemodels.PlantMonitoring{},
 		&harvestmodels.Harvest{},
 		&harvestmodels.HarvestRequest{},
@@ -112,6 +114,7 @@ func migrateDB() {
 		&notificationmodels.EmailTemplate{},
 		&notificationmodels.EmailLog{},
 		&notificationmodels.EmailMonitoring{},
+		&contentmodels.Article{},
 		&financemodels.OperationalCost{},
 		&financemodels.RevenueSimulation{},
 		&pricemodels.NationalPrice{},
@@ -188,6 +191,7 @@ func main() {
 		&coremodels.PlantBatch{},
 		&maintenancemodels.MaintenanceSchedule{},
 		&maintenancemodels.MaintenanceActivity{},
+		&maintenancemodels.ActivityType{},
 		&maintenancemodels.PlantMonitoring{},
 		&harvestmodels.Harvest{},
 		&harvestmodels.HarvestRequest{},
@@ -204,6 +208,7 @@ func main() {
 		&notificationmodels.EmailTemplate{},
 		&notificationmodels.EmailLog{},
 		&notificationmodels.EmailMonitoring{},
+		&contentmodels.Article{},
 		&financemodels.OperationalCost{},
 		&financemodels.RevenueSimulation{},
 		&pricemodels.NationalPrice{},

@@ -6,6 +6,7 @@ import {
   DollarSign, Shield 
 } from 'lucide-vue-next';
 import LandingLayout from '../../layouts/LandingLayout.vue';
+import heroImage from '../../assets/van3.png';
 
 const router = useRouter();
 </script>
@@ -13,19 +14,22 @@ const router = useRouter();
 <template>
   <LandingLayout>
     <!-- Hero Section -->
-    <section class="bg-gradient-to-r from-green-600 to-green-600 text-white py-20 relative overflow-hidden">
-      <!-- Decorative background elements -->
-      <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
-      
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div class="max-w-3xl">
-          <h1 class="text-4xl md:text-5xl font-bold mb-6 leading-tight drop-shadow-sm">
-            Bangun Kemitraan Vanili yang Tumbuh Bersama
-          </h1>
-          <p class="text-xl text-green-100 leading-relaxed mb-8">
-            Bergabunglah dengan program kemitraan Pondok Tani Land dan dapatkan dukungan penuh dari
-            pelatihan, pendampingan teknis, akses pasar, hingga jaminan pembelian hasil panen.
-          </p>
+    <section
+      class="relative overflow-hidden bg-cover bg-center py-20"
+      :style="{ backgroundImage: `url(${heroImage})` }"
+    >
+      <div class="absolute inset-0 bg-black/70"></div>
+      <div class="relative max-w-7xl mx-auto px-6">
+        <div class="flex flex-col items-center justify-center text-center">
+          <div class="rounded-[2rem] p-10 shadow-2xl max-w-4xl">
+            <h1 class="text-5xl font-bold mb-6 leading-tight text-white">
+              Bangun Kemitraan Vanili yang Tumbuh Bersama
+            </h1>
+            <p class="text-xl mb-8 leading-relaxed text-white/85">
+              Bergabunglah dengan program kemitraan Pondok Tani Land dan dapatkan dukungan penuh dari
+              pelatihan, pendampingan teknis, akses pasar, hingga jaminan pembelian hasil panen.
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -395,7 +399,7 @@ const router = useRouter();
     </section>
 
     <!-- FAQ -->
-    <section class="py-20 bg-slate-50">
+    <!-- <section class="py-20 bg-slate-50">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <h2 class="text-3xl font-bold text-gray-900 mb-12 text-center">
           Pertanyaan Umum Seputar Kemitraan
@@ -443,7 +447,7 @@ const router = useRouter();
           </div>
         </div>
       </div>
-    </section>
+    </section> -->
 
     <!-- CTA Section -->
     <section class="py-24 bg-green-600 text-white relative overflow-hidden">
@@ -460,7 +464,7 @@ const router = useRouter();
         </p>
         <div class="flex flex-wrap justify-center gap-4">
           <button 
-            @click="router.push('/login?mode=register')"
+            @click="router.push('/login?mode=register&role=mitra')"
             class="bg-white text-green-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-green-50 transition-all shadow-xl flex items-center gap-2 hover:-translate-y-0.5"
           >
             Daftar Jadi Mitra Sekarang

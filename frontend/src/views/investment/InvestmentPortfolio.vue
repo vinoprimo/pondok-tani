@@ -205,18 +205,75 @@ const portfolioData = computed(() => {
   })
 })
 
-const maxPortfolioValue = computed(() => Math.max(...portfolioData.value.map((d) => d.value), 1))
-
-const minPortfolioValue = computed(() => Math.min(...portfolioData.value.map((d) => d.value), 0))
-
-const barHeightPercent = (value: number) => {
-  const positiveMax = Math.max(maxPortfolioValue.value, 1)
-  const negativeMin = Math.min(minPortfolioValue.value, 0)
-  if (value >= 0) {
-    return (value / positiveMax) * 100
-  }
-  return (Math.abs(value) / Math.abs(negativeMin || -1)) * 100
+const balanceChart = {
+  width: 820,
+  height: 360,
+  marginTop: 18,
+  marginRight: 28,
+  marginBottom: 32,
+  marginLeft: 54,
 }
+
+const balanceChartInnerWidth = computed(
+  () => balanceChart.width - balanceChart.marginLeft - balanceChart.marginRight
+)
+
+const balanceChartInnerHeight = computed(
+  () => balanceChart.height - balanceChart.marginTop - balanceChart.marginBottom
+)
+
+const balanceChartMax = computed(() => {
+  const maxValue = Math.max(...portfolioData.value.map((d) => Math.max(d.value, 0)), 0)
+  const step = 15000
+  return Math.max(60000, Math.ceil(maxValue / step) * step || step)
+})
+
+const balanceChartTicks = computed(() => {
+  const step = balanceChartMax.value / 4
+  return Array.from({ length: 5 }, (_, index) => index * step)
+})
+
+function getBalanceChartX(index: number) {
+  if (portfolioData.value.length <= 1) {
+    return balanceChart.marginLeft + balanceChartInnerWidth.value / 2
+  }
+
+  return balanceChart.marginLeft + (index / (portfolioData.value.length - 1)) * balanceChartInnerWidth.value
+}
+
+function getBalanceChartY(value: number) {
+  const normalized = Math.max(0, Math.min(value, balanceChartMax.value))
+  const ratio = normalized / balanceChartMax.value
+  return balanceChart.marginTop + (1 - ratio) * balanceChartInnerHeight.value
+}
+
+const balanceChartPoints = computed(() =>
+  portfolioData.value.map((item, index) => ({
+    ...item,
+    x: getBalanceChartX(index),
+    y: getBalanceChartY(item.value),
+  }))
+)
+
+const balanceChartLinePath = computed(() => {
+  if (!balanceChartPoints.value.length) return ''
+  return balanceChartPoints.value
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+    .join(' ')
+})
+
+const balanceChartAreaPath = computed(() => {
+  if (!balanceChartPoints.value.length) return ''
+  const baselineY = balanceChart.height - balanceChart.marginBottom
+  const first = balanceChartPoints.value[0]
+  const last = balanceChartPoints.value[balanceChartPoints.value.length - 1]
+  return [
+    `M ${first.x.toFixed(2)} ${baselineY}`,
+    balanceChartLinePath.value.replace(/^M/, 'L'),
+    `L ${last.x.toFixed(2)} ${baselineY}`,
+    'Z',
+  ].join(' ')
+})
 
 async function loadPortfolio() {
   loading.value = true
@@ -434,20 +491,90 @@ onMounted(() => {
     <div class="bg-white rounded-xl border border-gray-200 p-6">
       <h3 class="text-lg font-semibold text-gray-900 mb-4">Pertumbuhan saldo bersih</h3>
       <p class="text-xs text-gray-500 mb-3">Akumulasi arus kas bersih 6 bulan terakhir (pendapatan - biaya operasional)</p>
-      <div class="flex items-end gap-1 h-32 mb-4 px-1 border border-gray-100 rounded-lg bg-gray-50/50 p-2">
-        <div
-          v-for="d in portfolioData"
-          :key="d.month"
-          class="flex-1 flex flex-col items-center justify-end gap-1 min-w-0"
+      <div class="mb-4 overflow-x-auto">
+        <svg
+          class="h-[340px] min-w-[720px] w-full"
+          :viewBox="`0 0 ${balanceChart.width} ${balanceChart.height}`"
+          role="img"
+          aria-label="Grafik pertumbuhan saldo bersih"
         >
-          <div
-            class="w-full max-w-[48px] mx-auto rounded-t min-h-[4px]"
-            :class="d.value >= 0 ? 'bg-emerald-500' : 'bg-rose-500'"
-            :style="{ height: `${barHeightPercent(d.value)}%` }"
-            :title="`${d.month}: ${formatRupiah(d.value)}`"
-          />
-          <span class="text-[10px] text-gray-500 truncate w-full text-center">{{ d.month }}</span>
-        </div>
+          <defs>
+            <linearGradient id="net-balance-area" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="#34d399" stop-opacity="0.38" />
+              <stop offset="62%" stop-color="#a7f3d0" stop-opacity="0.18" />
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0.78" />
+            </linearGradient>
+          </defs>
+
+          <g>
+            <line
+              :x1="balanceChart.marginLeft"
+              :x2="balanceChart.width - balanceChart.marginRight"
+              :y1="balanceChart.height - balanceChart.marginBottom"
+              :y2="balanceChart.height - balanceChart.marginBottom"
+              stroke="#9ca3af"
+              stroke-width="1"
+            />
+            <line
+              :x1="balanceChart.marginLeft"
+              :x2="balanceChart.marginLeft"
+              :y1="balanceChart.marginTop"
+              :y2="balanceChart.height - balanceChart.marginBottom"
+              stroke="#9ca3af"
+              stroke-width="1"
+            />
+
+            <g v-for="tick in balanceChartTicks" :key="`y-${tick}`">
+              <line
+                :x1="balanceChart.marginLeft"
+                :x2="balanceChart.width - balanceChart.marginRight"
+                :y1="getBalanceChartY(tick)"
+                :y2="getBalanceChartY(tick)"
+                stroke="#dbe3ec"
+                stroke-dasharray="3 4"
+                stroke-width="1"
+              />
+              <text
+                :x="balanceChart.marginLeft - 8"
+                :y="getBalanceChartY(tick) + 5"
+                text-anchor="end"
+                class="fill-slate-400 text-[14px]"
+              >
+                {{ Math.round(tick) }}
+              </text>
+            </g>
+
+            <g v-for="(point, index) in balanceChartPoints" :key="`x-${point.month}-${index}`">
+              <line
+                :x1="point.x"
+                :x2="point.x"
+                :y1="balanceChart.marginTop"
+                :y2="balanceChart.height - balanceChart.marginBottom"
+                stroke="#dbe3ec"
+                stroke-dasharray="3 4"
+                stroke-width="1"
+              />
+              <text
+                :x="point.x"
+                :y="balanceChart.height - 14"
+                text-anchor="middle"
+                class="fill-slate-400 text-[14px]"
+              >
+                {{ point.month }}
+              </text>
+            </g>
+
+            <path :d="balanceChartAreaPath" fill="url(#net-balance-area)" />
+            <path
+              :d="balanceChartLinePath"
+              fill="none"
+              stroke="#10b981"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+            />
+          </g>
+        </svg>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">

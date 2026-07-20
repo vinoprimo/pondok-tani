@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"pondok-tani-backend/config"
+	notificationhandler "pondok-tani-backend/handlers/notification"
 	authmodels "pondok-tani-backend/models/auth"
 	coremodels "pondok-tani-backend/models/core"
 	maintenancemodels "pondok-tani-backend/models/maintenance"
 	notificationmodels "pondok-tani-backend/models/notification"
-	notificationhandler "pondok-tani-backend/handlers/notification"
 	"pondok-tani-backend/utils"
 
 	"github.com/gin-gonic/gin"
@@ -556,7 +556,7 @@ func ListMaintenanceSchedules(c *gin.Context) {
 		query = query.Where("status = ?", strings.ToLower(status))
 	}
 
-	if err := query.Order("next_due_date ASC").Find(&schedules).Error; err != nil {
+	if err := query.Order("created_at DESC").Find(&schedules).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch maintenance schedules"})
 		return
 	}
@@ -744,7 +744,7 @@ func ListMyMaintenanceSchedules(c *gin.Context) {
 	var schedules []maintenancemodels.MaintenanceSchedule
 	if err := config.DB.Preload("PlantBatch").
 		Where("user_id = ?", userID).
-		Order("next_due_date ASC").
+		Order("created_at DESC").
 		Find(&schedules).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch maintenance schedules"})
 		return
