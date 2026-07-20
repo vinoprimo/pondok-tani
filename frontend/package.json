@@ -4,11 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "engines": {
-  "node": ">=22"
+  "node": ">=20"
 },
   "scripts": {
     "dev": "vite",
-    "prebuild": "npm install lightningcss-linux-x64-gnu@1.32.0 --no-save",
     "build": "vite build",
     "preview": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy"
