@@ -242,16 +242,11 @@ function openGradingModal(item: any) {
   selectedDryingForGrading.value = item
   gradingForm.value.dryingProcessId = item.id
   gradingForm.value.gradingDate = new Date().toISOString().slice(0, 10)
-  gradingForm.value.details = [{ gradeId: '', quantity: 0 }]
+  gradingForm.value.details = grades.value.map((grade) => ({
+    gradeId: String(grade.id),
+    quantity: 0,
+  }))
   showGradingModal.value = true
-}
-
-function addGradingRow() {
-  gradingForm.value.details.push({ gradeId: '', quantity: 0 })
-}
-
-function removeGradingRow(index: number) {
-  gradingForm.value.details.splice(index, 1)
 }
 
 function openOriginModal(gradeName: string) {
@@ -814,20 +809,20 @@ onMounted(() => {
             />
           </div>
           <div class="space-y-3">
+            <p v-if="!gradingForm.details.length" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-700">
+              Daftar grade belum tersedia.
+            </p>
             <div
-              v-for="(detail, index) in gradingForm.details"
-              :key="index"
-              class="grid grid-cols-1 gap-3 rounded-xl border border-gray-200 p-3 md:grid-cols-[1.2fr_1fr_auto]"
+              v-for="detail in gradingForm.details"
+              :key="detail.gradeId"
+              class="grid grid-cols-1 items-center gap-3 rounded-xl border border-gray-200 p-3 md:grid-cols-[1.2fr_1fr]"
             >
-              <select
-                v-model="detail.gradeId"
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
-              >
-                <option value="">Pilih grade</option>
-                <option v-for="grade in grades" :key="grade.id" :value="String(grade.id)">
-                  {{ grade.grade_name }}
-                </option>
-              </select>
+              <div>
+                <p class="font-semibold text-gray-900">
+                  {{ grades.find((grade) => String(grade.id) === detail.gradeId)?.grade_name || 'Grade' }}
+                </p>
+                <p class="mt-0.5 text-xs text-gray-500">Masukkan hasil kuantitas untuk grade ini.</p>
+              </div>
               <input
                 v-model.number="detail.quantity"
                 type="number"
@@ -836,22 +831,7 @@ onMounted(() => {
                 placeholder="Qty (kg)"
                 class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
               />
-              <button
-                type="button"
-                class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-                @click="removeGradingRow(index)"
-              >
-                Hapus
-              </button>
             </div>
-            <button
-              type="button"
-              class="inline-flex items-center gap-2 rounded-lg border border-emerald-500 px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
-              @click="addGradingRow"
-            >
-              <Plus class="h-4 w-4" />
-              Tambah grade
-            </button>
           </div>
         </div>
         <div class="flex gap-3 border-t border-gray-200 px-6 py-4">
